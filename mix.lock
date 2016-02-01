@@ -1,0 +1,5 @@
+%{"absinthe": {:hex, :absinthe, "0.5.2"},
+  "earmark": {:hex, :earmark, "0.1.19"},
+  "ex_doc": {:hex, :ex_doc, "0.11.2"},
+  "ex_spec": {:hex, :ex_spec, "1.0.0"},
+  "poison": {:hex, :poison, "1.5.0"}}

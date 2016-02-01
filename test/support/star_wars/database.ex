@@ -73,11 +73,7 @@ defmodule StarWars.Database do
     }
   }
 
-  def data do
-    @data
-    |> add_max_id(:ship)
-    |> add_max_id(:faction)
-  end
+  def data, do: @data
 
   def get(node_type, id) do
     data

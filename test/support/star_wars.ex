@@ -72,8 +72,10 @@ defmodule StarWars do
 
   alias StarWars.Database
   alias Absinthe.Relay.Node
+  alias Absinthe.Relay.Connection
 
   use Absinthe.Schema, type_modules: [Node]
+
   alias Absinthe.Type
 
   def query do
@@ -89,23 +91,14 @@ defmodule StarWars do
               Database.get_factions(names)
           end
         ],
-        node: Absinthe.Relay.Node.field
+        node: Node.field(fn
+          %{type: node_type, id: id} ->
+            Database.get(node_type, id)
+          _ ->
+            {:ok, nil}
+        end)
       )
     }
-  end
-
-  defp node_field do
-    Absinthe.Relay.node_field(fn
-      %{id: raw_global_id}, execution ->
-        case Absinthe.Relay.parse_global_id(raw_global_id) do
-          {:ok, %{type: node_type, id: id}} ->
-            Database.get(node_type, id)
-          {:ok, _} ->
-            {:ok, nil}
-          {:error, _} = err ->
-            err
-        end
-    end)
   end
 
   @absinthe :type
@@ -129,7 +122,7 @@ defmodule StarWars do
     end)
   end
 
-  @absinthe :faction
+  @absinthe :type
   def faction do
     %Type.Object{
       name: "Faction",
@@ -143,6 +136,11 @@ defmodule StarWars do
         ]
       )
     }
+  end
+
+  @absinthe :type
+  def ship_connection do
+    %Type.Object{}
   end
 
 end

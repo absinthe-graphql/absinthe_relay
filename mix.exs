@@ -6,7 +6,8 @@ defmodule AbsintheRelay.Mixfile do
   def project do
     [app: :absinthe_relay,
      version: @version,
-     elixir: "~> 1.2-dev",
+     elixir: "~> 1.2",
+     elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      package: package,
@@ -32,7 +33,7 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, "~> 0.2.1"},
+      {:absinthe, "~> 0.5.2"},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.11.0", only: :dev},
       {:earmark, "~> 0.1.19", only: :dev},

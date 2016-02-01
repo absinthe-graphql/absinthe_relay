@@ -12,12 +12,11 @@ defmodule Absinthe.Relay.Connection do
   * ...
   """
   @spec edge(Keyword.t) :: Absinthe.Type.Object.t
-  def edge(config) do
+  def edge(_config) do
 
   end
 
-  @spe
-  def object(config) do
+  def object(_config) do
   end
 
 end
