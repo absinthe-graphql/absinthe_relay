@@ -91,4 +91,12 @@ defmodule StarWars.Database do
     end)
   end
 
+  def get_rebels do
+    {:ok, @rebels}
+  end
+
+  def get_empire do
+    {:ok, @empire}
+  end
+
 end

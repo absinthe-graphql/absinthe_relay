@@ -43,6 +43,9 @@ defmodule Absinthe.Relay.SchemaTest do
 
   end
 
+  @jack_global_id "UGVyc29uOmphY2s="
+  @jill_global_id "UGVyc29uOmppbGw="
+
   describe "using Absinthe.Relay.Schema" do
     it "gives you the :node type automatically" do
       assert %Type.Interface{name: "Node"} = BlankSchema.schema.types[:node]
@@ -52,14 +55,14 @@ defmodule Absinthe.Relay.SchemaTest do
   describe "using the node field" do
     @query """
     {
-      node(id: "person:jack") {
+      node(id: "#{@jack_global_id}") {
         id
         ... on Person { name }
       }
     }
     """
     it "resolves using the global ID" do
-      assert {:ok, %{data: %{"node" => %{"id" => "person:jack", "name" => "Jack"}}}} = Absinthe.run(@query, BlankSchema)
+      assert {:ok, %{data: %{"node" => %{"id" => @jack_global_id, "name" => "Jack"}}}} = Absinthe.run(@query, BlankSchema)
     end
   end
 

@@ -48,7 +48,7 @@ defmodule Absinthe.Relay.Node do
       ),
       resolve: fn
         %{id: global_id}, info ->
-          case Node.from_global_id(global_id) do
+          case Node.from_global_id(global_id, info.schema) do
             {:ok, result} ->
               resolver.(result, info)
             other ->
@@ -71,44 +71,66 @@ defmodule Absinthe.Relay.Node do
     field(:node, resolver)
   end
 
-  def from_global_id(global_id) do
-    case String.split(global_id, ":", parts: 2) do
-      [type_name, id] ->
-        try do
-          type = type_name |> String.to_existing_atom
-          {:ok, %{type: type, id: id}}
-        rescue
-          # Atom doesn't exist -- type doesn't exist
-          ArgumentError ->
-            {:error, "Unknown node type `#{type_name}'"}
-        end
-      _ ->
-        {:error, "Could not parse global ID from `#{global_id}'"}
+  def from_global_id(global_id, schema) do
+    case Base.decode64(global_id) do
+      {:ok, decoded} ->
+        String.split(decoded, ":", parts: 2)
+        |> do_from_global_id(decoded, schema)
+      :error ->
+        {:error, "Could not decode ID value `#{global_id}'"}
     end
   end
 
-  def to_global_id(node_type, source_id), do: "#{node_type}:#{source_id}"
+  defp do_from_global_id([type_name, id], _, schema) when byte_size(id) > 0 and byte_size(type_name) > 0 do
+    case schema.types.by_name[type_name] do
+      nil ->
+        {:error, "Unknown type `#{type_name}'"}
+      %{reference: %{identifier: ident}, interfaces: interfaces} ->
+        if Enum.member?(interfaces || [], :node) do
+          {:ok, %{type: ident, id: id}}
+        else
+          {:error, "Type `#{type_name}' is not a valid node type"}
+        end
+    end
+  end
+  defp do_from_global_id(_, decoded, _schema) do
+    {:error, "Could not extract value from decoded ID `#{decoded}'"}
+  end
 
-  def global_id_field(node_type_identifier, id_fetcher) do
+  defp decode(value) do
+    case Base.decode64(value) do
+      {:ok, _} = result ->
+        result
+      _ ->
+        {:error, ""}
+    end
+  end
+
+  def to_global_id(node_type, nil) do
+    {:error, "No source non-global ID value present on object"}
+  end
+  def to_global_id(node_type, source_id) do
+    {:ok, "#{node_type}:#{source_id}" |> Base.encode64}
+  end
+
+  def global_id_field(type_identifier, id_fetcher) do
     %Type.Field{
       name: "id",
       description: "The ID of an object",
       type: non_null(:id),
       resolve: fn
-        _, %{source: source, parent_type: parent_type} = info ->
-          {
-            :ok,
-            to_global_id(
-              node_type_identifier || parent_type.name,
-              id_fetcher.(info.source, info)
-            )
-          }
+        _, info ->
+          type = Absinthe.Schema.lookup_type(info.schema, type_identifier)
+          to_global_id(
+            type.name,
+            id_fetcher.(info.source, info)
+          )
       end
     }
   end
 
-  def global_id_field(node_type_identifier) do
-    global_id_field(node_type_identifier, &default_id_fetcher/2)
+  def global_id_field(type_identifier) do
+    global_id_field(type_identifier, &default_id_fetcher/2)
   end
 
   defp default_id_fetcher(%{id: id}, _info), do: id

@@ -68,27 +68,29 @@
 #   introduceShip(input IntroduceShipInput!): IntroduceShipPayload
 # }
 
-defmodule StarWars do
+defmodule StarWars.Schema do
 
   alias StarWars.Database
-  alias Absinthe.Relay.Node
-  alias Absinthe.Relay.Connection
-
-  use Absinthe.Schema, type_modules: [Node]
+  use Absinthe.Relay.Schema
 
   alias Absinthe.Type
+  alias Absinthe.Relay.Node
 
   def query do
     %Type.Object{
       fields: fields(
-        factions: [
-          type: list_of(:faction),
-          args: args(
-            names: [type: list_of(:string)]
-          ),
+        rebels: [
+          type: :faction,
           resolve: fn
-            %{names: names} ->
-              Database.get_factions(names)
+            _, _ ->
+              Database.get_rebels()
+          end
+        ],
+        empire: [
+          type: :faction,
+          resolve: fn
+            _, _ ->
+              Database.get_empire()
           end
         ],
         node: Node.field(fn
@@ -104,28 +106,21 @@ defmodule StarWars do
   @absinthe :type
   def ship do
     %Type.Object{
-      name: "Ship",
       description: "A ship in the Star Wars saga",
       fields: fields(
-        id: Absinthe.Relay.Node.global_id_field(:ship),
+        id: Node.global_id_field(:ship),
         name: [type: :string, description: "The name of the ship."]
       ),
       interfaces: [:node]
     }
   end
 
-  @absinthe :type
-  def node do
-    Absinthe.Relay.Node.interface(fn
-      %{ships: _} -> :faction
-      _ -> :ship
-    end)
-  end
+  def node_type_resolver(%{ships: _}, _), do: :faction
+  def node_type_resolver(_, _), do: :ship
 
   @absinthe :type
   def faction do
     %Type.Object{
-      name: "Faction",
       description: "A faction in the Star Wars saga",
       fields: fields(
         id: Node.global_id_field(:faction),
@@ -134,13 +129,14 @@ defmodule StarWars do
           type: :ship_connection,
           description: "The ships used by the faction."
         ]
-      )
+      ),
+      interfaces: [:node]
     }
   end
 
   @absinthe :type
   def ship_connection do
-    %Type.Object{}
+    %Type.Object{fields: fields([])}
   end
 
 end
