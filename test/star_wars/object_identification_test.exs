@@ -15,6 +15,46 @@ defmodule StarWars.ObjectIdentificationTest do
       |> assert_data(%{"rebels" => %{"id" => "RmFjdGlvbjox", "name" => "Alliance to Restore the Republic"}})
     end
 
+    it "fetches the ID and name of the empire" do
+      """
+      query EmpireQuery {
+        empire {
+          id
+          name
+        }
+      }
+      """
+      |> assert_data(%{"empire" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
+    end
+
+    it "refetches the empire" do
+      """
+      query EmpireRefetchQuery {
+        node(id: "RmFjdGlvbjoy") {
+          id
+          ... on Faction {
+            name
+          }
+        }
+      }
+      """
+      |> assert_data(%{"node" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
+    end
+
+    it "refetches the X-Wing" do
+      """
+      query XWingRefetchQuery {
+        node(id: "U2hpcDox") {
+          id
+          ... on Ship {
+            name
+          }
+        }
+      }
+      """
+      |> assert_data(%{"node" => %{"id" => "U2hpcDox", "name" => "X-Wing"}})
+    end
+
   end
 
   defp assert_data(query, data) do

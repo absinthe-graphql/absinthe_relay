@@ -94,9 +94,9 @@ defmodule StarWars.Schema do
           end
         ],
         node: Node.field(fn
-          %{type: node_type, id: id} ->
+          %{type: node_type, id: id}, _ ->
             Database.get(node_type, id)
-          _ ->
+          _, _ ->
             {:ok, nil}
         end)
       )
