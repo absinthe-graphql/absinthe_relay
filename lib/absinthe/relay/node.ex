@@ -8,11 +8,12 @@ defmodule Absinthe.Relay.Node do
 
   @type type_resolver_t :: ((any) -> Absinthe.Type.identifier_t)
   @type object_resolver_t :: ((%{node_type: atom, id: binary}, Execution.Field.t) -> {:ok, any} | {:error, binary | [binary]})
+  @type id_fetcher_t :: ((any, Execution.Field.t) -> nil | binary)
 
   @doc """
   Get the Node interface given an optional type resolver
 
-  * `type_resolver` - A function used to determine the concrete type of an
+  - `type_resolver` - A function used to determine the concrete type of an
     object that uses the interface.
   """
   @spec interface(type_resolver_t | nil) :: Type.Interface.t
@@ -33,9 +34,9 @@ defmodule Absinthe.Relay.Node do
   @doc """
   Define the node field.
 
-  * `node_interface_identifier`: The defined type for the Node interface in your
+  - `node_interface_identifier`: The defined type for the Node interface in your
     schema
-  * `resolver` - The resolver function, should expect arguments `:type` and `:id`.
+  - `resolver` - The resolver function, should expect arguments `:type` and `:id`.
   """
   @spec field(Absinthe.Type.identifier_t, object_resolver_t) :: Type.Field.t
   def field(node_interface_identifier, resolver) do
@@ -113,26 +114,96 @@ defmodule Absinthe.Relay.Node do
     {:ok, "#{node_type}:#{source_id}" |> Base.encode64}
   end
 
+  @doc """
+  Build a global ID field for a node type using a custom ID fetcher.
+
+  Unless the default ID fetcher (essentially `Map.get(obj, :id) |> to_string`)
+  is inappropriate for your node type, use `global_id_field/1`.
+  """
+  @spec global_id_field(binary | atom, id_fetcher_t) :: Type.Field.t
   def global_id_field(type_identifier, id_fetcher) do
     %Type.Field{
       name: "id",
       description: "The ID of an object",
       type: non_null(:id),
-      resolve: fn
-        _, info ->
-          type = Absinthe.Schema.lookup_type(info.schema, type_identifier)
-          to_global_id(
-            type.name,
-            id_fetcher.(info.source, info)
-          )
-      end
+      resolve: global_id_resolver(type_identifier, id_fetcher)
     }
   end
 
+  @doc """
+  Build a global ID field for a node type using the default ID fetcher.
+
+  See `default_id_fetcher/2` for information on how raw, non-global IDs are
+  retrieved by default.
+
+  ## Examples
+
+  Using a type name:
+  ```
+  global_id_field("Business")
+  ```
+
+  Using a type identifier:
+  ```
+  global_id_field(:business)
+  ```
+
+  ## Performance Considerations
+
+  If using a type identifier instead of the type name, the
+  type name will have to be retrieved during field resolution to
+  generate the global ID.
+  """
+  @spec global_id_field(atom | binary) :: Type.Field.t
   def global_id_field(type_identifier) do
     global_id_field(type_identifier, &default_id_fetcher/2)
   end
 
-  defp default_id_fetcher(%{id: id}, _info), do: id
+  # The resolver for a global ID. If a type identifier instead of a type name
+  # is used during field configuration, the type name needs to be looked up
+  # during resolution.
+  @spec global_id_resolver(binary | atom, id_fetcher_t) :: Type.Field.resolver_t
+  defp global_id_resolver(identifier, id_fetcher) when is_atom(identifier) do
+    fn obj, info ->
+      type = Absinthe.Schema.lookup_type(info.schema, identifier)
+      to_global_id(
+        type.name,
+        id_fetcher.(info.source, info)
+      )
+    end
+  end
+  defp global_id_resolver(type_name, id_fetcher) when is_binary(type_name) do
+    fn _, info ->
+      to_global_id(
+        type_name,
+        id_fetcher.(info.source, info)
+      )
+    end
+  end
+
+  @doc """
+  The default ID fetcher used to retrieve raw, non-global IDs from values.
+
+  * Matches `:id` out of the value.
+    * If it's `nil`, it returns `nil`
+    * If it's not nil, it coerces it to a binary using `Kernel.to_string/1`
+
+  ## Examples
+
+  ```
+  iex> default_id_fetcher(%{id: "foo"})
+  "foo"
+  iex> default_id_fetcher(%{id: 123})
+  "123"
+  iex> default_id_fetcher(%{id: nil})
+  nil
+  iex> default_id_fetcher(%{nope: "no_id"})
+  nil
+  ```
+  """
+  @spec default_id_fetcher(any, Execution.Field.t) :: nil | binary
+  def default_id_fetcher(%{id: id}, _info) when is_nil(id), do: nil
+  def default_id_fetcher(%{id: id}, _info), do: id |> to_string
+  def default_id_fetcher(_), do: nil
 
 end
