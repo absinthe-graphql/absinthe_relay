@@ -6,18 +6,15 @@ package.
 
 **IN INITIAL BUILD-OUT; NOT YET READY FOR USE**
 
-## Roadmap & Contributions
+## Specifications
 
-For a list of specific planned features and version targets, see the
-[milestone list](https://github.com/CargoSense/absinthe_relay/milestones).
-
-We welcome issues and pull requests; please see [CONTRIBUTING](./CONTRIBUTING.md).
+http://facebook.github.io/relay/docs/graphql-relay-specification.html
 
 ## Usage
 
-### Node Interface
+### Object Identification
 
-Relay [requires an interface](https://facebook.github.io/relay/docs/graphql-object-identification.html), `node`, be defined in your schema to provide a simple way to fetch objects using a global ID scheme.
+Relay [requires an interface](https://facebook.github.io/relay/docs/graphql-object-identification.html), `node`, be defined in your schema to provide a simple way to fetch objects using a global ID scheme. This is designed to match the [Relay Global Object Identification Specification](http://facebook.github.io/relay/graphql/objectidentification.htm).
 
 To enable the `node` interface in your schema, use `Absinthe.Relay.Schema`
 _instead of_ `Absinthe.Schema`:
@@ -80,6 +77,15 @@ end
 Note that `global_id_field` is given the name of the prefix to use. It's
 best to make this the same as the identifier for your type, as we did
 here with `:person`.
+
+### Connection
+
+Relay uses [Connection](http://facebook.github.io/relay/docs/graphql-connections.html) (and other related) types to provide a
+standardized way of slicing and paginating a one-to-many relationship.
+
+Support in this package is designed to match the [Relay Cursor Connection Specification](http://facebook.github.io/relay/graphql/connections.htm).
+
+
 
 ## License
 

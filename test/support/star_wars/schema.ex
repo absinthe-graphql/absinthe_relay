@@ -75,6 +75,7 @@ defmodule StarWars.Schema do
 
   alias Absinthe.Type
   alias Absinthe.Relay.Node
+  alias Absinthe.Relay.Connection
 
   def query do
     %Type.Object{
@@ -115,6 +116,11 @@ defmodule StarWars.Schema do
     }
   end
 
+  @absinthe :type
+  def ship_connection do
+    Connection.type(:ship)
+  end
+
   def node_type_resolver(%{ships: _}, _), do: :faction
   def node_type_resolver(_, _), do: :ship
 
@@ -127,16 +133,23 @@ defmodule StarWars.Schema do
         name: [type: :string, description: "The name of the faction"],
         ships: [
           type: :ship_connection,
-          description: "The ships used by the faction."
+          description: "The ships used by the faction.",
+          args: Connection.args,
+          resolve: fn
+            resolve_args, %{source: faction} ->
+              IO.inspect(faction: faction)
+              Connection.from_list(
+                Enum.map(faction.ships, fn
+                  id ->
+                    with {:ok, id} <- Database.get(:ship, id), do: id
+                end),
+                resolve_args
+              )
+          end
         ]
       ),
       interfaces: [:node]
     }
-  end
-
-  @absinthe :type
-  def ship_connection do
-    %Type.Object{fields: fields([])}
   end
 
 end

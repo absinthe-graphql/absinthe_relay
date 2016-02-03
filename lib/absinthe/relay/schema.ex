@@ -1,8 +1,11 @@
 defmodule Absinthe.Relay.Schema do
 
   defmacro __using__(opts) do
+    type_modules = Keyword.get(opts, :type_modules, [])
     quote do
-      use Absinthe.Schema
+      use Absinthe.Schema, type_modules: [
+        Absinthe.Relay.Connection
+      ] ++ unquote(type_modules)
 
       @behaviour unquote(__MODULE__)
 
