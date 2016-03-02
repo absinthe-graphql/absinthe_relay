@@ -11,46 +11,45 @@ defmodule Absinthe.Relay.SchemaTest do
     @businesses %{"papers" => %{id: "papers", name: "Papers, Inc!", employee_count: 100},
                   "toilets" => %{id: "toilets", name: "Toilets International", employee_count: 1}}
 
-    def query do
-      %Type.Object{
-        fields: fields(
-          version: [type: :string, resolve: fn _, _ -> {:ok, "0.1.2"} end],
-        node: Absinthe.Relay.Node.field(fn
+    query do
+
+      field :version, :string do
+        resolve fn
+          _, _ ->
+            {:ok, "0.1.2"}
+        end
+      end
+
+      node_field do
+        resolve fn
           %{type: :person, id: id}, _ ->
             {:ok, Map.get(@people, id)}
           %{type: :business, id: id}, _ ->
             {:ok, Map.get(@businesses, id)}
-        end)
-        )
-      }
+        end
+      end
+
     end
 
-    def node_type_resolver(%{age: _}, _), do: :person
-    def node_type_resolver(%{employee_count: _}, _), do: :business
-    def node_type_resolver(_, _), do: nil
-
-    @absinthe :type
-    def person do
-      %Type.Object{
-        fields: fields(
-          id: Absinthe.Relay.Node.global_id_field(:person),
-          name: [type: :string],
-          age: [type: :integer]
-        ),
-        interfaces: [:node]
-      }
+    node_interface do
+      resolve_type fn
+        %{age: _}, _ ->
+          :person
+        %{employee_count: _}, _ ->
+          :business
+        _, _ ->
+          nil
+      end
     end
 
-    @absinthe :type
-    def business do
-      %Type.Object{
-        fields: fields(
-          id: Absinthe.Relay.Node.global_id_field("Business"),
-          name: [type: :string],
-          employee_count: [type: :integer]
-        ),
-        interfaces: [:node]
-      }
+    node_object :person do
+      field :name, :string
+      field :age, :string
+    end
+
+    node_object :business do
+      field :name, :string
+      field :employee_count, :integer
     end
 
   end
@@ -61,7 +60,7 @@ defmodule Absinthe.Relay.SchemaTest do
 
   describe "using Absinthe.Relay.Schema" do
     it "gives you the :node type automatically" do
-      assert %Type.Interface{name: "Node"} = Schema.schema.types[:node]
+      assert %Type.Interface{name: "Node"} = Schema.__absinthe_types__(:node)
     end
   end
 

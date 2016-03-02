@@ -66,13 +66,31 @@ _instead of_ `Absinthe.Schema`:
 use Absinthe.Relay.Schema
 ```
 
-This will automatically add the `:node` interface type and mark your schema as
-conforming to the `Absithe.Relay.Schema` behaviour.
+This will give you access to three new macros:
 
-Now, add the `node` field to your schema. You need to provide two functions to it:
+- `node_interface` - To define the node interface
+- `node_field` - To define the field used to lookup a node by a global ID
+- `node_object` - To define objects that represent nodes
 
-- `resolve` -  a resolver function that can lookup each each planned node type by `:type` and `:id`
-- `resolve_type` - a type resolver that, given a resolved object, returns the type identifier for the object (this is used to generate global IDs)
+First, add the node interface to your schema, providing a a type resolver that,
+given a resolved object, returns the type identifier for the object (this is
+used to generate global IDs):
+
+```elixir
+node_interface do
+  resolve_type fn
+     %{age: _}, _ ->
+       :person
+     %{employee_count: _}, _ ->
+       :business
+     _, _ ->
+       nil
+  end
+end
+```
+
+Now, add the `node` field to your schema, providing a `resolve` function used to
+lookup a node, given a type identifier and an ID:
 
 ```elixir
 query do
@@ -84,18 +102,12 @@ query do
       %{type: :business, id: id}, _ ->
         {:ok, Map.get(@businesses, id)}
     end
-    resolve_type fn
-      %{ships: _} ->
-        :faction
-      _ ->
-        :ship
-    end
   end
 
 end
 ```
 
-For your node types, use the `node_object` macro. This will automatically handle:
+Now, for your node types, use the `node_object` macro. This will automatically handle:
 
 * Adding `:node` to the object's interfaces list
 * Adding the required `:id` field using the global ID scheme
