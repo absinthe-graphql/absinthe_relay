@@ -1,10 +1,50 @@
 # Absinthe.Relay
 
 Support for the [Relay framework](https://facebook.github.io/relay/)
-from Elixir, using the [Absinthe](https://hex.pm/packages/absinthe)
+from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
 package.
 
 **IN INITIAL BUILD-OUT; NOT YET READY FOR USE**
+
+## Installation
+
+Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
+
+```elixir
+def deps do
+  [{:absinthe_relay, "~> 0.0.1"}]
+end
+```
+
+Add it to your `applications` configuration in `mix.exs`, too:
+
+```elixir
+def application do
+  [applications: [:absinthe_relay]]
+end
+```
+
+Note: Absinthe requires Elixir 1.2 or higher.
+
+## Upgrading
+
+See [CHANGELOG](./CHANGELOG.md) for upgrade steps between versions.
+
+## Documentation
+
+See "Usage," below, for basic usage information.
+
+- For the tutorial, guides, and general information about Absinthe-related
+  projects, see [http://absinthe-graphql.org](http://absinthe-graphql.org).
+- Links to the API documentation are available in the [project list](https://absinthe-graphql.org/projects).
+
+### Roadmap
+
+See the Roadmap on [absinthe-graphql.org](https://absinthe-graphql.org/roadmap).
+
+## Related Projects
+
+See the Project List on [absinthe-graphql.org](http://absinthe-graphql.org/projects).
 
 ## Roadmap & Contributions
 
@@ -29,57 +69,45 @@ use Absinthe.Relay.Schema
 This will automatically add the `:node` interface type and mark your schema as
 conforming to the `Absithe.Relay.Schema` behaviour.
 
-Now, add the `node` field to your schema, providing a resolver function for
-each planned node type:
+Now, add the `node` field to your schema. You need to provide two functions to it:
+
+- `resolve` -  a resolver function that can lookup each each planned node type by `:type` and `:id`
+- `resolve_type` - a type resolver that, given a resolved object, returns the type identifier for the object (this is used to generate global IDs)
 
 ```elixir
-def query do
-  %Type.Object{
-    fields: fields(
-      node: Absinthe.Relay.Node.field(fn
-        %{type: :person, id: id}, _ ->
-          {:ok, Map.get(@people, id)}
-        %{type: :business, id: id}, _ ->
-          {:ok, Map.get(@businesses, id)}
-      end)
-    )
-  }
+query do
+
+  node_field do
+    resolve fn
+      %{type: :person, id: id}, _ ->
+        {:ok, Map.get(@people, id)}
+      %{type: :business, id: id}, _ ->
+        {:ok, Map.get(@businesses, id)}
+    end
+    resolve_type fn
+      %{ships: _} ->
+        :faction
+      _ ->
+        :ship
+    end
+  end
+
 end
 ```
 
-Next, add a `node_type_resolver/1` function that, given a resolved object,
-returns the type identifier for the object (this is used to generate
-global IDs):
+For your node types, use the `node_object` macro. This will automatically handle:
 
-```elixir
-def node_type_resolver(%{ships: _}), do: :faction
-def node_type_resolver(_), do: :ship
-```
-
-In your node types, you need to do two things:
-
-* Add `:node` to your interfaces list
-* Add the required `:id` field using the global ID scheme
+* Adding `:node` to the object's interfaces list
+* Adding the required `:id` field using the global ID scheme
 
 Here's an example:
 
 ```elixir
-@absinthe :type
-def person do
-  %Type.Object{
-    fields: fields(
-      id: Absinthe.Relay.Node.global_id_field(:person),
-      name: [type: :string],
-      age: [type: :integer]
-    ),
-    interfaces: [:node]
-  }
+node_object :person do
+  field :name, :string
+  field :age, :integer
 end
 ```
-
-Note that `global_id_field` is given the name of the prefix to use. It's
-best to make this the same as the identifier for your type, as we did
-here with `:person`.
 
 ## License
 

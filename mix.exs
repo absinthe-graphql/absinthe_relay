@@ -33,7 +33,7 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, github: "CargoSense/absinthe"},
+      {:absinthe, "~> 1.0"},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.11.0", only: :dev},
       {:earmark, "~> 0.1.19", only: :dev},
