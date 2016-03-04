@@ -10,6 +10,7 @@ defmodule Absinthe.Relay.SchemaTest do
               "jill" => %{id: "jill", name: "Jill", age: 31}}
     @businesses %{"papers" => %{id: "papers", name: "Papers, Inc!", employee_count: 100},
                   "toilets" => %{id: "toilets", name: "Toilets International", employee_count: 1}}
+    @cats %{"binx" => %{tag: "binx", name: "Mr. Binx", whisker_count: 12}}
 
     query do
 
@@ -20,55 +21,74 @@ defmodule Absinthe.Relay.SchemaTest do
         end
       end
 
-      node_field do
+      node field do
         resolve fn
           %{type: :person, id: id}, _ ->
             {:ok, Map.get(@people, id)}
           %{type: :business, id: id}, _ ->
             {:ok, Map.get(@businesses, id)}
+          %{type: :cat, id: id}, _ ->
+            {:ok, Map.get(@cats, id)}
         end
       end
 
     end
 
     @desc "My Interface"
-    node_interface do
+    node interface do
       resolve_type fn
         %{age: _}, _ ->
           :person
         %{employee_count: _}, _ ->
           :business
+        %{whisker_count: _}, _ ->
+          :cat
         _, _ ->
           nil
       end
     end
 
-    node_object :person do
+    node object :person do
       field :name, :string
       field :age, :string
     end
 
-    node_object :business do
+    node object :business do
       field :name, :string
       field :employee_count, :integer
     end
+
+    node object :cat, name: "Kitten", id_fetcher: &tag_id_fetcher/2 do
+      field :name, :string
+      field :whisker_count, :integer
+    end
+
+    defp tag_id_fetcher(%{tag: value}, _), do: value
+    defp tag_id_fetcher(_, _), do: nil
 
   end
 
   @jack_global_id Base.encode64("Person:jack")
   @jill_global_id Base.encode64("Person:jill")
   @papers_global_id Base.encode64("Business:papers")
+  @binx_global_id Base.encode64("Kitten:binx")
 
-  describe "using node_interface" do
+  describe "using node interface" do
     it "creates the :node type" do
       assert %Type.Interface{name: "Node", description: "My Interface", fields: %{id: %Type.Field{name: "id", type: %Type.NonNull{of_type: :id}}}} = Schema.__absinthe_type__(:node)
     end
   end
 
-  describe "using node_field" do
+  describe "using node field" do
     it "creates the :node field" do
       assert %{fields: %{node: %{name: "node", type: :node, resolve: resolver}}} = Schema.__absinthe_type__(:query)
       assert !is_nil(resolver)
+    end
+  end
+
+  describe "using node object" do
+    it "creates the object" do
+      assert %{name: "Kitten"} = Schema.__absinthe_type__(:cat)
     end
   end
 
@@ -100,5 +120,17 @@ defmodule Absinthe.Relay.SchemaTest do
     end
   end
 
+  describe "using the node field and a custom id fetcher defined as an attribute" do
+    @query """
+    {
+      node(id: "#{@binx_global_id}") {
+        id
+      }
+    }
+    """
+    it "resolves using the global ID" do
+      assert {:ok, %{data: %{"node" => %{"id" => @binx_global_id}}}} = Absinthe.run(@query, Schema)
+    end
+  end
 
 end

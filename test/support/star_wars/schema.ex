@@ -90,7 +90,7 @@ defmodule StarWars.Schema do
       end
     end
 
-    node_field do
+    node field do
       resolve fn
         %{type: node_type, id: id}, _ ->
           Database.get(node_type, id)
@@ -102,14 +102,14 @@ defmodule StarWars.Schema do
   end
 
   @desc "A ship in the Star Wars saga"
-  node_object :ship do
+  node object :ship do
 
     @desc "The name of the ship."
     field :name, :string
 
   end
 
-  node_interface do
+  node interface do
     resolve_type fn
       %{ships: _}, _ ->
         :faction
@@ -119,7 +119,7 @@ defmodule StarWars.Schema do
   end
 
   @desc "A faction in the Star Wars saga"
-  node_object :faction do
+  node object :faction do
 
     @desc "The name of the faction"
     field :name, :string
