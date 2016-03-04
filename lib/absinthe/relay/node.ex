@@ -1,67 +1,119 @@
 defmodule Absinthe.Relay.Node do
 
-  use Absinthe.Schema.Notation
+  alias Absinthe.Schema.Notation
 
   defmacro node_interface([do: block]) do
-    __interface__(:node, block)
+    __CALLER__
+    |> Notation.recordable!(:interface)
+    |> record_interface!(:node, [], block)
+    Notation.desc_attribute_recorder(:node)
+  end
+
+  @doc false
+  # Record the node interface
+  def record_interface!(env, identifier, attrs, block) do
+    Notation.record_interface!(
+      env,
+      identifier,
+      Keyword.put_new(attrs, :description, "An object with an ID"),
+      [interface_body, block]
+    )
+  end
+  defp interface_body do
+    quote do
+      field :id, non_null(:id), description: "The id of the object."
+    end
   end
 
   defmacro node_field([do: block]) do
-    __field__(:node, :node, block)
+    __CALLER__
+    |> Notation.recordable!(:field)
+    |> record_field!(:node, [type: :node], block)
+  end
+
+  def record_field!(env, identifier, attrs, block) do
+    Notation.record_field!(
+      env,
+      identifier,
+      Keyword.put_new(attrs, :description, "Fetches an object given its ID"),
+      [field_body, block]
+    )
+  end
+  defp field_body do
+    quote do
+      @desc "The id of an object."
+      arg :id, non_null(:id)
+    end
+  end
+
+  defmacro resolve(raw_func_ast) do
+    env = __CALLER__
+    func_ast = resolve_body(env, raw_func_ast)
+    Notation.record_resolve!(env, func_ast)
+  end
+
+  defp resolve_body(env, raw_func_ast) do
+    case scopes_above(env) do
+      [{:field, :node}, {:object, :query}] ->
+        wrap_resolve(raw_func_ast)
+      _ ->
+        Notation.recordable!(env, :resolve)
+        raw_func_ast
+    end
+  end
+
+  defp scopes_above(env) do
+    Notation.Scope.on(env.module)
+    |> Enum.map(fn
+      scope ->
+        {:%{}, [], ref_attrs} = scope.attrs[:__reference__]
+        {scope.name, ref_attrs[:identifier]}
+    end)
+  end
+
+  defp wrap_resolve(raw_func_ast) do
+    quote do
+      fn
+        %{id: global_id}, info ->
+          case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
+            {:ok, result} ->
+              user_resolver = unquote(raw_func_ast)
+              user_resolver.(result, info)
+            other ->
+              other
+          end
+        args, info ->
+          IO.inspect(args: args, fields: info.definition)
+          user_resolver = unquote(raw_func_ast)
+          user_resolver.(%{}, info)
+      end
+    end
   end
 
   defmacro node_object(identifier, [do: block]) do
-    __object__(identifier, [], block)
+    record_object!(__CALLER__, identifier, [], block)
   end
-  defmacro node_object(identifier, opts, [do: block]) do
-    __object__(identifier, opts, block)
+  defmacro node_object(identifier, attrs, [do: block]) do
+    record_object!(__CALLER__, identifier, attrs, block)
   end
 
-  defp __interface__(identifier, block) do
+  def record_object!(env, identifier, attrs, block) do
+    name = attrs[:name] || identifier |> Atom.to_string |> Absinthe.Utils.camelize
+    Notation.record_object!(
+      env,
+      identifier,
+      attrs,
+      [object_body(name, attrs[:id_fetcher]), block]
+    )
+    Notation.desc_attribute_recorder(identifier)
+  end
+  defp object_body(name, id_fetcher) do
     quote do
-      @desc "An object with an ID"
-      interface unquote(identifier) do
-        @desc "The id of the object."
-        field :id, non_null(:id)
-        unquote(block)
+      @desc "The ID of an object"
+      field :id, non_null(:id) do
+        resolve Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(id_fetcher))
       end
-    end
-  end
-
-  defp __field__(identifier, interface_identifier, block) do
-    quote do
-      @desc "Fetches an object given its ID"
-      field unquote(identifier), unquote(interface_identifier) do
-
-        @desc "The id of an object."
-        arg :id, non_null(:id)
-
-        wrap_resolve fn
-          %{resolver: resolver}, %{id: global_id}, info ->
-            case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
-              {:ok, result} ->
-                resolver.(result, info)
-              other ->
-                other
-            end
-        end
-
-        unquote(block)
-
-      end
-    end
-  end
-
-  defp __object__(identifier, opts, block) do
-    name = opts[:name] || identifier |> Atom.to_string |> Absinthe.Utils.camelize
-    quote do
-      object unquote(identifier), unquote(opts) do
-        @desc "The ID of an object"
-        field :id, non_null(:id) do
-          resolve Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(Macro.escape(opts[:id_fetcher])))
-        end
-        unquote(block)
-      end
+      interface :node
     end
   end
 
@@ -79,7 +131,7 @@ defmodule Absinthe.Relay.Node do
     case schema.__absinthe_type__(type_name) do
       nil ->
         {:error, "Unknown type `#{type_name}'"}
-      %{reference: %{identifier: ident}, interfaces: interfaces} ->
+      %{__reference__: %{identifier: ident}, interfaces: interfaces} ->
         if Enum.member?(interfaces || [], :node) do
           {:ok, %{type: ident, id: id}}
         else
@@ -91,16 +143,7 @@ defmodule Absinthe.Relay.Node do
     {:error, "Could not extract value from decoded ID `#{decoded}'"}
   end
 
-  defp decode(value) do
-    case Base.decode64(value) do
-      {:ok, _} = result ->
-        result
-      _ ->
-        {:error, ""}
-    end
-  end
-
-  def to_global_id(node_type, nil) do
+  def to_global_id(_node_type, nil) do
     {:error, "No source non-global ID value present on object"}
   end
   def to_global_id(node_type, source_id) do
@@ -114,7 +157,7 @@ defmodule Absinthe.Relay.Node do
     global_id_resolver(identifier, &default_id_fetcher/2)
   end
   def global_id_resolver(identifier, id_fetcher) when is_atom(identifier) do
-    fn obj, info ->
+    fn _obj, info ->
       type = Absinthe.Schema.lookup_type(info.schema, identifier)
       to_global_id(
         type.name,

@@ -118,7 +118,6 @@ defmodule StarWars.Schema do
     end
   end
 
-
   @desc "A faction in the Star Wars saga"
   node_object :faction do
 
@@ -130,7 +129,7 @@ defmodule StarWars.Schema do
 
   end
 
-  node_object :ship_connection do
+  object :ship_connection do
     # ...
   end
 

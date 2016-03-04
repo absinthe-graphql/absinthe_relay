@@ -31,6 +31,7 @@ defmodule Absinthe.Relay.SchemaTest do
 
     end
 
+    @desc "My Interface"
     node_interface do
       resolve_type fn
         %{age: _}, _ ->
@@ -58,9 +59,16 @@ defmodule Absinthe.Relay.SchemaTest do
   @jill_global_id Base.encode64("Person:jill")
   @papers_global_id Base.encode64("Business:papers")
 
-  describe "using Absinthe.Relay.Schema" do
-    it "gives you the :node type automatically" do
-      assert %Type.Interface{name: "Node"} = Schema.__absinthe_types__(:node)
+  describe "using node_interface" do
+    it "creates the :node type" do
+      assert %Type.Interface{name: "Node", description: "My Interface", fields: %{id: %Type.Field{name: "id", type: %Type.NonNull{of_type: :id}}}} = Schema.__absinthe_type__(:node)
+    end
+  end
+
+  describe "using node_field" do
+    it "creates the :node field" do
+      assert %{fields: %{node: %{name: "node", type: :node, resolve: resolver}}} = Schema.__absinthe_type__(:query)
+      assert !is_nil(resolver)
     end
   end
 
