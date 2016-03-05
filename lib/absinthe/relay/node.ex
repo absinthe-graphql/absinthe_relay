@@ -1,77 +1,331 @@
 defmodule Absinthe.Relay.Node do
+  @moduledoc """
 
-  use Absinthe.Type.Definitions
+  This module provides a macro `node` that should be used by schema
+  authors to add required "object identification" support for object
+  types, and to provide a unified interface for querying them.
 
-  alias __MODULE__
-  alias Absinthe.Type
-  alias Absinthe.Execution
+  More information can be found at:
+  - https://facebook.github.io/relay/docs/graphql-object-identification.html#content
+  - https://facebook.github.io/relay/graphql/objectidentification.htm
 
-  @type type_resolver_t :: ((any) -> Absinthe.Type.identifier_t)
-  @type object_resolver_t :: ((%{node_type: atom, id: binary}, Execution.Field.t) -> {:ok, any} | {:error, binary | [binary]})
-  @type id_fetcher_t :: ((any, Execution.Field.t) -> nil | binary)
+  ## Interface
+
+  Define a node interface for your schema, providing a type resolver that,
+  given a resolved object can determine which node object type it belongs to.
+
+  ```
+  node interface do
+    resolve_type fn
+      %{age: _}, _ ->
+        :person
+      %{employee_count: _}, _ ->
+        :business
+      _, _ ->
+        nil
+    end
+  end
+  ```
+
+  This will create an interface, `:node` that expects one field, `:id`, be
+  defined -- and that the ID will be a global identifier.
+
+  If you use the `node` macro to create your `object` types (see "Object" below),
+  this can be easily done, layered on top of the standard object type definition
+  style.
+
+  ## Field
+
+  The node field provides a unified interface to query for an object in the
+  system using a global ID. The node field should be defined within your schema
+  `query` and should provide a resolver that, given a map containing the object
+  type identifier and internal, non-global ID (the incoming global ID will be
+  parsed into these values for you automatically) can resolve the correct value.
+
+  ```
+  query do
+
+    # ...
+
+    node field do
+      resolve fn
+        %{type: :person, id: id}, _ ->
+          {:ok, Map.get(@people, id)}
+        %{type: :business, id: id}, _ ->
+          {:ok, Map.get(@businesses, id)}
+      end
+    end
+
+  end
+  ```
+
+  This creates a field, `:node`, with one argument: `:id`. This is expected to
+  be a global ID and, once resolved, will result in a value whose type
+  implements the `:node` interface.
+
+  Here's how you easly create object types that can be looked up using this
+  field:
+
+  ## Object
+
+  To play nicely with the `:node` interface and field, explained above, any
+  object types need to implement the `:node` interface and generate a global
+  ID as the value of its `:id` field. Using the `node` macro, you can easily do
+  this while retaining the usual object type definition style.
+
+  ```
+  node object :person do
+    field :name, :string
+    field :age, :string
+  end
+  ```
+
+  This will create an object type, `:person`, as you might expect. An `:id`
+  field is created for you automatically, and this field generates a global ID;
+  a Base64 string that's built using the object type name and the raw, internal
+  identifier. All of this is handled for you automatically by prefixing your
+  object type definition with `"node "`.
+
+  The raw, internal value is retrieved using `default_id_fetcher/2` which just
+  pattern matches an `:id` field from the resolved object. If you need to
+  extract/build an internal ID via another method, just provide a function as
+  an `:id_fetcher` option.
+
+  For instance, assuming your raw internal IDs were stored as `:_id`, you could
+  configure your object like this:
+
+  ```
+  node object :thing, id_fetcher: &my_custom_id_fetcher/2 do
+    field :name, :string
+  end
+  ```
+  """
+
+  alias Absinthe.Schema.Notation
 
   @doc """
-  Get the Node interface given an optional type resolver
-
-  - `type_resolver` - A function used to determine the concrete type of an
-    object that uses the interface.
+  Define a node interface, field, or object type for a schema. See the module documentation for more information.
   """
-  @spec interface(type_resolver_t | nil) :: Type.Interface.t
-  def interface(type_resolver \\ nil) do
-    %Type.Interface{
-      name: "Node",
-      description: "An object with an ID",
-      fields: fields(
-        id: [
-          type: non_null(:id),
-          description: "The id of the object."
-        ]
-      ),
-      resolve_type: type_resolver
-    }
+  defmacro node({:interface, _, _}, [do: block]) do
+    do_interface(__CALLER__, block)
+  end
+  defmacro node({:field, _, _}, [do: block]) do
+    do_field(__CALLER__, block)
+  end
+  defmacro node({:object, _, [identifier | rest]}, [do: block]) do
+    do_object(__CALLER__, identifier, List.flatten(rest), block)
   end
 
-  @doc """
-  Define the node field.
+  #
+  # INTERFACE
+  #
 
-  - `node_interface_identifier`: The defined type for the Node interface in your
-    schema
-  - `resolver` - The resolver function, should expect arguments `:type` and `:id`.
+  # Add the node interface
+  defp do_interface(env, block) do
+    env
+    |> Notation.recordable!(:interface)
+    |> record_interface!(:node, [], block)
+    Notation.desc_attribute_recorder(:node)
+  end
+
+  @doc false
+  # Record the node interface
+  def record_interface!(env, identifier, attrs, block) do
+    Notation.record_interface!(
+      env,
+      identifier,
+      Keyword.put_new(attrs, :description, "An object with an ID"),
+      [interface_body, block]
+    )
+  end
+
+  # An id field is automatically configured
+  defp interface_body do
+    quote do
+      field :id, non_null(:id), description: "The id of the object."
+    end
+  end
+
+  #
+  # FIELD
+  #
+
+  # Add the node field
+  defp do_field(env, block) do
+    env
+    |> Notation.recordable!(:field)
+    |> record_field!(:node, [type: :node], block)
+  end
+
+  @doc false
+  # Record the node field
+  def record_field!(env, identifier, attrs, block) do
+    Notation.record_field!(
+      env,
+      identifier,
+      Keyword.put_new(attrs, :description, "Fetches an object given its ID"),
+      [field_body, block]
+    )
+  end
+
+  # An id arg is automatically added
+  defp field_body do
+    quote do
+      @desc "The id of an object."
+      arg :id, non_null(:id)
+    end
+  end
+
+  #
+  # RESOLVE
+  #
+
+  @doc """
+  Define a resolver for a field.
+
+  If done within a `node field`, the resolver will receive a
+  `%{type: a_type_name, id: an_id}` value as the first argument.
+
+  ## Example
+
+  ```
+  query do
+
+    node field do
+      resolve fn
+        %{type: :person, id: id}, _ ->
+          {:ok, Map.get(@people, id)}
+        %{type: :business, id: id}, _ ->
+          {:ok, Map.get(@businesses, id)}
+      end
+    end
+
+  end
+  ```
+
+
   """
-  @spec field(Absinthe.Type.identifier_t, object_resolver_t) :: Type.Field.t
-  def field(node_interface_identifier, resolver) do
-    %Type.Field{
-      name: "ID",
-      description: "Fetches an object given its ID",
-      type: node_interface_identifier,
-      args: args(
-        id: [type: non_null(:id), description: "The id of an object."]
-      ),
-      resolve: fn
+  defmacro resolve(raw_func_ast) do
+    env = __CALLER__
+    func_ast = resolve_body(env, raw_func_ast)
+    Notation.record_resolve!(env, func_ast)
+  end
+
+  # Retrieve the AST for the resolver
+  # - Bare if this isn't for a node field.
+  # - Wrapped with global ID handling if
+  #   it is for a node field.
+  defp resolve_body(env, raw_func_ast) do
+    case scopes_status(env) do
+      [{:field, :node}, {:object, :query}] ->
+        resolve_with_global_id(raw_func_ast)
+      _ ->
+        Notation.recordable!(env, :resolve)
+        raw_func_ast
+    end
+  end
+
+  # Get tuples representing the current state of the scope
+  # stack
+  defp scopes_status(env) do
+    Notation.Scope.on(env.module)
+    |> Enum.map(fn
+      scope ->
+        {:%{}, [], ref_attrs} = scope.attrs[:__reference__]
+        {scope.name, ref_attrs[:identifier]}
+    end)
+  end
+
+  # Build a wrapper around a resolve function that
+  # parses the global ID before invoking it
+  defp resolve_with_global_id(raw_func_ast) do
+    quote do
+      fn
         %{id: global_id}, info ->
-          case Node.from_global_id(global_id, info.schema) do
+          case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
             {:ok, result} ->
-              resolver.(result, info)
+              user_resolver = unquote(raw_func_ast)
+              user_resolver.(result, info)
             other ->
               other
           end
+        _, info ->
+          user_resolver = unquote(raw_func_ast)
+          user_resolver.(%{}, info)
       end
-    }
+    end
+  end
+
+  #
+  # OBJECT
+  #
+
+  # Define a node object type
+  defp do_object(env, identifier, attrs, block) do
+    record_object!(env, identifier, attrs, block)
+  end
+
+  @doc false
+  # Record a node object type
+  def record_object!(env, identifier, attrs, block) do
+    name = attrs[:name] || identifier |> Atom.to_string |> Absinthe.Utils.camelize
+    Notation.record_object!(
+      env,
+      identifier,
+      Keyword.delete(attrs, :id_fetcher),
+      [object_body(name, attrs[:id_fetcher]), block]
+    )
+    Notation.desc_attribute_recorder(identifier)
+  end
+
+  # Automatically add:
+  # - An id field that resolves to the generated global ID
+  #   for an object of this type
+  # - A declaration that this implements the node interface
+  defp object_body(name, id_fetcher) do
+    quote do
+      @desc "The ID of an object"
+      field :id, non_null(:id) do
+        resolve Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(id_fetcher))
+      end
+      interface :node
+    end
   end
 
   @doc """
-  Define the node field.
+  Parse a global ID, given a schema.
 
-  * `resolver` - The resolver function, should expect arguments `:type` and `:id`.
+  ## Examples
 
-  This assumes you've defined the Node interface in your schema as `:node`. If
-  you've used another type identifier, use `node_field/2` instead.
+  For a valid, existing type in `Schema`:
+
+  ```
+  iex> from_global_id("UGVyc29uOjE=", Schema)
+  {:ok, %{type: :person, id: "1"}}
+  ```
+
+  For an invalid global ID value:
+
+  ```
+  iex> from_global_id("GHNF", Schema)
+  {:error, "Could not decode ID value `GHNF'"}
+  ```
+
+  For a type that isn't in the schema:
+
+  ```
+  iex> from_global_id("Tm9wZToxMjM=", Schema)
+  {:error, "Unknown type `Nope'"}
+  ```
+
+  For a type that is in the schema but isn't a node:
+
+  ```
+  iex> from_global_id("SXRlbToxMjM=", Schema)
+  {:error, "Type `Item' is not a valid node type"}
+  ```
   """
-  @spec field(object_resolver_t) :: Type.Field.t
-  def field(resolver) do
-    field(:node, resolver)
-  end
-
+  @spec from_global_id(binary, atom) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
   def from_global_id(global_id, schema) do
     case Base.decode64(global_id) do
       {:ok, decoded} ->
@@ -83,11 +337,11 @@ defmodule Absinthe.Relay.Node do
   end
 
   defp do_from_global_id([type_name, id], _, schema) when byte_size(id) > 0 and byte_size(type_name) > 0 do
-    case schema.types.by_name[type_name] do
+    case schema.__absinthe_type__(type_name) do
       nil ->
         {:error, "Unknown type `#{type_name}'"}
-      %{reference: %{identifier: ident}, interfaces: interfaces} ->
-        if Enum.member?(interfaces || [], :node) do
+      %{__reference__: %{identifier: ident}, interfaces: interfaces} ->
+        if Enum.member?(List.wrap(interfaces), :node) do
           {:ok, %{type: ident, id: id}}
         else
           {:error, "Type `#{type_name}' is not a valid node type"}
@@ -98,73 +352,33 @@ defmodule Absinthe.Relay.Node do
     {:error, "Could not extract value from decoded ID `#{decoded}'"}
   end
 
-  defp decode(value) do
-    case Base.decode64(value) do
-      {:ok, _} = result ->
-        result
-      _ ->
-        {:error, ""}
-    end
-  end
+  @doc """
+  Generate a global ID given a node type name and an internal (non-global) ID
 
-  def to_global_id(node_type, nil) do
+  ## Example
+
+  ```
+  iex> Absinthe.Relay.Node.to_global_id("Person", "123")
+  {:ok, "UGVyc29uOjEyMw=="}
+  ```
+  """
+  @spec to_global_id(binary, binary) :: {:ok, binary} | {:error, binary}
+  def to_global_id(_node_type, nil) do
     {:error, "No source non-global ID value present on object"}
   end
   def to_global_id(node_type, source_id) do
     {:ok, "#{node_type}:#{source_id}" |> Base.encode64}
   end
 
-  @doc """
-  Build a global ID field for a node type using a custom ID fetcher.
-
-  Unless the default ID fetcher (essentially `Map.get(obj, :id) |> to_string`)
-  is inappropriate for your node type, use `global_id_field/1`.
-  """
-  @spec global_id_field(binary | atom, id_fetcher_t) :: Type.Field.t
-  def global_id_field(type_identifier, id_fetcher) do
-    %Type.Field{
-      name: "id",
-      description: "The ID of an object",
-      type: non_null(:id),
-      resolve: global_id_resolver(type_identifier, id_fetcher)
-    }
-  end
-
-  @doc """
-  Build a global ID field for a node type using the default ID fetcher.
-
-  See `default_id_fetcher/2` for information on how raw, non-global IDs are
-  retrieved by default.
-
-  ## Examples
-
-  Using a type name:
-  ```
-  global_id_field("Business")
-  ```
-
-  Using a type identifier:
-  ```
-  global_id_field(:business)
-  ```
-
-  ## Performance Considerations
-
-  If using a type identifier instead of the type name, the
-  type name will have to be retrieved during field resolution to
-  generate the global ID.
-  """
-  @spec global_id_field(atom | binary) :: Type.Field.t
-  def global_id_field(type_identifier) do
-    global_id_field(type_identifier, &default_id_fetcher/2)
-  end
-
+  @doc false
   # The resolver for a global ID. If a type identifier instead of a type name
   # is used during field configuration, the type name needs to be looked up
   # during resolution.
-  @spec global_id_resolver(binary | atom, id_fetcher_t) :: Type.Field.resolver_t
-  defp global_id_resolver(identifier, id_fetcher) when is_atom(identifier) do
-    fn obj, info ->
+  def global_id_resolver(identifier, nil)  do
+    global_id_resolver(identifier, &default_id_fetcher/2)
+  end
+  def global_id_resolver(identifier, id_fetcher) when is_atom(identifier) do
+    fn _obj, info ->
       type = Absinthe.Schema.lookup_type(info.schema, identifier)
       to_global_id(
         type.name,
@@ -172,7 +386,7 @@ defmodule Absinthe.Relay.Node do
       )
     end
   end
-  defp global_id_resolver(type_name, id_fetcher) when is_binary(type_name) do
+  def global_id_resolver(type_name, id_fetcher) when is_binary(type_name) do
     fn _, info ->
       to_global_id(
         type_name,
@@ -204,6 +418,6 @@ defmodule Absinthe.Relay.Node do
   @spec default_id_fetcher(any, Execution.Field.t) :: nil | binary
   def default_id_fetcher(%{id: id}, _info) when is_nil(id), do: nil
   def default_id_fetcher(%{id: id}, _info), do: id |> to_string
-  def default_id_fetcher(_), do: nil
+  def default_id_fetcher(_, _), do: nil
 
 end

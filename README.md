@@ -1,10 +1,50 @@
 # Absinthe.Relay
 
 Support for the [Relay framework](https://facebook.github.io/relay/)
-from Elixir, using the [Absinthe](https://hex.pm/packages/absinthe)
+from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
 package.
 
 **IN INITIAL BUILD-OUT; NOT YET READY FOR USE**
+
+## Installation
+
+Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
+
+```elixir
+def deps do
+  [{:absinthe_relay, "~> 0.0.1"}]
+end
+```
+
+Add it to your `applications` configuration in `mix.exs`, too:
+
+```elixir
+def application do
+  [applications: [:absinthe_relay]]
+end
+```
+
+Note: Absinthe requires Elixir 1.2 or higher.
+
+## Upgrading
+
+See [CHANGELOG](./CHANGELOG.md) for upgrade steps between versions.
+
+## Documentation
+
+See "Usage," below, for basic usage information.
+
+- For the tutorial, guides, and general information about Absinthe-related
+  projects, see [http://absinthe-graphql.org](http://absinthe-graphql.org).
+- Links to the API documentation are available in the [project list](http://absinthe-graphql.org/projects).
+
+### Roadmap
+
+See the Roadmap on [absinthe-graphql.org](http://absinthe-graphql.org/roadmap).
+
+## Related Projects
+
+See the Project List on [absinthe-graphql.org](http://absinthe-graphql.org/projects).
 
 ## Roadmap & Contributions
 
@@ -15,71 +55,96 @@ We welcome issues and pull requests; please see [CONTRIBUTING](./CONTRIBUTING.md
 
 ## Usage
 
-### Node Interface
-
-Relay [requires an interface](https://facebook.github.io/relay/docs/graphql-object-identification.html), `node`, be defined in your schema to provide a simple way to fetch objects using a global ID scheme.
-
-To enable the `node` interface in your schema, use `Absinthe.Relay.Schema`
-_instead of_ `Absinthe.Schema`:
+Relay users should use `Absinthe.Relay.Schema` _instead of_ `Absinthe.Schema`:
 
 ```elixir
 use Absinthe.Relay.Schema
 ```
 
-This will automatically add the `:node` interface type and mark your schema as
-conforming to the `Absithe.Relay.Schema` behaviour.
+### Node Interface
 
-Now, add the `node` field to your schema, providing a resolver function for
-each planned node type:
+Relay
+[requires an interface](https://facebook.github.io/relay/docs/graphql-object-identification.html),
+`"Node"`, be defined in your schema to provide a simple way to fetch
+objects using a global ID scheme.
 
-```elixir
-def query do
-  %Type.Object{
-    fields: fields(
-      node: Absinthe.Relay.Node.field(fn
-        %{type: :person, id: id}, _ ->
-          {:ok, Map.get(@people, id)}
-        %{type: :business, id: id}, _ ->
-          {:ok, Map.get(@businesses, id)}
-      end)
-    )
-  }
-end
-```
-
-Next, add a `node_type_resolver/1` function that, given a resolved object,
-returns the type identifier for the object (this is used to generate
+Using `Absinthe.Relay`, this is how you can add node interface to your
+schema, providing a type resolver that, given a resolved object,
+returns the type identifier for the object type (this is used to generate
 global IDs):
 
 ```elixir
-def node_type_resolver(%{ships: _}), do: :faction
-def node_type_resolver(_), do: :ship
-```
-
-In your node types, you need to do two things:
-
-* Add `:node` to your interfaces list
-* Add the required `:id` field using the global ID scheme
-
-Here's an example:
-
-```elixir
-@absinthe :type
-def person do
-  %Type.Object{
-    fields: fields(
-      id: Absinthe.Relay.Node.global_id_field(:person),
-      name: [type: :string],
-      age: [type: :integer]
-    ),
-    interfaces: [:node]
-  }
+node interface do
+  resolve_type fn
+     %{age: _}, _ ->
+       :person
+     %{employee_count: _}, _ ->
+       :business
+     _, _ ->
+       nil
+  end
 end
 ```
 
-Note that `global_id_field` is given the name of the prefix to use. It's
-best to make this the same as the identifier for your type, as we did
-here with `:person`.
+### Node Field
+
+The node field provides a unified interface to query for an object in the
+system using a global ID. The node field should be defined within your schema
+`query` and should provide a resolver that, given a map containing the object
+type identifier and internal, non-global ID (the incoming global ID will be
+parsed into these values for you automatically) can resolve the correct value.
+
+```elixir
+query do
+
+  node field do
+    resolve fn
+      %{type: :person, id: id}, _ ->
+        {:ok, Map.get(@people, id)}
+      %{type: :business, id: id}, _ ->
+        {:ok, Map.get(@businesses, id)}
+    end
+  end
+
+end
+```
+
+Here's how you easly create object types that can be looked up using this
+field:
+
+### Node Objects
+
+To play nicely with the `:node` interface and field, explained above, any
+object types need to implement the `:node` interface and generate a global
+ID as the value of its `:id` field. Using the `node` macro, you can easily do
+this while retaining the usual object type definition style.
+
+```
+node object :person do
+  field :name, :string
+  field :age, :string
+end
+```
+
+This will create an object type, `:person`, as you might expect. An `:id`
+field is created for you automatically, and this field generates a global ID;
+a Base64 string that's built using the object type name and the raw, internal
+identifier. All of this is handled for you automatically by prefixing your
+object type definition with `"node "`.
+
+The raw, internal value is retrieved using `default_id_fetcher/2` which just
+pattern matches an `:id` field from the resolved object. If you need to
+extract/build an internal ID via another method, just provide a function as
+an `:id_fetcher` option.
+
+For instance, assuming your raw internal IDs were stored as `:_id`, you could
+configure your object like this:
+
+```
+node object :thing, id_fetcher: &my_custom_id_fetcher/2 do
+  field :name, :string
+end
+```
 
 ## License
 
