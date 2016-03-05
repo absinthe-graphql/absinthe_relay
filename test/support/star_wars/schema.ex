@@ -73,83 +73,74 @@ defmodule StarWars.Schema do
   alias StarWars.Database
   use Absinthe.Relay.Schema
 
-  alias Absinthe.Type
-  alias Absinthe.Relay.Node
-  alias Absinthe.Relay.Connection
+  query do
 
-  def query do
-    %Type.Object{
-      fields: fields(
-        rebels: [
-          type: :faction,
-          resolve: fn
-            _, _ ->
-              Database.get_rebels()
-          end
-        ],
-        empire: [
-          type: :faction,
-          resolve: fn
-            _, _ ->
-              Database.get_empire()
-          end
-        ],
-        node: Node.field(fn
-          %{type: node_type, id: id}, _ ->
-            Database.get(node_type, id)
-          _, _ ->
-            {:ok, nil}
-        end)
-      )
-    }
+    field :rebels, :faction do
+      resolve fn
+        _, _ ->
+          Database.get_rebels()
+      end
+    end
+
+    field :empire, :faction do
+      resolve fn
+        _, _ ->
+          Database.get_empire()
+      end
+    end
+
+    node field do
+      resolve fn
+        %{type: node_type, id: id}, _ ->
+          Database.get(node_type, id)
+        _, _ ->
+          {:ok, nil}
+      end
+    end
+
   end
 
-  @absinthe :type
-  def ship do
-    %Type.Object{
-      description: "A ship in the Star Wars saga",
-      fields: fields(
-        id: Node.global_id_field(:ship),
-        name: [type: :string, description: "The name of the ship."]
-      ),
-      interfaces: [:node]
-    }
+  @desc "A ship in the Star Wars saga"
+  node object :ship do
+
+    @desc "The name of the ship."
+    field :name, :string
+
   end
 
-  @absinthe :type
-  def ship_connection do
-    Connection.type(:ship)
+  node interface do
+    resolve_type fn
+      %{ships: _}, _ ->
+        :faction
+      _, _ ->
+        :ship
+    end
   end
 
-  def node_type_resolver(%{ships: _}, _), do: :faction
-  def node_type_resolver(_, _), do: :ship
+  @desc "A faction in the Star Wars saga"
+  node object :faction do
 
-  @absinthe :type
-  def faction do
-    %Type.Object{
-      description: "A faction in the Star Wars saga",
-      fields: fields(
-        id: Node.global_id_field(:faction),
-        name: [type: :string, description: "The name of the faction"],
-        ships: [
-          type: :ship_connection,
-          description: "The ships used by the faction.",
-          args: Connection.args,
-          resolve: fn
-            resolve_args, %{source: faction} ->
-              IO.inspect(faction: faction)
-              Connection.from_list(
-                Enum.map(faction.ships, fn
-                  id ->
-                    with {:ok, id} <- Database.get(:ship, id), do: id
-                end),
-                resolve_args
-              )
-          end
-        ]
-      ),
-      interfaces: [:node]
-    }
+    @desc "The name of the faction"
+    field :name, :string
+
+    @desc "The ships used by the faction."
+    connection field :ships, :ship_connection do
+      resolve fn
+        resolve_args, %{source: faction} ->
+          # TODO: Better syntax?
+          Connection.from_list(
+            Enum.map(faction.ships, fn
+              id ->
+                with {:ok, id} <- Database.get(:ship, id), do: id
+            end),
+            resolve_args
+          )
+      end
+    end
+
   end
+
+  connection object :ship_connection, :ship
+  # TODO: Edge type?
 
 end

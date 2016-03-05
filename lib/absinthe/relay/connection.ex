@@ -1,10 +1,6 @@
 defmodule Absinthe.Relay.Connection do
 
-  use Absinthe.Type.Definitions
-
-  alias __MODULE__
-  alias Absinthe.Type.Definitions
-  alias Absinthe.Type
+  use Absinthe.Schema.Notation
 
   @type cursor_t :: binary
 
