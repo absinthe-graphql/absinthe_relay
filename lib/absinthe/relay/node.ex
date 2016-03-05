@@ -104,9 +104,7 @@ defmodule Absinthe.Relay.Node do
   alias Absinthe.Schema.Notation
 
   @doc """
-  Define a node interface, field, or object type for a schema.
-
-  See the module documentation for more information.
+  Define a node interface, field, or object type for a schema. See the module documentation for more information.
   """
   defmacro node({:interface, _, _}, [do: block]) do
     do_interface(__CALLER__, block)
@@ -182,6 +180,31 @@ defmodule Absinthe.Relay.Node do
   # RESOLVE
   #
 
+  @doc """
+  Define a resolver for a field.
+
+  If done within a `node field`, the resolver will receive a
+  `%{type: a_type_name, id: an_id}` value as the first argument.
+
+  ## Example
+
+  ```
+  query do
+
+    node field do
+      resolve fn
+        %{type: :person, id: id}, _ ->
+          {:ok, Map.get(@people, id)}
+        %{type: :business, id: id}, _ ->
+          {:ok, Map.get(@businesses, id)}
+      end
+    end
+
+  end
+  ```
+
+
+  """
   defmacro resolve(raw_func_ast) do
     env = __CALLER__
     func_ast = resolve_body(env, raw_func_ast)
@@ -270,7 +293,37 @@ defmodule Absinthe.Relay.Node do
   end
 
   @doc """
-  Parse a global ID, given a schema
+  Parse a global ID, given a schema.
+
+  ## Examples
+
+  For a valid, existing type in `Schema`:
+
+  ```
+  iex> from_global_id("UGVyc29uOjE=", Schema)
+  {:ok, %{type: :person, id: "1"}}
+  ```
+
+  For an invalid global ID value:
+
+  ```
+  iex> from_global_id("GHNF", Schema)
+  {:error, "Could not decode ID value `GHNF'"}
+  ```
+
+  For a type that isn't in the schema:
+
+  ```
+  iex> from_global_id("Tm9wZToxMjM=", Schema)
+  {:error, "Unknown type `Nope'"}
+  ```
+
+  For a type that is in the schema but isn't a node:
+
+  ```
+  iex> from_global_id("SXRlbToxMjM=", Schema)
+  {:error, "Type `Item' is not a valid node type"}
+  ```
   """
   @spec from_global_id(binary, atom) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
   def from_global_id(global_id, schema) do
@@ -288,7 +341,7 @@ defmodule Absinthe.Relay.Node do
       nil ->
         {:error, "Unknown type `#{type_name}'"}
       %{__reference__: %{identifier: ident}, interfaces: interfaces} ->
-        if Enum.member?(interfaces || [], :node) do
+        if Enum.member?(List.wrap(interfaces), :node) do
           {:ok, %{type: ident, id: id}}
         else
           {:error, "Type `#{type_name}' is not a valid node type"}
@@ -301,6 +354,13 @@ defmodule Absinthe.Relay.Node do
 
   @doc """
   Generate a global ID given a node type name and an internal (non-global) ID
+
+  ## Example
+
+  ```
+  iex> Absinthe.Relay.Node.to_global_id("Person", "123")
+  {:ok, "UGVyc29uOjEyMw=="}
+  ```
   """
   @spec to_global_id(binary, binary) :: {:ok, binary} | {:error, binary}
   def to_global_id(_node_type, nil) do
