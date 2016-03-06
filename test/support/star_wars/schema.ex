@@ -73,6 +73,8 @@ defmodule StarWars.Schema do
   alias StarWars.Database
   use Absinthe.Relay.Schema
 
+  alias Absinthe.Relay.Connection
+
   query do
 
     field :rebels, :faction do
@@ -124,23 +126,22 @@ defmodule StarWars.Schema do
     field :name, :string
 
     @desc "The ships used by the faction."
-    connection field :ships, :ship_connection do
+    connection field :ships, :ship do
       resolve fn
         resolve_args, %{source: faction} ->
-          # TODO: Better syntax?
-          Connection.from_list(
+          connection = Connection.from_list(
             Enum.map(faction.ships, fn
               id ->
                 with {:ok, id} <- Database.get(:ship, id), do: id
             end),
             resolve_args
           )
+          {:ok, connection}
       end
     end
 
   end
 
-  connection object :ship_connection, :ship
-  # TODO: Edge type?
+  connection definition :ship
 
 end
