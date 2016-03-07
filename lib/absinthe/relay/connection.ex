@@ -8,20 +8,21 @@ defmodule Absinthe.Relay.Connection do
   @doc """
   Define a connection type for a given node type
   """
-  defmacro connection({:field, _, [identifier, node_type_identifier]}, [do: block]) do
-    do_connection_field(__CALLER__, identifier, node_type_identifier, [], block)
+  defmacro connection({:field, _, [identifier, attrs]}, [do: block]) when is_list(attrs) do
+    if attrs[:node_type] do
+      do_connection_field(__CALLER__, identifier, attrs[:node_type], [], block)
+    else
+      raise "`connection field' requires a `:node_type` option"
+    end
   end
-  defmacro connection({:definition, _, [node_type_identifier]}, [do: block]) do
+  defmacro connection([node_type: node_type_identifier], [do: block]) do
     do_connection_definition(__CALLER__, node_type_identifier, [], block)
   end
-  defmacro connection({:definition, _, [node_type_identifier]}) do
+  defmacro connection([node_type: node_type_identifier]) do
     do_connection_definition(__CALLER__, node_type_identifier, [], nil)
   end
-  defmacro connection(a) do
-    IO.inspect(a: a)
-  end
-  defmacro connection(a, b) do
-    IO.inspect(a: a, b: b)
+
+  defmacro edge([do: _block]) do
   end
 
   defp do_connection_field(env, identifier, node_type_identifier, attrs, block) do
@@ -54,6 +55,9 @@ defmodule Absinthe.Relay.Connection do
   def record_connection_definition!(env, node_type_identifier, nil) do
     record_connection_object!(env, node_type_identifier, [], nil)
     record_edge_object!(env, node_type_identifier, [], nil)
+  end
+  def record_connection_definition!(env, node_type_identifier, block) do
+    record_connection_object!(env, node_type_identifier, [], block)
   end
 
   @doc false
@@ -144,6 +148,16 @@ defmodule Absinthe.Relay.Connection do
     ]
   end
 
+  @empty_connection %{
+    edges: [],
+    page_info: %{
+      start_cursor: nil,
+      end_cursor: nil,
+      has_previous_page: nil,
+      has_next_page: nil
+    }
+  }
+
   @doc """
   Get a connection object for a list of data.
 
@@ -152,47 +166,43 @@ defmodule Absinthe.Relay.Connection do
   """
   @spec from_list(list, map) :: map
   def from_list(data, args) do
-    from_slice(data, args, %{slice_start: 0, data_length: length(data)})
-  end
-
-  @spec from_slice(list, map, map) :: map
-  def from_slice(data, args, %{slice_start: slice_start, data_length: data_length}) do
     %{after: aft, before: before, last: last, first: first} = struct(Options, args)
-    slice_end = slice_start + length(data)
-    before_offset = offset_with_default(before, data_length)
-    after_offset = offset_with_default(aft, -1)
-    start_offset = Enum.max([slice_start - 1, after_offset, -1])
-    end_offset = Enum.min([slice_end, before_offset, data_length])
-    if first, do: end_offset = Enum.min([end_offset, start_offset + first])
-    if last, do: start_offset = Enum.max([start_offset, end_offset - last])
-    # If supplied slice is too large, trim it down before mapping over it.
-    slice = Enum.slice(
-      data,
-      Enum.max([start_offset - slice_start, 0]),
-      length(data) - (slice_end - end_offset)
-    )
-    edges = slice
-    |> Enum.with_index
-    |> Enum.map(fn
-      {value, index} ->
-        %{
-          cursor: offset_to_cursor(start_offset + index),
-          node: value
-         }
-    end)
-    first_edge = edges |> List.first
-    last_edge = edges |> List.last
-    lower_bound = if aft, do: (after_offset + 1), else: 0
-    upper_bound = if before, do: before_offset, else: data_length
-    %{
-      edges: edges,
-      page_info: %{
-        start_cursor: (if first_edge, do: first_edge.cursor, else: nil),
-        end_cursor: (if last_edge, do: last_edge.cursor, else: nil),
-        has_previous_page: (if last, do: start_offset > lower_bound, else: false),
-        has_next_page: (if first, do: end_offset < upper_bound, else: false)
+    count = length(data)
+
+    begin_at = Enum.max([offset_with_default(aft, -1), -1]) + 1
+    end_at = Enum.min([offset_with_default(before, count + 1), count])
+    if begin_at > count || begin_at >= end_at do
+      @empty_connection
+    else
+      first_preslice_cursor = offset_to_cursor(begin_at)
+      last_preslice_cursor = offset_to_cursor(Enum.min([end_at, count]) - 1)
+
+      end_at = if first, do: Enum.min([begin_at + first, end_at]), else: end_at
+      begin_at = if last, do: Enum.map([end_at - last, begin_at]), else: begin_at
+
+      sliced_data = Enum.slice(data, begin_at, end_at - begin_at)
+      edges = sliced_data
+      |> Enum.with_index
+      |> Enum.map(fn
+        {value, index} ->
+          %{
+            cursor: offset_to_cursor(begin_at + index),
+            node: value
+          }
+      end)
+
+      first_edge = edges |> List.first
+      last_edge = edges |> List.last
+      %{
+        edges: edges,
+        page_info: %{
+          start_cursor: first_edge.cursor,
+          end_cursor: last_edge.cursor,
+          has_previous_page: (first_edge.cursor != first_preslice_cursor),
+          has_next_page: (last_edge.cursor != last_preslice_cursor)
+        }
       }
-    }
+    end
   end
 
   @spec offset_with_default(nil | binary, integer) :: integer

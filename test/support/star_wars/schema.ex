@@ -126,22 +126,25 @@ defmodule StarWars.Schema do
     field :name, :string
 
     @desc "The ships used by the faction."
-    connection field :ships, :ship do
+    connection field :ships, node_type: :ship do
       resolve fn
         resolve_args, %{source: faction} ->
           connection = Connection.from_list(
-            Enum.map(faction.ships, fn
-              id ->
-                with {:ok, id} <- Database.get(:ship, id), do: id
-            end),
-            resolve_args
-          )
-          {:ok, connection}
+          Enum.map(faction.ships, fn
+            id ->
+              with {:ok, value} <- Database.get(:ship, id) do
+              value
+            end
+          end),
+          resolve_args
+        )
+        {:ok, connection}
       end
     end
 
   end
 
-  connection definition :ship
+  # Default
+  connection node_type: :ship
 
 end

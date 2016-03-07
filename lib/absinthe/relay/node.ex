@@ -176,69 +176,9 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
-  #
-  # RESOLVE
-  #
-
-  @doc """
-  Define a resolver for a field.
-
-  If done within a `node field`, the resolver will receive a
-  `%{type: a_type_name, id: an_id}` value as the first argument.
-
-  ## Example
-
-  ```
-  query do
-
-    node field do
-      resolve fn
-        %{type: :person, id: id}, _ ->
-          {:ok, Map.get(@people, id)}
-        %{type: :business, id: id}, _ ->
-          {:ok, Map.get(@businesses, id)}
-      end
-    end
-
-  end
-  ```
-
-
-  """
-  defmacro resolve(raw_func_ast) do
-    env = __CALLER__
-    func_ast = resolve_body(env, raw_func_ast)
-    Notation.record_resolve!(env, func_ast)
-  end
-
-  # Retrieve the AST for the resolver
-  # - Bare if this isn't for a node field.
-  # - Wrapped with global ID handling if
-  #   it is for a node field.
-  defp resolve_body(env, raw_func_ast) do
-    case scopes_status(env) do
-      [{:field, :node}, {:object, :query}] ->
-        resolve_with_global_id(raw_func_ast)
-      _ ->
-        Notation.recordable!(env, :resolve)
-        raw_func_ast
-    end
-  end
-
-  # Get tuples representing the current state of the scope
-  # stack
-  defp scopes_status(env) do
-    Notation.Scope.on(env.module)
-    |> Enum.map(fn
-      scope ->
-        {:%{}, [], ref_attrs} = scope.attrs[:__reference__]
-        {scope.name, ref_attrs[:identifier]}
-    end)
-  end
-
   # Build a wrapper around a resolve function that
   # parses the global ID before invoking it
-  defp resolve_with_global_id(raw_func_ast) do
+  def resolve_with_global_id(raw_func_ast) do
     quote do
       fn
         %{id: global_id}, info ->
@@ -321,7 +261,7 @@ defmodule Absinthe.Relay.Node do
   For a type that is in the schema but isn't a node:
 
   ```
-  iex> from_global_id("SXRlbToxMjM=", Schema)
+  iex> from_global_id("Tm9wZToxMjM=", Schema)
   {:error, "Type `Item' is not a valid node type"}
   ```
   """
