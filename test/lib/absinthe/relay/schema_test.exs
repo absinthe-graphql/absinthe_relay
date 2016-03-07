@@ -4,7 +4,8 @@ defmodule Absinthe.Relay.SchemaTest do
   alias Absinthe.Type
 
   defmodule Schema do
-    use Absinthe.Relay.Schema
+    use Absinthe.Schema
+    use Absinthe.Relay
 
     @people %{"jack" => %{id: "jack", name: "Jack", age: 35},
               "jill" => %{id: "jill", name: "Jill", age: 31}}

@@ -2,7 +2,6 @@ defmodule Absinthe.Relay.Connection do
 
   use Absinthe.Schema.Notation
 
-  alias __MODULE__
   alias Absinthe.Schema.Notation
 
   @doc """
@@ -32,7 +31,7 @@ defmodule Absinthe.Relay.Connection do
   end
 
   # Generate connection & edge objects
-  defp do_connection_definition(env, node_type_identifier, attrs, block) do
+  defp do_connection_definition(env, node_type_identifier, _, block) do
     env
     |> Notation.recordable!(:object)
     |> record_connection_definition!(node_type_identifier, block)
@@ -209,7 +208,7 @@ defmodule Absinthe.Relay.Connection do
   defp offset_with_default(nil, default_offset) do
     default_offset
   end
-  defp offset_with_default(cursor, default_offset) do
+  defp offset_with_default(cursor, _) do
     cursor
     |> cursor_to_offset
   end

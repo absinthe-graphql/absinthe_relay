@@ -71,7 +71,9 @@
 defmodule StarWars.Schema do
 
   alias StarWars.Database
-  use Absinthe.Relay.Schema
+
+  use Absinthe.Schema
+  use Absinthe.Relay
 
   alias Absinthe.Relay.Connection
 

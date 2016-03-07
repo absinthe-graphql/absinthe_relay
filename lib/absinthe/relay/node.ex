@@ -173,27 +173,23 @@ defmodule Absinthe.Relay.Node do
     quote do
       @desc "The id of an object."
       arg :id, non_null(:id)
+
+      private Absinthe.Relay, :resolve, &Absinthe.Relay.Node.resolve_with_global_id/3
     end
   end
 
   # Build a wrapper around a resolve function that
   # parses the global ID before invoking it
-  def resolve_with_global_id(raw_func_ast) do
-    quote do
-      fn
-        %{id: global_id}, info ->
-          case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
-            {:ok, result} ->
-              user_resolver = unquote(raw_func_ast)
-              user_resolver.(result, info)
-            other ->
-              other
-          end
-        _, info ->
-          user_resolver = unquote(raw_func_ast)
-          user_resolver.(%{}, info)
-      end
+  def resolve_with_global_id(%{id: global_id}, info, designer_resolver) do
+    case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
+      {:ok, result} ->
+        designer_resolver.(result, info)
+      other ->
+        other
     end
+  end
+  def resolve_with_global_id(_, info, designer_resolver) do
+    designer_resolver.(%{}, info)
   end
 
   #

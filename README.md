@@ -48,6 +48,33 @@ See the Project List on [absinthe-graphql.org](http://absinthe-graphql.org/proje
 
 ## Usage
 
+Simply `use Absinthe.Relay` in your schema (or another module where you're
+defining types) to make use of the features explained below.
+
+For example, in a schema:
+
+```elixir
+defmodule Schema do
+  use Absinthe.Schema
+  use Absinthe.Relay
+
+  # ...
+
+end
+```
+
+In a different module where you're definining types:
+
+```elixir
+defmodule Schema do
+  use Absinthe.Schema.Notation
+  use Absinthe.Relay
+
+  # ...
+
+end
+```
+
 ### Node Interface
 
 Relay
