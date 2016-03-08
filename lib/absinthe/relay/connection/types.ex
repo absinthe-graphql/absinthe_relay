@@ -1,4 +1,5 @@
 defmodule Absinthe.Relay.Connection.Types do
+  @moduledoc false
 
   use Absinthe.Schema.Notation
 

@@ -1,6 +1,6 @@
 defmodule Absinthe.Relay.Connection do
   @moduledoc """
-  Pagination
+  Support for paginated result sets.
 
   Define connection types that provide a standard mechanism for slicing and
   paginating result sets.
@@ -26,7 +26,7 @@ defmodule Absinthe.Relay.Connection do
 
   This will automatically define two new types: `:pet_connection` and `:pet_edge`.
 
-  We could define a field that uses these types to paginate associated records
+  We define a field that uses these types to paginate associated records
   by using `connection field`. Here, for instance, we support paginating a
   person's pets:
 
