@@ -76,9 +76,12 @@ defmodule StarWars.Database do
   def data, do: @data
 
   def get(node_type, id) do
-    data
-    |> get_in([node_type, id])
-    |> Flag.as(:ok)
+    case data |> get_in([node_type, id]) do
+      nil ->
+        {:error, "No #{node_type} with ID #{id}"}
+      result ->
+        {:ok, result}
+    end
   end
 
   def get_factions(names) do

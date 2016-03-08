@@ -4,7 +4,8 @@ Support for the [Relay framework](https://facebook.github.io/relay/)
 from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
 package.
 
-**IN INITIAL BUILD-OUT; NOT YET READY FOR USE**
+Please note that this is the initial release of this package and that
+significant API changes are expected before v1.0.
 
 ## Installation
 
@@ -32,7 +33,7 @@ See [CHANGELOG](./CHANGELOG.md) for upgrade steps between versions.
 
 ## Documentation
 
-See "Usage," below, for basic usage information.
+See "Usage," below, for basic usage information and links to specific resources.
 
 - For the tutorial, guides, and general information about Absinthe-related
   projects, see [http://absinthe-graphql.org](http://absinthe-graphql.org).
@@ -46,19 +47,33 @@ See the Roadmap on [absinthe-graphql.org](http://absinthe-graphql.org/roadmap).
 
 See the Project List on [absinthe-graphql.org](http://absinthe-graphql.org/projects).
 
-## Roadmap & Contributions
-
-For a list of specific planned features and version targets, see the
-[milestone list](https://github.com/CargoSense/absinthe_relay/milestones).
-
-We welcome issues and pull requests; please see [CONTRIBUTING](./CONTRIBUTING.md).
-
 ## Usage
 
-Relay users should use `Absinthe.Relay.Schema` _instead of_ `Absinthe.Schema`:
+Simply `use Absinthe.Relay` in your schema (or another module where you're
+defining types) to make use of the features explained below.
+
+For example, in a schema:
 
 ```elixir
-use Absinthe.Relay.Schema
+defmodule Schema do
+  use Absinthe.Schema
+  use Absinthe.Relay
+
+  # ...
+
+end
+```
+
+In a different module where you're defining types:
+
+```elixir
+defmodule Schema do
+  use Absinthe.Schema.Notation
+  use Absinthe.Relay
+
+  # ...
+
+end
 ```
 
 ### Node Interface
@@ -68,83 +83,20 @@ Relay
 `"Node"`, be defined in your schema to provide a simple way to fetch
 objects using a global ID scheme.
 
-Using `Absinthe.Relay`, this is how you can add node interface to your
-schema, providing a type resolver that, given a resolved object,
-returns the type identifier for the object type (this is used to generate
-global IDs):
+See the [Absinthe.Relay.Node](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Node.html)
+module documentation for specific instructions on how do design a schema that makes use of nodes.
 
-```elixir
-node interface do
-  resolve_type fn
-     %{age: _}, _ ->
-       :person
-     %{employee_count: _}, _ ->
-       :business
-     _, _ ->
-       nil
-  end
-end
-```
+### Connection
 
-### Node Field
+Relay uses
+[Connection](http://facebook.github.io/relay/docs/graphql-connections.html)
+(and other related) types to provide a standardized way of slicing and
+paginating a one-to-many relationship.
 
-The node field provides a unified interface to query for an object in the
-system using a global ID. The node field should be defined within your schema
-`query` and should provide a resolver that, given a map containing the object
-type identifier and internal, non-global ID (the incoming global ID will be
-parsed into these values for you automatically) can resolve the correct value.
+Support in this package is designed to match the [Relay Cursor Connection Specification](http://facebook.github.io/relay/graphql/connections.htm).
 
-```elixir
-query do
-
-  node field do
-    resolve fn
-      %{type: :person, id: id}, _ ->
-        {:ok, Map.get(@people, id)}
-      %{type: :business, id: id}, _ ->
-        {:ok, Map.get(@businesses, id)}
-    end
-  end
-
-end
-```
-
-Here's how you easly create object types that can be looked up using this
-field:
-
-### Node Objects
-
-To play nicely with the `:node` interface and field, explained above, any
-object types need to implement the `:node` interface and generate a global
-ID as the value of its `:id` field. Using the `node` macro, you can easily do
-this while retaining the usual object type definition style.
-
-```
-node object :person do
-  field :name, :string
-  field :age, :string
-end
-```
-
-This will create an object type, `:person`, as you might expect. An `:id`
-field is created for you automatically, and this field generates a global ID;
-a Base64 string that's built using the object type name and the raw, internal
-identifier. All of this is handled for you automatically by prefixing your
-object type definition with `"node "`.
-
-The raw, internal value is retrieved using `default_id_fetcher/2` which just
-pattern matches an `:id` field from the resolved object. If you need to
-extract/build an internal ID via another method, just provide a function as
-an `:id_fetcher` option.
-
-For instance, assuming your raw internal IDs were stored as `:_id`, you could
-configure your object like this:
-
-```
-node object :thing, id_fetcher: &my_custom_id_fetcher/2 do
-  field :name, :string
-end
-```
+See the [Absinthe.Relay.Connection](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Connection.html)
+module documentation for specific instructions on how do design a schema that makes use of nodes.
 
 ## License
 
