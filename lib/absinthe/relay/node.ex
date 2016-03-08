@@ -174,7 +174,7 @@ defmodule Absinthe.Relay.Node do
       @desc "The id of an object."
       arg :id, non_null(:id)
 
-      private Absinthe.Relay, :resolve, &Absinthe.Relay.Node.resolve_with_global_id/3
+      private Absinthe, :resolve, &Absinthe.Relay.Node.resolve_with_global_id/3
     end
   end
 

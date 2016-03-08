@@ -21,7 +21,20 @@ defmodule Absinthe.Relay.Connection do
     do_connection_definition(__CALLER__, node_type_identifier, [], nil)
   end
 
-  defmacro edge([do: _block]) do
+  defmacro edge(attrs, [do: block]) do
+    __CALLER__
+    |> do_edge(attrs, block)
+  end
+  defmacro edge([do: block]) do
+    __CALLER__
+    |> do_edge([], block)
+  end
+
+  @private_node_type_path [Absinthe.Relay, :node_type]
+  defp do_edge(env, attrs, block) do
+    Notation.recordable!(env, :edge, private_lookup: @private_node_type_path)
+    node_type_identifier = Notation.get_in_private(env.module, @private_node_type_path)
+    record_edge_object!(env, node_type_identifier, attrs, block)
   end
 
   defp do_connection_field(env, identifier, node_type_identifier, attrs, block) do
@@ -90,6 +103,7 @@ defmodule Absinthe.Relay.Connection do
     quote do
       field :page_info, type: non_null(:page_info)
       field :edges, type: list_of(unquote(edge_type))
+      private Absinthe.Relay, :node_type, unquote(node_type_identifier)
     end
   end
 

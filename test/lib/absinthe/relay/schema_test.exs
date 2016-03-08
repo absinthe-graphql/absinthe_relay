@@ -210,10 +210,8 @@ defmodule Absinthe.Relay.SchemaTest do
 
   end
 
-  @tag :extra_fields
   describe "Defining custom connection and edge fields" do
-    IO.inspect(CustomConnectionAndEdgeFieldsSchema.__absinthe_type__(:pet_connection))
-    it "work normally" do
+    it "allows querying those additional fields" do
       result = """
       query FirstPetName($personId: ID!) {
         node(id: $personId) {
@@ -235,6 +233,5 @@ defmodule Absinthe.Relay.SchemaTest do
     end
 
   end
-
 
 end
