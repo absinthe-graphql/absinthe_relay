@@ -1,4 +1,126 @@
 defmodule Absinthe.Relay.Connection do
+  @moduledoc """
+  Pagination
+
+  Define connection types that provide a standard mechanism for slicing and
+  paginating result sets.
+
+  For information about the connection model, see the Relay Cursor Connections Specification
+  at https://facebook.github.io/relay/graphql/connections.htm.
+
+  ## Connection
+
+  Given an object type, eg:
+
+  ```
+  object :pet do
+    field :name, :string
+  end
+  ```
+
+  You can create a connection type to paginate them by:
+
+  ```
+  connection node_type: :pet
+  ```
+
+  This will automatically define two new types: `:pet_connection` and `:pet_edge`.
+
+  We could define a field that uses these types to paginate associated records
+  by using `connection field`. Here, for instance, we support paginating a
+  person's pets:
+
+  ```
+  object :person do
+    field :first_name, :string
+    connection field :pets, node_type: :pet do
+      resolve fn
+        pagination_args, %{source: person} ->
+          Absinthe.Relay.Connection.from_list(
+            Enum.map(person.petIds, &getPetById(&1)),
+            pagination_args
+          )
+        end
+      end
+    end
+  end
+  ```
+
+  The `:pets` field is automatically set to return a `:pet_connection` type,
+  and configured to accept the standard pagination arguments `after`, `before`,
+  `first`, and `last`. We create the connection by using
+  `Absinthe.Relay.Connection.from_list/2`, which takes a list and the pagination
+  arguments passed to the resolver.
+
+  Note: `Absinthe.Relay.Connection.from_list/2`, like `connectionFromArray` in
+  the JS implementation, expects that the full list of records be materialized
+  and provided -- it just discards what it doesn't need. Planned for future
+  development is an implementation more like
+  `connectionFromArraySlice`, intended for use in cases where you know
+  the cardinality of the connection, consider it too large to
+  materialize the entire array, and instead wish pass in a slice of
+  the total result large enough to cover the range specified in the
+  pagination arguments.
+
+  Here's how you might request the names of the first `$petCount` pets a person
+  owns:
+
+  ```
+  query FindPets($personId: ID!, $petCount: Int!) {
+    person(id: $personId) {
+      pets(first: $petCount) {
+        pageInfo {
+          hasPreviousPage
+          hasNextPage
+        }
+        edges {
+          node {
+            name
+          }
+        }
+      }
+    }
+  }
+  ```
+
+  `edges` here is the list of intermediary edge types (created for you
+  automatically) that contain a field, `node`, that is the same `:node_type` you
+  passed earlier (`:pet`).
+
+  `pageInfo` is a field that contains information about the current view; the `startCursor`,
+  `endCursor`, `hasPreviousPage`, and `hasNextPage` fields.
+
+  ### Customizing Types
+
+  If you'd like to add additional fields to the generated connection and edge
+  types, you can do that by providing a block to the `connection` macro, eg,
+  here we add a field, `:twice_edges_count` to the connection type, and another,
+  `:node_name_backwards`, to the edge type:
+
+  ```
+  connection node_type: :pet do
+    field :twice_edges_count, :integer do
+      resolve fn
+        _, %{source: conn} ->
+          {:ok, length(conn.edges) * 2}
+        end
+      end
+    edge do
+      field :node_name_backwards, :string do
+      resolve fn
+        _, %{source: edge} ->
+          {:ok, edge.node.name |> String.reverse}
+        end
+      end
+    end
+  end
+  ```
+
+  Just remember that if you use the block form of `connection`, you must call
+  the `edge` macro within the block.
+
+  """
+
 
   use Absinthe.Schema.Notation
 

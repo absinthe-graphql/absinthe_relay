@@ -1,5 +1,6 @@
 defmodule Absinthe.Relay.Node do
   @moduledoc """
+  Object Identification
 
   This module provides a macro `node` that should be used by schema
   authors to add required "object identification" support for object
