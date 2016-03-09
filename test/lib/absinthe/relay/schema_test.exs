@@ -12,7 +12,7 @@ defmodule Absinthe.Relay.SchemaTest do
 
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay
+    use Absinthe.Relay.Schema
 
     @people %{"jack" => %{id: "jack", name: "Jack", age: 35},
               "jill" => %{id: "jill", name: "Jill", age: 31}}
@@ -138,7 +138,7 @@ defmodule Absinthe.Relay.SchemaTest do
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema
-    use Absinthe.Relay
+    use Absinthe.Relay.Schema
 
     @people %{"jack" => %{id: "jack", name: "Jack", age: 35, pets: ["1", "2"]},
               "jill" => %{id: "jill", name: "Jill", age: 31, pets: ["3"]}}
