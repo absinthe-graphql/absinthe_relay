@@ -292,21 +292,34 @@ defmodule Absinthe.Relay.Node do
   @doc """
   Generate a global ID given a node type name and an internal (non-global) ID
 
-  ## Example
+  ## Examples
 
   ```
-  iex> Absinthe.Relay.Node.to_global_id("Person", "123")
-  {:ok, "UGVyc29uOjEyMw=="}
+  iex> to_global_id("Person", "123")
+  "UGVyc29uOjEyMw=="
+  iex> to_global_id(:person, "123", SchemaWithPersonType)
+  "UGVyc29uOjEyMw=="
+  iex> to_global_id(:person, nil, SchemaWithPersonType)
+  "No source non-global ID value given"
   ```
   """
-  @spec to_global_id(binary, binary) :: {:ok, binary} | {:error, binary}
+  @spec to_global_id(atom | binary, integer | binary | nil) :: binary | nil
   def to_global_id(_node_type, nil) do
-    {:error, "No source non-global ID value present on object"}
+    nil
   end
-  def to_global_id(node_type, source_id) do
-    {:ok, "#{node_type}:#{source_id}" |> Base.encode64}
+  def to_global_id(node_type, source_id) when is_binary(node_type) do
+    "#{node_type}:#{source_id}" |> Base.encode64
+  end
+  def to_global_id(node_type, source_id, schema) when is_atom(node_type) do
+    case Absinthe.Schema.lookup_type(schema, node_type) do
+      nil ->
+        nil
+      type ->
+        to_global_id(type.name, source_id)
+    end
   end
 
+  @missing_internal_id_error "No source non-global ID value could be fetched from the source object"
   @doc false
   # The resolver for a global ID. If a type identifier instead of a type name
   # is used during field configuration, the type name needs to be looked up
@@ -317,18 +330,22 @@ defmodule Absinthe.Relay.Node do
   def global_id_resolver(identifier, id_fetcher) when is_atom(identifier) do
     fn _obj, info ->
       type = Absinthe.Schema.lookup_type(info.schema, identifier)
-      to_global_id(
-        type.name,
-        id_fetcher.(info.source, info)
-      )
+      case id_fetcher.(info.source, info) do
+        nil ->
+          {:error, @missing_internal_id_error}
+        internal_id ->
+          {:ok, to_global_id(type.name, internal_id)}
+      end
     end
   end
   def global_id_resolver(type_name, id_fetcher) when is_binary(type_name) do
     fn _, info ->
-      to_global_id(
-        type_name,
-        id_fetcher.(info.source, info)
-      )
+      case id_fetcher.(info.source, info) do
+        nil ->
+          {:error, @missing_internal_id_error}
+        internal_id ->
+          {:ok, to_global_id(type_name, internal_id)}
+      end
     end
   end
 
