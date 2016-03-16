@@ -4,6 +4,7 @@ defmodule Absinthe.Relay do
 
   - Global Identification: See `Absinthe.Relay.Node`
   - Connection Model: See `Absinthe.Relay.Connection`
+  - Mutations: See `Absinthe.Relay.Mutation`
 
   ## Examples
 
@@ -31,7 +32,7 @@ defmodule Absinthe.Relay do
   end
   ```
 
-  See `Absinthe.Relay.Node` and `Absinthe.Relay.Connection` for
-  specific macro information.
+  See `Absinthe.Relay.Node`, `Absinthe.Relay.Connection`, and
+  `Absinthe.Relay.Mutation` for specific macro information.
   """
 end

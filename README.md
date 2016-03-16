@@ -99,6 +99,15 @@ Support in this package is designed to match the [Relay Cursor Connection Specif
 See the [Absinthe.Relay.Connection](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Connection.html)
 module documentation for specific instructions on how do design a schema that makes use of nodes.
 
+## Mutation
+
+Relay supports mutation via [a contract](https://facebook.github.io/relay/docs/graphql-mutations.html) involving single input object arguments with and client mutation
+IDs.
+
+Support in this package is designed to match the [Relay Input Object Mutations Specification](https://facebook.github.io/relay/graphql/mutations.htm).
+
+See the [Absinthe.Relay.Mutation](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Mutation.html) module documentation for specific instructions on how to design a schema that makes use of mutations.
+
 ## License
 
 BSD License
