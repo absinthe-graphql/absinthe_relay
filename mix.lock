@@ -1,4 +1,4 @@
-%{"absinthe": {:git, "https://github.com/absinthe-graphql/absinthe.git", "1b43c65a7d9c8ca55433e771f7bd10a483e4fba6", []},
+%{"absinthe": {:git, "https://github.com/absinthe-graphql/absinthe.git", "f2e24926d82f3ab99e85270acb772e52faa70c49", []},
   "earmark": {:hex, :earmark, "0.1.19"},
   "ex_doc": {:hex, :ex_doc, "0.11.2"},
   "ex_spec": {:hex, :ex_spec, "1.0.0"},
