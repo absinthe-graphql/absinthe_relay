@@ -1,7 +1,7 @@
 defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
-  @version "0.0.1"
+  @version "0.8.0"
 
   def project do
     [app: :absinthe_relay,
