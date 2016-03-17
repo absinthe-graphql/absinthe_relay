@@ -83,28 +83,55 @@ defmodule Absinthe.Relay.Mutation do
   """
   defmacro payload({:field, _, [field_ident]}, [do: block]) do
     __CALLER__
+    |> do_payload(field_ident, [], block)
+  end
+  defmacro payload({:field, _, [field_ident | rest]}, [do: block]) do
+    __CALLER__
+    |> do_payload(field_ident, List.flatten(rest), block)
+  end
+  defmacro payload({:field, _, [field_ident | rest]}) do
+    __CALLER__
+    |> do_payload(field_ident, List.flatten(rest), nil)
+  end
+
+  defp do_payload(env, field_ident, attrs, block) do
+    env
     |> Notation.recordable!(:field)
-    |> record_field!(field_ident, block)
+    |> record_field!(field_ident, attrs, block)
   end
 
   @doc false
   # Record the mutation field
-  def record_field!(env, field_ident, block) do
+  def record_field!(env, field_ident, attrs, block) do
     Notation.record_field!(
       env,
       field_ident,
-      [type: ident(field_ident, :payload)],
-      [field_body(field_ident), block]
+      Keyword.put(attrs, :type, ident(field_ident, :payload)),
+      [
+        field_body(field_ident),
+        block,
+        finalize
+      ]
     )
   end
 
-  #
   defp field_body(field_ident) do
     input_type_identifier = ident(field_ident, :input)
     quote do
       arg :input, non_null(unquote(input_type_identifier))
       private Absinthe.Relay, :mutation_field_identifier, unquote(field_ident)
       private Absinthe, :resolve, &Absinthe.Relay.Mutation.resolve_with_input/3
+    end
+  end
+
+  defp finalize do
+    quote do
+      input do
+        # Default!
+      end
+      output do
+        # Default!
+      end
     end
   end
 
@@ -155,7 +182,9 @@ defmodule Absinthe.Relay.Mutation do
   # Record the mutation input object
   def record_input_object!(env, base_identifier, block) do
     identifier = ident(base_identifier, :input)
-    Notation.record_input_object!(env, identifier, [], [client_mutation_id_field, block])
+    unless already_recorded?(env.module, :input_object, identifier) do
+      Notation.record_input_object!(env, identifier, [], [client_mutation_id_field, block])
+    end
   end
 
   #
@@ -176,12 +205,18 @@ defmodule Absinthe.Relay.Mutation do
   # Record the mutation input object
   def record_object!(env, base_identifier, block) do
     identifier = ident(base_identifier, :payload)
-    Notation.record_object!(env, identifier, [], [client_mutation_id_field, block])
+    unless already_recorded?(env.module, :object, identifier) do
+      Notation.record_object!(env, identifier, [], [client_mutation_id_field, block])
+    end
   end
 
   #
   # UTILITIES
   #
+
+  defp already_recorded?(mod, kind, identifier) do
+    Notation.Scope.recorded?(mod, kind, identifier)
+  end
 
   # Construct a namespaced identifier
   defp ident(base_identifier, category) do
