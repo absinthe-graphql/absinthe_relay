@@ -2,8 +2,8 @@ defmodule Absinthe.Relay.Node do
   @moduledoc """
   Support for global object identification.
 
-  This module provides a macro `node` that should be used by schema
-  authors to add required "object identification" support for object
+  This module provides a macro, `node`, that should be used by schema
+  designers to add required "object identification" support for object
   types, and to provide a unified interface for querying them.
 
   More information can be found at:
