@@ -110,7 +110,7 @@ See the [Absinthe.Relay.Mutation](https://hexdocs.pm/absinthe_relay/Absinthe.Rel
 
 ## Supporting the Babel Relay Plugin
 
-To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/guides-babel-plugin.html), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
+To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/guides-babel-plugin.html#schema-json), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
 
 Here's the usage information for the task:
 
