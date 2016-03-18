@@ -108,6 +108,32 @@ Support in this package is designed to match the [Relay Input Object Mutations S
 
 See the [Absinthe.Relay.Mutation](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Mutation.html) module documentation for specific instructions on how to design a schema that makes use of mutations.
 
+## Supporting the Babel Relay Plugin
+
+To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/guides-babel-plugin.html), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
+
+Here's the usage information for the task:
+
+```
+mix absinthe.schema.json
+
+Generate a schema.json file
+
+Usage
+
+┃ absinthe.schema.json Schema.Module.Name [FILENAME]
+
+Options
+
+--json-codec Sets JSON Codec. Default: Poison --pretty Whether to pretty-print
+(Poison-only). Default: false
+
+Examples
+
+┃ $ mix absinthe.schema.json MySchema
+┃ $ mix absinthe.schema.json MySchema ../path/to/schema.json
+```
+
 ## License
 
 BSD License
