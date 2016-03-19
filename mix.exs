@@ -20,7 +20,7 @@ defmodule AbsintheRelay.Mixfile do
      files: ["lib", "mix.exs", "README*"],
      maintainers: ["Bruce Williams"],
      licenses: ["BSD"],
-     links: %{github: "https://github.com/CargoSense/absinthe_relay"}]
+     links: %{github: "https://github.com/absinthe-graphql/absinthe_relay"}]
   end
 
   def application do
