@@ -99,7 +99,7 @@ Support in this package is designed to match the [Relay Cursor Connection Specif
 See the [Absinthe.Relay.Connection](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Connection.html)
 module documentation for specific instructions on how do design a schema that makes use of nodes.
 
-## Mutation
+### Mutation
 
 Relay supports mutation via [a contract](https://facebook.github.io/relay/docs/graphql-mutations.html) involving single input object arguments with and client mutation
 IDs.
@@ -112,26 +112,21 @@ See the [Absinthe.Relay.Mutation](https://hexdocs.pm/absinthe_relay/Absinthe.Rel
 
 To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/guides-babel-plugin.html#schema-json), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
 
-Here's the usage information for the task:
+In your project, check out the documentation with:
 
 ```
-mix absinthe.schema.json
+mix help absinthe.schema.json
+```
 
-Generate a schema.json file
+## Schema IDL
 
-Usage
+If you'd like to generate a `schema.graphql` file that describes your schema in
+GraphQL IDL, run the `absinthe.schema.graphql` Mix task in your project.
 
-┃ absinthe.schema.json Schema.Module.Name [FILENAME]
+Check out the documentation with:
 
-Options
-
---json-codec Sets JSON Codec. Default: Poison --pretty Whether to pretty-print
-(Poison-only). Default: false
-
-Examples
-
-┃ $ mix absinthe.schema.json MySchema
-┃ $ mix absinthe.schema.json MySchema ../path/to/schema.json
+```
+mix help absinthe.schema.graphql
 ```
 
 ## License
