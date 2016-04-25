@@ -36,10 +36,10 @@ defmodule Absinthe.Relay.Connection do
     connection field :pets, node_type: :pet do
       resolve fn
         pagination_args, %{source: person} ->
-          Absinthe.Relay.Connection.from_list(
+          {:ok, Absinthe.Relay.Connection.from_list(
             Enum.map(person.pet_ids, &pet_from_id(&1)),
             pagination_args
-          )
+          )}
         end
       end
     end
