@@ -37,7 +37,7 @@ defmodule AbsintheRelay.Mixfile do
       {:ecto, "~> 1.0 or ~> 2.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.11.0", only: :dev},
-      {:earmark, "~> 0.1.19", only: :dev},
+      {:earmark, "~> 0.2", only: :dev},
       {:ex_spec, "~> 1.0.0", only: :test}
     ]
   end

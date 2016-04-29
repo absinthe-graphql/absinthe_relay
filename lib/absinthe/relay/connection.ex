@@ -137,16 +137,6 @@ defmodule Absinthe.Relay.Connection do
 
   alias Absinthe.Relay.Connection.Options
 
-  @empty_connection %{
-    edges: [],
-    page_info: %{
-      start_cursor: nil,
-      end_cursor: nil,
-      has_previous_page: nil,
-      has_next_page: nil
-    }
-  }
-
   @doc """
   Get a connection object for a list of data.
 
@@ -154,18 +144,24 @@ defmodule Absinthe.Relay.Connection do
   a connection object for use in GraphQL.
   """
   @spec from_list(list, map) :: map
-  def from_list(data, args) do
+  def from_list(data, args, opts \\ []) do
     limit = limit(args)
     offset = offset(args, limit)
 
+    opts =
+      opts
+      |> Keyword.put_new(:has_next_page, length(data) > (offset + limit))
+      |> Keyword.put_new(:has_previous_page, offset > 0)
+
     data
     |> Enum.slice(offset, offset + limit)
-    |> from_slice(args, has_next_page: length(data) > (offset + limit))
+    |> from_slice(args, opts)
   end
 
   @type from_slice_opts :: [
     max: pos_integer,
     has_next_page: boolean,
+    has_previous_page: boolean,
   ]
 
   @doc """
@@ -186,24 +182,26 @@ defmodule Absinthe.Relay.Connection do
 
     {edges, first, last} = build_cursors(items, offset)
 
-    has_next_page = case Keyword.fetch(opts, :has_next_page) do
-      {:ok, value} -> value
-      :error -> length(items) >= limit
-    end
-
     page_info = %{
       start_cursor: first,
       end_cursor: last,
       has_previous_page: false,
-      has_next_page: has_next_page,
+      has_next_page: Keyword.get(opts, :has_next_page, length(items) >= limit),
     }
     %{edges: edges, page_info: page_info}
   end
 
   @doc """
-  Sets the limit and offset on an Ecto Query
+  Build a connection from an Ecto Query
+
+  This will automatically set a limit and offset value on the ecto query,
+  and then run the query with whatever function is passed as the second argument.
+
+  Note: Your query MUST have an order_by value. Offset does not make sense without
+  one.
 
   ## Example
+  ```
   alias Absinthe.Relay
 
   def connection(args, _) do
@@ -213,6 +211,7 @@ defmodule Absinthe.Relay.Connection do
       |> Relay.Connection.from_query(&Repo.all/1, args)
     {:ok, conn}
   end
+  ```
   """
   @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
   @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_slice_opts) :: map
@@ -220,6 +219,7 @@ defmodule Absinthe.Relay.Connection do
   if Code.ensure_loaded?(Ecto) do
     def from_query(query, repo_fun, args, opts) do
       require Ecto.Query
+
       limit = limit(args)
       offset = offset(args, limit)
 
@@ -254,6 +254,12 @@ defmodule Absinthe.Relay.Connection do
   def limit(%{last: last}), do: last
   def limit(_), do: 0
 
+  @doc """
+  Returns the offset for a page.
+
+  The limit is required because if using backwards pagination the limit will be
+  subtracted from the offset.
+  """
   def offset(%{after: cursor}, _) do
     cursor_to_offset(cursor) + 1
   end
