@@ -2,10 +2,9 @@ defmodule Absinthe.Relay.Mutation do
   @moduledoc """
   Support for building mutations with single inputs and client mutation IDs.
 
-  This module provides a macro, `payload`, that should be used by schema
-  designers to support mutation fields that receive a single input object
-  argument with a client mutation ID and return that ID as part of the
-  response payload.
+  The `payload` macro can be used by schema designers to support mutation
+  fields that receive a single input object argument with a client mutation ID
+  and return that ID as part of the response payload.
 
   More information can be found at:
   - https://facebook.github.io/relay/docs/graphql-mutations.html
@@ -22,7 +21,7 @@ defmodule Absinthe.Relay.Mutation do
   Notice the `resolve` function doesn't need to know anything about the
   wrapping `input` argument -- it only concerns itself with the contents
   -- and the client mutation ID doesn't need to be dealt with, either. It
-  will be returned as part of the response payload.
+  will be returned as part of the response payload automatically.
 
   ```
   mutation do
@@ -73,6 +72,12 @@ defmodule Absinthe.Relay.Mutation do
 
   For this reason, the identifier passed to `payload field` must be unique
   across your schema.
+
+  ## Macros
+
+  For more details on `payload` and other mutation-related macros, see
+  `Absinthe.Relay.Mutation.Notation`.
+
   """
 
   @doc false

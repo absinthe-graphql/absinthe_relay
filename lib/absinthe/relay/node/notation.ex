@@ -1,9 +1,17 @@
 defmodule Absinthe.Relay.Node.Notation do
 
+  @moduledoc """
+  Macros used to define Node-related schema entities
+
+  See `Absinthe.Relay.Node` for examples of use.
+  """
+
   alias Absinthe.Schema.Notation
 
   @doc """
-  Define a node interface, field, or object type for a schema. See the module documentation for more information.
+  Define a node interface, field, or object type for a schema.
+
+  See the `Absinthe.Relay.Node` module documentation for examples.
   """
   defmacro node({:interface, _, _}, [do: block]) do
     do_interface(__CALLER__, block)

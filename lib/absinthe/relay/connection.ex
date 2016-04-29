@@ -104,8 +104,8 @@ defmodule Absinthe.Relay.Connection do
       resolve fn
         _, %{source: conn} ->
           {:ok, length(conn.edges) * 2}
-        end
       end
+    end
     edge do
       field :node_name_backwards, :string do
       resolve fn
@@ -120,6 +120,10 @@ defmodule Absinthe.Relay.Connection do
   Just remember that if you use the block form of `connection`, you must call
   the `edge` macro within the block.
 
+  ## Macros
+
+  For more details on connection-related macros, see
+  `Absinthe.Relay.Connection.Notation`.
   """
 
   use Absinthe.Schema.Notation

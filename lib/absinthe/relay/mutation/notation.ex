@@ -1,10 +1,16 @@
 defmodule Absinthe.Relay.Mutation.Notation do
 
+  @moduledoc """
+  Macros used to define Mutation-related schema entities.
+
+  See `Absinthe.Relay.Mutation` for examples of use.
+  """
+
   use Absinthe.Schema.Notation
   alias Absinthe.Schema.Notation
 
   @doc """
-  Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
+  Define a mutation with a single input and a client mutation ID. See the `Absinthe.Relay.Mutation` module documentation for more information.
   """
   defmacro payload({:field, _, [field_ident]}, [do: block]) do
     __CALLER__
@@ -78,7 +84,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
   #
 
   @doc """
-  Defines the input type for your payload field. See the module documentation for more information.
+  Defines the input type for your payload field. See the `Absinthe.Relay.Mutation` module documentation for an example.
   """
   defmacro input([do: block]) do
     env = __CALLER__
@@ -101,7 +107,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
   #
 
   @doc """
-  Defines the output (payload) type for your payload field. See the module documentation for more information.
+  Defines the output (payload) type for your payload field. See the `Absinthe.Relay.Mutation` module documentation for an example.
   """
   defmacro output([do: block]) do
     env = __CALLER__

@@ -2,9 +2,9 @@ defmodule Absinthe.Relay.Node do
   @moduledoc """
   Support for global object identification.
 
-  This module provides a macro, `node`, that should be used by schema
-  designers to add required "object identification" support for object
-  types, and to provide a unified interface for querying them.
+  The `node` macro can be used by schema designers to add required
+  "object identification" support for object types, and to provide a unified
+  interface for querying them.
 
   More information can be found at:
   - https://facebook.github.io/relay/docs/graphql-object-identification.html#content
@@ -100,6 +100,12 @@ defmodule Absinthe.Relay.Node do
     field :name, :string
   end
   ```
+
+  ## Macros
+
+  For more details on node-related macros, see
+  `Absinthe.Relay.Node.Notation`.
+
   """
 
   # Build a wrapper around a resolve function that

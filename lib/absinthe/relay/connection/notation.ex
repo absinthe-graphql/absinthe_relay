@@ -1,5 +1,11 @@
 defmodule Absinthe.Relay.Connection.Notation do
 
+  @moduledoc """
+  Macros used to define Connection-related schema entities
+
+  See `Absinthe.Relay.Connection` for more information.
+  """
+
   alias Absinthe.Schema.Notation
 
   defmodule Naming do
@@ -37,7 +43,50 @@ defmodule Absinthe.Relay.Connection.Notation do
   end
 
   @doc """
-  Define a connection type for a given node type
+  Define a connection type for a given node type.
+
+  ## Examples
+
+  A basic connection for a node type, `:pet`. This well generate simple
+  `:pet_connection` and `:pet_edge` types for you:
+
+  ```
+  connection node_type: :pet
+  ```
+
+  You can provide a custom name for the connection type (just don't include the
+  word "connection"). You must still provide the `:node_type`. You can create as
+  many different connections to a node type as you want.
+
+  This example will create a connection type, `:favorite_pets_connection`, and
+  an edge type, `:favorite_pets_edge`:
+
+  ```
+  connection :favorite_pets, node_type: :pet
+  ```
+
+  You can customize the connection object just like any other `object`:
+
+  ```
+  connection :favorite_pets, node_type: :pet do
+    field :total_age, :float do
+      resolve fn
+        _, %{source: conn} ->
+          sum = conn.edges
+          |> Enum.map(fn edge -> edge.node.age)
+          |> Enum.sum
+          {:ok, sum}
+      end
+    end
+    edge do
+      # ...
+    end
+  end
+  ```
+
+  Just remember that if you use the block form of `connection`, you must call
+  the `edge` macro within the block to make sure the edge type is generated.
+  See the `edge` macro below for more information.
   """
   defmacro connection({:field, _, [identifier, attrs]}, [do: block]) when is_list(attrs) do
     field_attrs = Keyword.drop(attrs, [:node_type, :connection])
@@ -55,6 +104,25 @@ defmodule Absinthe.Relay.Connection.Notation do
     do_connection_definition(__CALLER__, naming, object_attrs, block)
   end
 
+  @doc """
+  Customize the edge type.
+
+  ## Examples
+
+  ```
+  connection node_type: :pet do
+    # ...
+    edge do
+      field :node_name_backwards, :string do
+        resolve fn
+          _, %{source: edge} ->
+            {:ok, edge.node.name |> String.reverse}
+        end
+      end
+    end
+  end
+  ```
+  """
   defmacro edge(attrs, [do: block]) do
     __CALLER__
     |> do_edge(attrs, block)
