@@ -1,3 +1,12 @@
+defmodule Absinthe.Relay.Connection.Options do
+  @moduledoc false
+
+  @typedoc false
+  @type t :: %{after: nil | integer, before: nil | integer, first: nil | integer, last: nil | integer}
+
+  defstruct after: nil, before: nil, first: nil, last: nil
+end
+
 defmodule Absinthe.Relay.Connection do
   @moduledoc """
   Support for paginated result sets.
@@ -126,17 +135,7 @@ defmodule Absinthe.Relay.Connection do
   `Absinthe.Relay.Connection.Notation`.
   """
 
-  use Absinthe.Schema.Notation
-  alias Absinthe.Schema.Notation
-
-  defmodule Options do
-    @moduledoc false
-
-    @typedoc false
-    @type t :: %{after: nil | integer, before: nil | integer, first: nil | integer, last: nil | integer}
-
-    defstruct after: nil, before: nil, first: nil, last: nil
-  end
+  alias Absinthe.Relay.Connection.Options
 
   @empty_connection %{
     edges: [],
@@ -156,53 +155,134 @@ defmodule Absinthe.Relay.Connection do
   """
   @spec from_list(list, map) :: map
   def from_list(data, args) do
-    %{after: aft, before: before, last: last, first: first} = struct(Options, args)
-    count = length(data)
+    limit = limit(args)
+    offset = offset(args, limit)
 
-    begin_at = Enum.max([offset_with_default(aft, -1), -1]) + 1
-    end_at = Enum.min([offset_with_default(before, count + 1), count])
-    if begin_at > count || begin_at >= end_at do
-      @empty_connection
-    else
-      first_preslice_cursor = offset_to_cursor(begin_at)
-      last_preslice_cursor = offset_to_cursor(Enum.min([end_at, count]) - 1)
+    data
+    |> Enum.slice(offset, offset + limit)
+    |> from_slice(args, has_next_page: length(data) > (offset + limit))
+  end
 
-      end_at = if first, do: Enum.min([begin_at + first, end_at]), else: end_at
-      begin_at = if last, do: Enum.map([end_at - last, begin_at]), else: begin_at
+  @type from_slice_opts :: [
+    max: pos_integer,
+    has_next_page: boolean,
+  ]
 
-      sliced_data = Enum.slice(data, begin_at, end_at - begin_at)
-      edges = sliced_data
-      |> Enum.with_index
-      |> Enum.map(fn
-        {value, index} ->
-          %{
-            cursor: offset_to_cursor(begin_at + index),
-            node: value
-          }
-      end)
+  @doc """
+  Build a connection from slice
 
-      first_edge = edges |> List.first
-      last_edge = edges |> List.last
-      %{
-        edges: edges,
-        page_info: %{
-          start_cursor: first_edge.cursor,
-          end_cursor: last_edge.cursor,
-          has_previous_page: (first_edge.cursor != first_preslice_cursor),
-          has_next_page: (last_edge.cursor != last_preslice_cursor)
-        }
-      }
+  This function assumes you have already retrieved precisely the number of items
+  to be returned in the connection.
+  """
+  @spec from_slice(list, Options.t) :: map
+  @spec from_slice(list, Options.t, opts :: from_slice_opts) :: map
+  def from_slice(items, pagination_args, opts \\ []) do
+    limit = case Keyword.fetch(opts, :max) do
+      {:ok, val} -> limit(pagination_args, val)
+      :error -> limit(pagination_args)
+    end
+
+    offset = offset(pagination_args, limit)
+
+    {edges, first, last} = build_cursors(items, offset)
+
+    has_next_page = case Keyword.fetch(opts, :has_next_page) do
+      {:ok, value} -> value
+      :error -> length(items) >= limit
+    end
+
+    page_info = %{
+      start_cursor: first,
+      end_cursor: last,
+      has_previous_page: false,
+      has_next_page: has_next_page,
+    }
+    %{edges: edges, page_info: page_info}
+  end
+
+  @doc """
+  Sets the limit and offset on an Ecto Query
+
+  ## Example
+  alias Absinthe.Relay
+
+  def connection(args, _) do
+    conn =
+      Post
+      |> where(author_id: ^user.id)
+      |> Relay.Connection.from_query(&Repo.all/1, args)
+    {:ok, conn}
+  end
+  """
+  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
+  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_slice_opts) :: map
+  def from_query(query, repo_fun, args, opts \\ [])
+  if Code.ensure_loaded?(Ecto) do
+    def from_query(query, repo_fun, args, opts) do
+      require Ecto.Query
+      limit = limit(args)
+      offset = offset(args, limit)
+
+      query
+      |> Ecto.Query.limit(^limit)
+      |> Ecto.Query.offset(^offset)
+      |> repo_fun.()
+      |> from_slice(args, opts)
+    end
+  else
+    def from_query(_, _, _, _, _) do
+      raise ArgumentError, """
+      Ecto not Loaded!
+
+      You cannot use this unless Ecto is also a dependency
+      """
     end
   end
 
-  @spec offset_with_default(nil | binary, integer) :: integer
-  defp offset_with_default(nil, default_offset) do
-    default_offset
+  @spec limit(Options.t, pos_integer) :: pos_integer
+  def limit(args, val) do
+    args
+    |> limit
+    |> min(val)
   end
-  defp offset_with_default(cursor, _) do
-    cursor
-    |> cursor_to_offset
+
+  @doc """
+  Returns the maximal number of records to retrieve
+  """
+  @spec limit(Options.t) :: pos_integer
+  def limit(%{first: first}), do: first
+  def limit(%{last: last}), do: last
+  def limit(_), do: 0
+
+  def offset(%{after: cursor}, _) do
+    cursor_to_offset(cursor) + 1
   end
+  def offset(%{before: cursor}, limit) do
+    max(cursor_to_offset(cursor) - 1 - limit, 0)
+  end
+  def offset(_, _), do: 0
+
+  defp build_cursors([], _offset), do: {[], nil, nil}
+  defp build_cursors([item | items], offset) do
+    first = offset_to_cursor(offset)
+    first_edge = %{
+      node: item,
+      cursor: first
+    }
+    {edges, last} = do_build_cursors(items, offset + 1, [first_edge], first)
+    {edges, first, last}
+  end
+
+  defp do_build_cursors([], _, edges, last), do: {Enum.reverse(edges), last}
+  defp do_build_cursors([item | rest], i, edges, _last) do
+    cursor = offset_to_cursor(i)
+    edge = %{
+      node: item,
+      cursor: cursor
+    }
+    do_build_cursors(rest, i + 1, [edge | edges], cursor)
+  end
+
 
   @cursor_prefix "arrayconnection:"
 

@@ -81,7 +81,7 @@ defmodule StarWars.ConnectionTest do
         query EndOfRebelShipsQuery {
           rebels {
             name,
-            ships(first: 3 after: "YXJyYXljb25uZWN0aW9uOjE=") {
+            ships(first: 3, after: "YXJyYXljb25uZWN0aW9uOjE=") {
               edges {
                 cursor,
                 node {
@@ -127,7 +127,7 @@ defmodule StarWars.ConnectionTest do
         query RebelsQuery {
           rebels {
             name,
-            ships(first: 3 after: "YXJyYXljb25uZWN0aW9uOjQ=") {
+            ships(first: 3, after: "YXJyYXljb25uZWN0aW9uOjQ=") {
               edges {
                 cursor,
                 node {
@@ -164,7 +164,7 @@ defmodule StarWars.ConnectionTest do
                 hasNextPage
               }
             }
-            moreShips: ships(first: 3 after: "YXJyYXljb25uZWN0aW9uOjE=") {
+            moreShips: ships(first: 3, after: "YXJyYXljb25uZWN0aW9uOjE=") {
               edges {
                 node {
                   name
@@ -224,5 +224,13 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
+  end
+
+  @tag :pending
+  describe "Ecto Helper" do
+    describe "build_query/2" do
+      it "should set the appropriate limit and offset" do
+      end
+    end
   end
 end
