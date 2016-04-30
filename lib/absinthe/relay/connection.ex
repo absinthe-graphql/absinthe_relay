@@ -104,8 +104,8 @@ defmodule Absinthe.Relay.Connection do
       resolve fn
         _, %{source: conn} ->
           {:ok, length(conn.edges) * 2}
-        end
       end
+    end
     edge do
       field :node_name_backwards, :string do
       resolve fn
@@ -120,127 +120,14 @@ defmodule Absinthe.Relay.Connection do
   Just remember that if you use the block form of `connection`, you must call
   the `edge` macro within the block.
 
-  """
+  ## Macros
 
+  For more details on connection-related macros, see
+  `Absinthe.Relay.Connection.Notation`.
+  """
 
   use Absinthe.Schema.Notation
-
   alias Absinthe.Schema.Notation
-
-  @doc """
-  Define a connection type for a given node type
-  """
-  defmacro connection({:field, _, [identifier, attrs]}, [do: block]) when is_list(attrs) do
-    if attrs[:node_type] do
-      do_connection_field(__CALLER__, identifier, attrs[:node_type], [], block)
-    else
-      raise "`connection field' requires a `:node_type` option"
-    end
-  end
-  defmacro connection([node_type: node_type_identifier], [do: block]) do
-    do_connection_definition(__CALLER__, node_type_identifier, [], block)
-  end
-  defmacro connection([node_type: node_type_identifier]) do
-    do_connection_definition(__CALLER__, node_type_identifier, [], nil)
-  end
-
-  defmacro edge(attrs, [do: block]) do
-    __CALLER__
-    |> do_edge(attrs, block)
-  end
-  defmacro edge([do: block]) do
-    __CALLER__
-    |> do_edge([], block)
-  end
-
-  @private_node_type_path [Absinthe.Relay, :node_type]
-  defp do_edge(env, attrs, block) do
-    Notation.recordable!(env, :edge, private_lookup: @private_node_type_path)
-    node_type_identifier = Notation.get_in_private(env.module, @private_node_type_path)
-    record_edge_object!(env, node_type_identifier, attrs, block)
-  end
-
-  defp do_connection_field(env, identifier, node_type_identifier, attrs, block) do
-    env
-    |> Notation.recordable!(:field)
-    |> record_connection_field!(identifier, node_type_identifier, attrs, block)
-  end
-
-  # Generate connection & edge objects
-  defp do_connection_definition(env, node_type_identifier, _, block) do
-    env
-    |> Notation.recordable!(:object)
-    |> record_connection_definition!(node_type_identifier, block)
-  end
-
-  @doc false
-  # Record a connection field
-  def record_connection_field!(env, identifier, node_type_identifier, attrs, block) do
-    pagination = Keyword.get(attrs, :paginate, :both)
-    Notation.record_field!(
-      env,
-      identifier,
-      [type: ident(node_type_identifier, :connection)] ++ Keyword.delete(attrs, :paginate),
-      [paginate_args(pagination), block]
-    )
-  end
-
-  @doc false
-  # Record a connection and edge types
-  def record_connection_definition!(env, node_type_identifier, nil) do
-    record_connection_object!(env, node_type_identifier, [], nil)
-    record_edge_object!(env, node_type_identifier, [], nil)
-  end
-  def record_connection_definition!(env, node_type_identifier, block) do
-    record_connection_object!(env, node_type_identifier, [], block)
-  end
-
-  @doc false
-  # Record the connection object
-  def record_connection_object!(env, node_type_identifier, attrs, block) do
-    Notation.record_object!(
-      env,
-      ident(node_type_identifier, :connection),
-      attrs,
-      [connection_object_body(node_type_identifier), block]
-    )
-  end
-
-  @doc false
-  # Record the edge object
-  def record_edge_object!(env, node_type_identifier, attrs, block) do
-    Notation.record_object!(
-      env,
-      ident(node_type_identifier, :edge),
-      attrs,
-      [edge_object_body(node_type_identifier), block]
-    )
-  end
-
-  defp ident(node_type_identifier, category) do
-    :"#{node_type_identifier}_#{category}"
-  end
-
-  defp connection_object_body(node_type_identifier) do
-    edge_type = ident(node_type_identifier, :edge)
-    quote do
-      field :page_info, type: non_null(:page_info)
-      field :edges, type: list_of(unquote(edge_type))
-      private Absinthe.Relay, :node_type, unquote(node_type_identifier)
-    end
-  end
-
-  defp edge_object_body(node_type_identifier) do
-    quote do
-
-      @desc "The item at the end of the edge"
-      field :node, unquote(node_type_identifier)
-
-      @desc "A cursor for use in pagination"
-      field :cursor, non_null(:string)
-
-    end
-  end
 
   defmodule Options do
     @moduledoc false
@@ -249,39 +136,6 @@ defmodule Absinthe.Relay.Connection do
     @type t :: %{after: nil | integer, before: nil | integer, first: nil | integer, last: nil | integer}
 
     defstruct after: nil, before: nil, first: nil, last: nil
-  end
-
-  # Forward pagination arguments.
-  #
-  # Arguments appropriate to include on a field whose type is a connection
-  # with forward pagination.
-  defp paginate_args(:forward) do
-    quote do
-      arg :after, :string
-      arg :first, :integer
-    end
-  end
-
-  # Backward pagination arguments.
-
-  # Arguments appropriate to include on a field whose type is a connection
-  # with backward pagination.
-  defp paginate_args(:backward) do
-    quote do
-      arg :before, :string
-      arg :last, :integer
-    end
-  end
-
-  # Pagination arguments (both forward and backward).
-
-  # Arguments appropriate to include on a field whose type is a connection
-  # with both forward and backward pagination.
-  defp paginate_args(:both) do
-    [
-      paginate_args(:forward),
-      paginate_args(:backward)
-    ]
   end
 
   @empty_connection %{

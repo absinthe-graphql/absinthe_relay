@@ -8,9 +8,9 @@ defmodule Absinthe.Relay.Schema.Notation do
 
   defmacro __using__(_opts) do
     quote do
-      import Absinthe.Relay.Mutation, only: :macros
-      import Absinthe.Relay.Node, only: :macros
-      import Absinthe.Relay.Connection, only: :macros
+      import Absinthe.Relay.Mutation.Notation, only: :macros
+      import Absinthe.Relay.Node.Notation, only: :macros
+      import Absinthe.Relay.Connection.Notation, only: :macros
     end
   end
 
