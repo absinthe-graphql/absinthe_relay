@@ -30,7 +30,7 @@ defmodule Absinthe.Relay.NodeTest do
     query do
       field :foo, :foo do
         arg :id, non_null(:id)
-        resolve parsing_node_ids(&resolve_foo/2, __MODULE__, id: :foo)
+        resolve parsing_node_ids(&resolve_foo/2, id: :foo)
       end
     end
 

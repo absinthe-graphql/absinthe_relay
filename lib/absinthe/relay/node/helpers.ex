@@ -11,14 +11,14 @@ defmodule Absinthe.Relay.Node.Helpers do
   `:item` type)
 
   ```
-  resolve parsing_node_ids(&my_field_resolver/2, TheSchema, item_id: :item)
+  resolve parsing_node_ids(&my_field_resolver/2, item_id: :item)
   ```
   """
-  def parsing_node_ids(resolver, schema, id_keys) do
+  def parsing_node_ids(resolver, id_keys) do
     fn args, info ->
       args = Enum.reduce(id_keys, args, fn {key, type}, args ->
         with {:ok, global_id} <- Map.fetch(args, key),
-             {:ok, %{id: id, type: ^type}} <- Node.from_global_id(global_id, schema) do
+             {:ok, %{id: id, type: ^type}} <- Node.from_global_id(global_id, info.schema) do
           {:success, Map.put(args, key, id)}
         end
         |> case do
