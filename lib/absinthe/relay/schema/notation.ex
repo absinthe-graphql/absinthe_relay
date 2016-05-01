@@ -10,6 +10,7 @@ defmodule Absinthe.Relay.Schema.Notation do
     quote do
       import Absinthe.Relay.Mutation.Notation, only: :macros
       import Absinthe.Relay.Node.Notation, only: :macros
+      import Absinthe.Relay.Node.Helpers
       import Absinthe.Relay.Connection.Notation, only: :macros
     end
   end

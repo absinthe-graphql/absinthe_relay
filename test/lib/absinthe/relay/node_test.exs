@@ -7,15 +7,40 @@ defmodule Absinthe.Relay.NodeTest do
     use Absinthe.Schema
     use Absinthe.Relay.Schema
 
-    object :foo do
+    @foos %{
+      "1" => %{id: "1", name: "Bar"}
+    }
+
+    node interface do
+      resolve_type fn
+        _, _  ->
+          # We just resolve :foos for now
+          :foo
+      end
+    end
+
+    node object :foo do
       field :name, :string
     end
 
-    object :other_foo, name: "FancyFoo" do
+    node object :other_foo, name: "FancyFoo" do
       field :name, :string
+    end
+
+    query do
+      field :foo, :foo do
+        arg :id, non_null(:id)
+        resolve parsing_node_ids(&resolve_foo/2, __MODULE__, id: :foo)
+      end
+    end
+
+    defp resolve_foo(%{id: id}, _) do
+      {:ok, Map.get(@foos, id)}
     end
 
   end
+
+  @foo_id Base.encode64("Foo:1")
 
   describe "to_global_id" do
 
@@ -41,6 +66,17 @@ defmodule Absinthe.Relay.NodeTest do
 
     it "fails given a bad ID" do
       assert is_nil(Node.to_global_id("Foo", nil))
+    end
+
+  end
+
+  describe "parsing_node_id_args" do
+
+    it "parses correctly" do
+      result = """
+      { foo(id: "#{@foo_id}") { id name } }
+      """ |> Absinthe.run(Schema)
+      assert {:ok, %{data: %{"foo" => %{"name" => "Bar", "id" => @foo_id}}}} == result
     end
 
   end
