@@ -129,7 +129,19 @@ defmodule Absinthe.Relay.Connection do
   Just remember that if you use the block form of `connection`, you must call
   the `edge` macro within the block.
 
-  ## Macros
+  ## Creating Connections
+
+  This module provides two functions that mirror similar Javascript functions,
+  `from_list/2,3` and `from_slice/2,3`. We also provide `from_query/2,3` if you
+  have Ecto as a dependency for convenience.
+
+  Use `from_list` when you have all items in a list that you're going to
+  paginate over.
+
+  Use `from_slice` when you have items for a particular request, and merely need
+  a connection produced from these items.
+
+  ## Schema Macros
 
   For more details on connection-related macros, see
   `Absinthe.Relay.Connection.Notation`.
@@ -137,56 +149,135 @@ defmodule Absinthe.Relay.Connection do
 
   alias Absinthe.Relay.Connection.Options
 
+  @cursor_prefix "arrayconnection:"
+
+  @type t :: %{
+    edges: [edge],
+    page_info: page_info
+  }
+
+  @typedoc """
+  An opaque pagination cursor
+
+  Internally it has the base64 encoded structure:
+
+  ```
+  #{@cursor_prefix}:$offset
+  ```
+  """
+  @type cursor :: binary
+
+  @type edge :: %{
+    node: term,
+    cursor: cursor
+  }
+
+  @typedoc """
+  Offset from zero.
+
+  Negative offsets are not supported.
+  """
+  @type offset :: non_neg_integer
+  @type limit :: non_neg_integer
+
+  @type page_info :: %{
+    start_cursor: cursor,
+    end_cursor: cursor,
+    has_previous_page: boolean,
+    has_next_page: boolean
+  }
+
   @doc """
   Get a connection object for a list of data.
 
   A simple function that accepts a list and connection arguments, and returns
   a connection object for use in GraphQL.
+
+  The data given to it should constitute all data that further pagination requests
+  may page over. As such, it may be very inefficient if you're pulling data
+  from a database which could be used to more directly retrieve just the desired
+  data.
+
+  See also `from_query` and `from_slice`.
+
+  ## Example
+  ```
+  @items ~w(foo bar baz)
+  def connection(args, _) do
+    {:ok, Connection.from_list(@items, args)}
+  end
+  ```
   """
-  @spec from_list(list, map) :: map
+  @spec from_list(data :: list, args :: Option.t) :: t
   def from_list(data, args, opts \\ []) do
-    limit = limit(args)
-    offset = offset(args, limit)
+    count = length(data)
+    {offset, limit} = case limit(args, opts[:max]) do
+      {:forward, limit} ->
+        {offset(args) || 0, limit}
+
+      {:backward, limit} ->
+        offset = offset(args) || count
+        {max(offset - limit, 0), limit}
+    end
 
     opts =
       opts
-      |> Keyword.put_new(:has_next_page, length(data) > (offset + limit))
-      |> Keyword.put_new(:has_previous_page, offset > 0)
+      |> Keyword.put_new(:has_next_page, count > (offset + limit))
+      |> Keyword.put_new(:has_previous_page, offset - limit > 0)
 
     data
     |> Enum.slice(offset, offset + limit)
-    |> from_slice(args, opts)
+    |> from_slice(offset, opts)
   end
 
   @type from_slice_opts :: [
-    max: pos_integer,
     has_next_page: boolean,
     has_previous_page: boolean,
   ]
+
+  @type pagination_direction :: :forward | :backward
 
   @doc """
   Build a connection from slice
 
   This function assumes you have already retrieved precisely the number of items
-  to be returned in the connection.
+  to be returned in this connection request.
+
+  Often this function is used internally by other functions.
+
+  ## Example
+
+  This is basically how our `from_query/2` function works if we didn't need to
+  worry about backwards pagination.
+  ```
+  alias Absinthe.Relay
+
+  def connection(args, %{context: %{current_user: user}}) do
+    {:forward, limit} = Connection.limit(args)
+    offset = Connection.offset(args)
+
+    conn =
+      Post
+      |> where(author_id: ^user.id)
+      |> limit(^limit)
+      |> offset(^offset)
+      |> Repo.all
+      |> Relay.Connection.from_slice(offset)
+    {:ok, conn}
+  end
+  ```
   """
-  @spec from_slice(list, Options.t) :: map
-  @spec from_slice(list, Options.t, opts :: from_slice_opts) :: map
-  def from_slice(items, pagination_args, opts \\ []) do
-    limit = case Keyword.fetch(opts, :max) do
-      {:ok, val} -> limit(pagination_args, val)
-      :error -> limit(pagination_args)
-    end
-
-    offset = offset(pagination_args, limit)
-
+  @spec from_slice(data :: list, offset :: offset) :: t
+  @spec from_slice(data :: list, offset :: offset, opts :: from_slice_opts) :: t
+  def from_slice(items, offset, opts \\ []) do
+    opts = Map.new(opts)
     {edges, first, last} = build_cursors(items, offset)
 
     page_info = %{
       start_cursor: first,
       end_cursor: last,
-      has_previous_page: false,
-      has_next_page: Keyword.get(opts, :has_next_page, length(items) >= limit),
+      has_previous_page: Map.get(opts, :has_previous_page, false),
+      has_next_page: Map.get(opts, :has_next_page, false),
     }
     %{edges: edges, page_info: page_info}
   end
@@ -197,14 +288,17 @@ defmodule Absinthe.Relay.Connection do
   This will automatically set a limit and offset value on the ecto query,
   and then run the query with whatever function is passed as the second argument.
 
-  Note: Your query MUST have an order_by value. Offset does not make sense without
-  one.
+  Notes:
+  - Your query MUST have an `order_by` value. Offset does not make sense without one.
+  - `last: N` must always be acompanied by either a `before:` argument to the query,
+  or an explicit `count: ` option to the `from_query` call.
+  Otherwise it is impossible to derive the required offset.
 
   ## Example
   ```
   alias Absinthe.Relay
 
-  def connection(args, _) do
+  def connection(args, %{context: %{current_user: user}}) do
     conn =
       Post
       |> where(author_id: ^user.id)
@@ -213,21 +307,36 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
   """
+
+  @type from_query_opts :: [
+    count: non_neg_integer
+  ] | from_slice_opts
+
   @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
-  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_slice_opts) :: map
+  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: map
   def from_query(query, repo_fun, args, opts \\ [])
   if Code.ensure_loaded?(Ecto) do
     def from_query(query, repo_fun, args, opts) do
       require Ecto.Query
 
-      limit = limit(args)
-      offset = offset(args, limit)
+      {offset, limit} = case limit(args, opts[:max]) do
+        {:forward, limit} ->
+          {offset(args) || 0, limit}
+
+        {:backward, limit} ->
+          offset = case {offset(args), opts[:count]} do
+            {nil, nil} -> raise "You must supply a count if using `last` without `before`"
+            {nil, value} -> max(value - limit, 0)
+            {value, _} -> max(value - limit, 0)
+          end
+          {offset, limit}
+      end
 
       query
       |> Ecto.Query.limit(^limit)
       |> Ecto.Query.offset(^offset)
       |> repo_fun.()
-      |> from_slice(args, opts)
+      |> from_slice(offset, opts)
     end
   else
     def from_query(_, _, _, _, _) do
@@ -239,19 +348,28 @@ defmodule Absinthe.Relay.Connection do
     end
   end
 
-  @spec limit(Options.t, pos_integer) :: pos_integer
-  def limit(args, val) do
-    args
-    |> limit
-    |> min(val)
+  @doc """
+  Same as `limit/1` with user provided upper bound.
+
+  Often backend developers want to provide a maximum value above which no more
+  records can be retrieved, no matter how many are asked for by the front end.
+
+  This function provides that capability. For use with `from_list` or `from_query`
+  use the `:max` option on those functions.
+  """
+  @spec limit(args :: Options.t, max :: pos_integer | nil) :: pos_integer
+  def limit(args, nil), do: limit(args)
+  def limit(args, max) do
+    {direction, limit} = limit(args)
+    {direction, max(max, limit)}
   end
 
   @doc """
-  Returns the maximal number of records to retrieve
+  The direction and desired number of records in the pagination arguments.
   """
-  @spec limit(Options.t) :: pos_integer
-  def limit(%{first: first}), do: first
-  def limit(%{last: last}), do: last
+  @spec limit(args :: Options.t) :: {pagination_direction, limit}
+  def limit(%{first: first}), do: {:forward, first}
+  def limit(%{last: last}), do: {:backward, last}
   def limit(_), do: 0
 
   @doc """
@@ -259,14 +377,17 @@ defmodule Absinthe.Relay.Connection do
 
   The limit is required because if using backwards pagination the limit will be
   subtracted from the offset.
+
+  If no offset is specified in the pagination arguments, this will return `nil`.
   """
-  def offset(%{after: cursor}, _) do
+  @spec offset(args :: Options.t) :: offset | nil
+  def offset(%{after: cursor}) do
     cursor_to_offset(cursor) + 1
   end
-  def offset(%{before: cursor}, limit) do
-    max(cursor_to_offset(cursor) - 1 - limit, 0)
+  def offset(%{before: cursor}) do
+    max(cursor_to_offset(cursor) - 1, 0)
   end
-  def offset(_, _), do: 0
+  def offset(_), do: nil
 
   defp build_cursors([], _offset), do: {[], nil, nil}
   defp build_cursors([item | items], offset) do
@@ -289,16 +410,13 @@ defmodule Absinthe.Relay.Connection do
     do_build_cursors(rest, i + 1, [edge | edges], cursor)
   end
 
-
-  @cursor_prefix "arrayconnection:"
-
   @doc """
   Creates the cursor string from an offset.
   """
   @spec offset_to_cursor(integer) :: binary
   def offset_to_cursor(offset) do
-    [@cursor_prefix, offset]
-    |> Enum.join
+    [@cursor_prefix, to_string(offset)]
+    |> IO.iodata_to_binary
     |> Base.encode64
   end
 
@@ -307,8 +425,7 @@ defmodule Absinthe.Relay.Connection do
   """
   @spec cursor_to_offset(binary) :: integer | :error
   def cursor_to_offset(cursor) do
-    with {:ok, decoded} <- Base.decode64(cursor),
-         {_, raw} <- String.split_at(decoded, byte_size(@cursor_prefix)),
+    with {:ok, @cursor_prefix <> raw} <- Base.decode64(cursor),
          {parsed, _} <- Integer.parse(raw) do
       parsed
     end

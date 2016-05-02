@@ -1,6 +1,122 @@
 defmodule StarWars.ConnectionTest do
   use ExSpec, async: true
 
+  describe "Backwards Pagination" do
+    it "can start from the end of a list" do
+      query = """
+        query RebelsShipsQuery {
+          rebels {
+            name,
+            ships1: ships(last: 2) {
+              edges {
+                node {
+                  name
+                }
+              }
+              pageInfo {
+                hasPreviousPage
+                hasNextPage
+              }
+            }
+            ships2: ships(last: 5) {
+              pageInfo {
+                hasPreviousPage
+                hasNextPage
+              }
+            }
+          }
+        }
+      """
+      expected = %{
+        "rebels" => %{
+          "name" => "Alliance to Restore the Republic",
+          "ships1" => %{
+            "edges" => [
+              %{
+                "node" => %{
+                  "name" => "Millenium Falcon"
+                }
+              },
+              %{
+                "node" => %{
+                  "name" => "Home One"
+                }
+              }
+            ],
+            "pageInfo" => %{
+              "hasPreviousPage" => true,
+              "hasNextPage" => false,
+            }
+          },
+          "ships2" => %{"pageInfo" => %{"hasNextPage" => false, "hasPreviousPage" => false}}
+        }
+      }
+      assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
+    end
+
+    it "should calculate hasNextPage correctly" do
+      query = """
+        query RebelsShipsQuery {
+          rebels {
+            ships(last: 2) {
+              pageInfo {
+                startCursor
+              }
+            }
+          }
+        }
+      """
+      assert {:ok, %{data: data}} = Absinthe.run(query, StarWars.Schema)
+      cursor = data["rebels"]["ships"]["pageInfo"]["startCursor"]
+
+      query = """
+        query RebelsShipsQuery {
+          rebels {
+            ships(last: 3, before: "#{cursor}") {
+              edges {
+                node {
+                  name
+                }
+              }
+              pageInfo {
+                hasNextPage
+                hasPreviousPage
+              }
+            }
+          }
+        }
+      """
+      expected = %{
+        "rebels" => %{
+          "ships" => %{
+            "edges" => [
+              %{
+                "node" => %{
+                  "name" => "X-Wing"
+                }
+              },
+              %{
+                "node" => %{
+                  "name" => "Y-Wing"
+                }
+              },
+              %{
+                "node" => %{
+                  "name" => "A-Wing"
+                }
+              }
+            ],
+            "pageInfo" => %{
+              "hasPreviousPage" => false,
+              "hasNextPage" => true,
+            }
+          },
+        }
+      }
+      assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
+    end
+  end
+
   describe "Star Wars connections" do
 
     it "fetches the first ship of the rebels" do
