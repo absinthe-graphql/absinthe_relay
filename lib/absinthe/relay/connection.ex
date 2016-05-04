@@ -361,7 +361,7 @@ defmodule Absinthe.Relay.Connection do
   def limit(args, nil), do: limit(args)
   def limit(args, max) do
     {direction, limit} = limit(args)
-    {direction, max(max, limit)}
+    {direction, min(max, limit)}
   end
 
   @doc """
