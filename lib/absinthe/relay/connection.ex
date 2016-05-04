@@ -202,8 +202,9 @@ defmodule Absinthe.Relay.Connection do
 
   ## Example
   ```
+  #in a resolver module
   @items ~w(foo bar baz)
-  def connection(args, _) do
+  def list(args, _) do
     {:ok, Connection.from_list(@items, args)}
   end
   ```
@@ -250,9 +251,10 @@ defmodule Absinthe.Relay.Connection do
   This is basically how our `from_query/2` function works if we didn't need to
   worry about backwards pagination.
   ```
+  # In PostResolver module
   alias Absinthe.Relay
 
-  def connection(args, %{context: %{current_user: user}}) do
+  def list(args, %{context: %{current_user: user}}) do
     {:forward, limit} = Connection.limit(args)
     offset = Connection.offset(args)
 
@@ -296,9 +298,10 @@ defmodule Absinthe.Relay.Connection do
 
   ## Example
   ```
+  # In a PostResolver module
   alias Absinthe.Relay
 
-  def connection(args, %{context: %{current_user: user}}) do
+  def list(args, %{context: %{current_user: user}}) do
     conn =
       Post
       |> where(author_id: ^user.id)
