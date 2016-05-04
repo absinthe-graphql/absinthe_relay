@@ -1,3 +1,12 @@
+defmodule Absinthe.Relay.Connection.Options do
+  @moduledoc false
+
+  @typedoc false
+  @type t :: %{after: nil | integer, before: nil | integer, first: nil | integer, last: nil | integer}
+
+  defstruct after: nil, before: nil, first: nil, last: nil
+end
+
 defmodule Absinthe.Relay.Connection do
   @moduledoc """
   Support for paginated result sets.
@@ -120,32 +129,62 @@ defmodule Absinthe.Relay.Connection do
   Just remember that if you use the block form of `connection`, you must call
   the `edge` macro within the block.
 
-  ## Macros
+  ## Creating Connections
+
+  This module provides two functions that mirror similar Javascript functions,
+  `from_list/2,3` and `from_slice/2,3`. We also provide `from_query/2,3` if you
+  have Ecto as a dependency for convenience.
+
+  Use `from_list` when you have all items in a list that you're going to
+  paginate over.
+
+  Use `from_slice` when you have items for a particular request, and merely need
+  a connection produced from these items.
+
+  ## Schema Macros
 
   For more details on connection-related macros, see
   `Absinthe.Relay.Connection.Notation`.
   """
 
-  use Absinthe.Schema.Notation
-  alias Absinthe.Schema.Notation
+  alias Absinthe.Relay.Connection.Options
 
-  defmodule Options do
-    @moduledoc false
+  @cursor_prefix "arrayconnection:"
 
-    @typedoc false
-    @type t :: %{after: nil | integer, before: nil | integer, first: nil | integer, last: nil | integer}
+  @type t :: %{
+    edges: [edge],
+    page_info: page_info
+  }
 
-    defstruct after: nil, before: nil, first: nil, last: nil
-  end
+  @typedoc """
+  An opaque pagination cursor
 
-  @empty_connection %{
-    edges: [],
-    page_info: %{
-      start_cursor: nil,
-      end_cursor: nil,
-      has_previous_page: nil,
-      has_next_page: nil
-    }
+  Internally it has the base64 encoded structure:
+
+  ```
+  #{@cursor_prefix}:$offset
+  ```
+  """
+  @type cursor :: binary
+
+  @type edge :: %{
+    node: term,
+    cursor: cursor
+  }
+
+  @typedoc """
+  Offset from zero.
+
+  Negative offsets are not supported.
+  """
+  @type offset :: non_neg_integer
+  @type limit :: non_neg_integer
+
+  @type page_info :: %{
+    start_cursor: cursor,
+    end_cursor: cursor,
+    has_previous_page: boolean,
+    has_next_page: boolean
   }
 
   @doc """
@@ -153,66 +192,234 @@ defmodule Absinthe.Relay.Connection do
 
   A simple function that accepts a list and connection arguments, and returns
   a connection object for use in GraphQL.
+
+  The data given to it should constitute all data that further pagination requests
+  may page over. As such, it may be very inefficient if you're pulling data
+  from a database which could be used to more directly retrieve just the desired
+  data.
+
+  See also `from_query` and `from_slice`.
+
+  ## Example
+  ```
+  #in a resolver module
+  @items ~w(foo bar baz)
+  def list(args, _) do
+    {:ok, Connection.from_list(@items, args)}
+  end
+  ```
   """
-  @spec from_list(list, map) :: map
-  def from_list(data, args) do
-    %{after: aft, before: before, last: last, first: first} = struct(Options, args)
+  @spec from_list(data :: list, args :: Option.t) :: t
+  def from_list(data, args, opts \\ []) do
     count = length(data)
+    {offset, limit} = case limit(args, opts[:max]) do
+      {:forward, limit} ->
+        {offset(args) || 0, limit}
 
-    begin_at = Enum.max([offset_with_default(aft, -1), -1]) + 1
-    end_at = Enum.min([offset_with_default(before, count + 1), count])
-    if begin_at > count || begin_at >= end_at do
-      @empty_connection
-    else
-      first_preslice_cursor = offset_to_cursor(begin_at)
-      last_preslice_cursor = offset_to_cursor(Enum.min([end_at, count]) - 1)
+      {:backward, limit} ->
+        offset = offset(args) || count
+        {max(offset - limit, 0), limit}
+    end
 
-      end_at = if first, do: Enum.min([begin_at + first, end_at]), else: end_at
-      begin_at = if last, do: Enum.map([end_at - last, begin_at]), else: begin_at
+    opts =
+      opts
+      |> Keyword.put_new(:has_next_page, count > (offset + limit))
+      |> Keyword.put_new(:has_previous_page, offset - limit > 0)
 
-      sliced_data = Enum.slice(data, begin_at, end_at - begin_at)
-      edges = sliced_data
-      |> Enum.with_index
-      |> Enum.map(fn
-        {value, index} ->
-          %{
-            cursor: offset_to_cursor(begin_at + index),
-            node: value
-          }
-      end)
+    data
+    |> Enum.slice(offset, offset + limit)
+    |> from_slice(offset, opts)
+  end
 
-      first_edge = edges |> List.first
-      last_edge = edges |> List.last
-      %{
-        edges: edges,
-        page_info: %{
-          start_cursor: first_edge.cursor,
-          end_cursor: last_edge.cursor,
-          has_previous_page: (first_edge.cursor != first_preslice_cursor),
-          has_next_page: (last_edge.cursor != last_preslice_cursor)
-        }
-      }
+  @type from_slice_opts :: [
+    has_next_page: boolean,
+    has_previous_page: boolean,
+  ]
+
+  @type pagination_direction :: :forward | :backward
+
+  @doc """
+  Build a connection from slice
+
+  This function assumes you have already retrieved precisely the number of items
+  to be returned in this connection request.
+
+  Often this function is used internally by other functions.
+
+  ## Example
+
+  This is basically how our `from_query/2` function works if we didn't need to
+  worry about backwards pagination.
+  ```
+  # In PostResolver module
+  alias Absinthe.Relay
+
+  def list(args, %{context: %{current_user: user}}) do
+    {:forward, limit} = Connection.limit(args)
+    offset = Connection.offset(args)
+
+    conn =
+      Post
+      |> where(author_id: ^user.id)
+      |> limit(^limit)
+      |> offset(^offset)
+      |> Repo.all
+      |> Relay.Connection.from_slice(offset)
+    {:ok, conn}
+  end
+  ```
+  """
+  @spec from_slice(data :: list, offset :: offset) :: t
+  @spec from_slice(data :: list, offset :: offset, opts :: from_slice_opts) :: t
+  def from_slice(items, offset, opts \\ []) do
+    opts = Map.new(opts)
+    {edges, first, last} = build_cursors(items, offset)
+
+    page_info = %{
+      start_cursor: first,
+      end_cursor: last,
+      has_previous_page: Map.get(opts, :has_previous_page, false),
+      has_next_page: Map.get(opts, :has_next_page, false),
+    }
+    %{edges: edges, page_info: page_info}
+  end
+
+  @doc """
+  Build a connection from an Ecto Query
+
+  This will automatically set a limit and offset value on the ecto query,
+  and then run the query with whatever function is passed as the second argument.
+
+  Notes:
+  - Your query MUST have an `order_by` value. Offset does not make sense without one.
+  - `last: N` must always be acompanied by either a `before:` argument to the query,
+  or an explicit `count: ` option to the `from_query` call.
+  Otherwise it is impossible to derive the required offset.
+
+  ## Example
+  ```
+  # In a PostResolver module
+  alias Absinthe.Relay
+
+  def list(args, %{context: %{current_user: user}}) do
+    conn =
+      Post
+      |> where(author_id: ^user.id)
+      |> Relay.Connection.from_query(&Repo.all/1, args)
+    {:ok, conn}
+  end
+  ```
+  """
+
+  @type from_query_opts :: [
+    count: non_neg_integer
+  ] | from_slice_opts
+
+  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
+  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: map
+  def from_query(query, repo_fun, args, opts \\ [])
+  if Code.ensure_loaded?(Ecto) do
+    def from_query(query, repo_fun, args, opts) do
+      require Ecto.Query
+
+      {offset, limit} = case limit(args, opts[:max]) do
+        {:forward, limit} ->
+          {offset(args) || 0, limit}
+
+        {:backward, limit} ->
+          offset = case {offset(args), opts[:count]} do
+            {nil, nil} -> raise "You must supply a count if using `last` without `before`"
+            {nil, value} -> max(value - limit, 0)
+            {value, _} -> max(value - limit, 0)
+          end
+          {offset, limit}
+      end
+
+      query
+      |> Ecto.Query.limit(^limit)
+      |> Ecto.Query.offset(^offset)
+      |> repo_fun.()
+      |> from_slice(offset, opts)
+    end
+  else
+    def from_query(_, _, _, _, _) do
+      raise ArgumentError, """
+      Ecto not Loaded!
+
+      You cannot use this unless Ecto is also a dependency
+      """
     end
   end
 
-  @spec offset_with_default(nil | binary, integer) :: integer
-  defp offset_with_default(nil, default_offset) do
-    default_offset
-  end
-  defp offset_with_default(cursor, _) do
-    cursor
-    |> cursor_to_offset
+  @doc """
+  Same as `limit/1` with user provided upper bound.
+
+  Often backend developers want to provide a maximum value above which no more
+  records can be retrieved, no matter how many are asked for by the front end.
+
+  This function provides that capability. For use with `from_list` or `from_query`
+  use the `:max` option on those functions.
+  """
+  @spec limit(args :: Options.t, max :: pos_integer | nil) :: pos_integer
+  def limit(args, nil), do: limit(args)
+  def limit(args, max) do
+    {direction, limit} = limit(args)
+    {direction, min(max, limit)}
   end
 
-  @cursor_prefix "arrayconnection:"
+  @doc """
+  The direction and desired number of records in the pagination arguments.
+  """
+  @spec limit(args :: Options.t) :: {pagination_direction, limit}
+  def limit(%{first: first}), do: {:forward, first}
+  def limit(%{last: last}), do: {:backward, last}
+  def limit(_), do: 0
+
+  @doc """
+  Returns the offset for a page.
+
+  The limit is required because if using backwards pagination the limit will be
+  subtracted from the offset.
+
+  If no offset is specified in the pagination arguments, this will return `nil`.
+  """
+  @spec offset(args :: Options.t) :: offset | nil
+  def offset(%{after: cursor}) do
+    cursor_to_offset(cursor) + 1
+  end
+  def offset(%{before: cursor}) do
+    max(cursor_to_offset(cursor) - 1, 0)
+  end
+  def offset(_), do: nil
+
+  defp build_cursors([], _offset), do: {[], nil, nil}
+  defp build_cursors([item | items], offset) do
+    first = offset_to_cursor(offset)
+    first_edge = %{
+      node: item,
+      cursor: first
+    }
+    {edges, last} = do_build_cursors(items, offset + 1, [first_edge], first)
+    {edges, first, last}
+  end
+
+  defp do_build_cursors([], _, edges, last), do: {Enum.reverse(edges), last}
+  defp do_build_cursors([item | rest], i, edges, _last) do
+    cursor = offset_to_cursor(i)
+    edge = %{
+      node: item,
+      cursor: cursor
+    }
+    do_build_cursors(rest, i + 1, [edge | edges], cursor)
+  end
 
   @doc """
   Creates the cursor string from an offset.
   """
   @spec offset_to_cursor(integer) :: binary
   def offset_to_cursor(offset) do
-    [@cursor_prefix, offset]
-    |> Enum.join
+    [@cursor_prefix, to_string(offset)]
+    |> IO.iodata_to_binary
     |> Base.encode64
   end
 
@@ -221,8 +428,7 @@ defmodule Absinthe.Relay.Connection do
   """
   @spec cursor_to_offset(binary) :: integer | :error
   def cursor_to_offset(cursor) do
-    with {:ok, decoded} <- Base.decode64(cursor),
-         {_, raw} <- String.split_at(decoded, byte_size(@cursor_prefix)),
+    with {:ok, @cursor_prefix <> raw} <- Base.decode64(cursor),
          {parsed, _} <- Integer.parse(raw) do
       parsed
     end
