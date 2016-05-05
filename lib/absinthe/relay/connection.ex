@@ -315,11 +315,10 @@ defmodule Absinthe.Relay.Connection do
     count: non_neg_integer
   ] | from_slice_opts
 
-  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
-  @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: map
-  def from_query(query, repo_fun, args, opts \\ [])
   if Code.ensure_loaded?(Ecto) do
-    def from_query(query, repo_fun, args, opts) do
+    @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
+    @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: map
+    def from_query(query, repo_fun, args, opts \\ []) do
       require Ecto.Query
 
       {offset, limit} = case limit(args, opts[:max]) do
@@ -342,7 +341,7 @@ defmodule Absinthe.Relay.Connection do
       |> from_slice(offset, opts)
     end
   else
-    def from_query(_, _, _, _, _) do
+    def from_query(_, _, _, _, _ \\ []) do
       raise ArgumentError, """
       Ecto not Loaded!
 
