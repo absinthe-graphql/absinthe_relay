@@ -334,11 +334,18 @@ defmodule Absinthe.Relay.Connection do
           {offset, limit}
       end
 
-      query
-      |> Ecto.Query.limit(^limit)
-      |> Ecto.Query.offset(^offset)
-      |> repo_fun.()
-      |> from_slice(offset, opts)
+      records =
+        query
+        |> Ecto.Query.limit(^limit)
+        |> Ecto.Query.offset(^offset)
+        |> repo_fun.()
+
+      opts = [
+        has_next_page: !(length(records) < limit),
+        has_previous_page: offset > 0,
+      ] ++ opts
+
+      from_slice(records, offset, opts)
     end
   else
     def from_query(_, _, _, _, _ \\ []) do
