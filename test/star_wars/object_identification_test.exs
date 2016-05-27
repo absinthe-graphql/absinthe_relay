@@ -41,6 +41,24 @@ defmodule StarWars.ObjectIdentificationTest do
       |> assert_data(%{"node" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
     end
 
+    it "refetches the empire, with nested redundant Node fragment" do
+      """
+      query EmpireRefetchQueryWithExtraNodeFragment {
+        node(id: "RmFjdGlvbjoy") {
+          id
+          ... on Faction {
+            ... on Node {
+              ... on Faction {
+                name
+              }
+            }
+          }
+        }
+      }
+      """
+      |> assert_data(%{"node" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
+    end
+
     it "refetches the X-Wing" do
       """
       query XWingRefetchQuery {
