@@ -149,4 +149,49 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
   end
 
+  describe "Defining custom connection and edge fields, with redundant spread fragments" do
+    it " allows querying those additional fields" do
+      result = """
+        query FirstPetName($personId: ID!) {
+          node(id: $personId) {
+            ... on Person {
+              pets(first: 1) {
+                twiceEdgesCount
+                edges {
+                  nodeNameBackwards
+                  node {
+                    ... on Node {
+                      ... on Pet {
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+              favoritePets(first: 1) {
+                favTwiceEdgesCount
+                edges {
+                  favNodeNameBackwards
+                  node {
+                    ... on Pet {
+                      ... on Node {
+                        ... on Pet {
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      """ |> Absinthe.run(CustomConnectionAndEdgeFieldsSchema, variables: %{"personId" => @jack_global_id})
+      assert {:ok, %{data: %{"node" => %{
+                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"name" => "Svenja"}}]},
+                              "favoritePets" => %{"favTwiceEdgesCount" => 2, "edges" => [%{"favNodeNameBackwards" => "kcoJ", "node" => %{"name" => "Jock"}}]}}
+                            }}} == result
+    end
+  end
+
 end
