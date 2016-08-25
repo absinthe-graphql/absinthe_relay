@@ -24,7 +24,7 @@ defmodule AbsintheRelay.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :absinthe]]
+    [applications: [:logger, :plug, :absinthe]]
   end
 
   # Specifies which paths to compile per environment.
@@ -34,6 +34,7 @@ defmodule AbsintheRelay.Mixfile do
   defp deps do
     [
       {:absinthe, "~> 1.1.7"},
+      {:plug, "~> 1.0"},
       {:ecto, "~> 1.0 or ~> 2.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.11.0", only: :dev},
