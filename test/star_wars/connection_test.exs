@@ -1,5 +1,5 @@
 defmodule StarWars.ConnectionTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   describe "Backwards Pagination" do
     it "can start from the end of a list" do

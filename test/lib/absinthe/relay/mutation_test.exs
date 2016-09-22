@@ -1,5 +1,5 @@
 defmodule Absinthe.Relay.MutationTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   defmodule Schema do
     use Absinthe.Schema

@@ -1,5 +1,5 @@
 defmodule Absinthe.Relay.NodeTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   alias Absinthe.Relay.Node
 
