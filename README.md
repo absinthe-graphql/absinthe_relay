@@ -13,7 +13,7 @@ Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
 
 ```elixir
 def deps do
-  [{:absinthe_relay, "~> 0.9.2"}]
+  [{:absinthe_relay, "~> 1.2.0-alpha0"}]
 end
 ```
 
@@ -25,7 +25,7 @@ def application do
 end
 ```
 
-Note: Absinthe requires Elixir 1.2 or higher.
+Note: Absinthe requires Elixir 1.3 or higher.
 
 ## Upgrading
 
@@ -116,17 +116,6 @@ In your project, check out the documentation with:
 
 ```
 mix help absinthe.schema.json
-```
-
-## Schema IDL
-
-If you'd like to generate a `schema.graphql` file that describes your schema in
-GraphQL IDL, run the `absinthe.schema.graphql` Mix task in your project.
-
-Check out the documentation with:
-
-```
-mix help absinthe.schema.graphql
 ```
 
 ## License
