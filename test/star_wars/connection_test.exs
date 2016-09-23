@@ -151,7 +151,6 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    @tag :focus
     it "fetches the first two ships of the rebels with a cursor" do
       query = """
         query MoreRebelShipsQuery {

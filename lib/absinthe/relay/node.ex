@@ -263,7 +263,7 @@ defmodule Absinthe.Relay.Node do
   nil
   ```
   """
-  @spec default_id_fetcher(any, Execution.Field.t) :: nil | binary
+  @spec default_id_fetcher(any, Absinthe.Resolution.t) :: nil | binary
   def default_id_fetcher(%{id: id}, _info) when is_nil(id), do: nil
   def default_id_fetcher(%{id: id}, _info), do: id |> to_string
   def default_id_fetcher(_, _), do: nil

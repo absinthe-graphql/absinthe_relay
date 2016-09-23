@@ -32,7 +32,7 @@ defmodule Absinthe.Relay.MutationTest do
     }
     """
     it "requires an `input' argument" do
-      assert {:ok, %{errors: [%{message: "Field `simpleMutation': 1 required argument (`input') not provided"}, %{message: "Argument `input' (SimpleMutationInput): Not provided"}]}} = Absinthe.run(@query, Schema)
+      assert {:ok, %{errors: [%{message: ~s(In argument "input": Expected type "SimpleMutationInput!", found null.)}]}} = Absinthe.run(@query, Schema)
     end
 
     @query """
