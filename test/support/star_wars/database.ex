@@ -1,7 +1,5 @@
 defmodule StarWars.Database do
 
-  alias Absinthe.Flag
-
   @xwing %{
     id: "1",
     name: "X-Wing"
