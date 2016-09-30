@@ -51,7 +51,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
     quote do
       arg :input, non_null(unquote(input_type_identifier))
       private Absinthe.Relay, :mutation_field_identifier, unquote(field_ident)
-      private Absinthe, :resolve, &Absinthe.Relay.Mutation.resolve_with_input/3
+      private Absinthe, :resolve, &Absinthe.Relay.Mutation.resolve_with_input/1
     end
   end
 
