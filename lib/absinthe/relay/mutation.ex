@@ -94,7 +94,6 @@ defmodule Absinthe.Relay.Mutation do
             other
         end
       args, info ->
-        IO.inspct args
         Absinthe.Type.Field.call(designer_resolver, %{}, info)
     end
   end
