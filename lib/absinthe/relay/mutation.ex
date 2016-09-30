@@ -98,7 +98,7 @@ defmodule Absinthe.Relay.Mutation do
     end
   end
   def resolve_with_input(_, info, designer_resolver) do
-    designer_resolver.(%{}, info)
+    Absinthe.Type.Field.call(designer_resolver, %{}, info)
   end
 
 end
