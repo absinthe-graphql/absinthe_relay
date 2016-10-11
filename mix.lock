@@ -1,4 +1,4 @@
-%{"absinthe": {:hex, :absinthe, "1.2.0-alpha.1", "77d118421aa0396d4fb062ef0e9abfd869ef7e4773545067a0a80c771e071add", [:mix], []},
+%{"absinthe": {:hex, :absinthe, "1.2.0-alpha.2", "2e786c5d067f9f6252297622a93534564e8e536cb5f2a06c1ce628b0e1a08df6", [:mix], []},
   "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
   "earmark": {:hex, :earmark, "0.2.1", "ba6d26ceb16106d069b289df66751734802777a3cbb6787026dd800ffeb850f3", [:mix], []},
   "ecto": {:hex, :ecto, "1.1.5", "5c181b737a650117466b0540aa323198a0fb9d518e52718ac2c299f4047187e1", [:mix], [{:decimal, "~> 1.0", [hex: :decimal, optional: false]}, {:mariaex, "~> 0.5.0 or ~> 0.6.0", [hex: :mariaex, optional: true]}, {:poison, "~> 1.0", [hex: :poison, optional: true]}, {:poolboy, "~> 1.4", [hex: :poolboy, optional: false]}, {:postgrex, "~> 0.11.0", [hex: :postgrex, optional: true]}, {:sbroker, "~> 0.7", [hex: :sbroker, optional: true]}]},
