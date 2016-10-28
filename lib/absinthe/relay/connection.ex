@@ -224,10 +224,10 @@ defmodule Absinthe.Relay.Connection do
     opts =
       opts
       |> Keyword.put_new(:has_next_page, count > (offset + limit))
-      |> Keyword.put_new(:has_previous_page, offset - limit > 0)
+      |> Keyword.put_new(:has_previous_page, offset > 0)
 
     data
-    |> Enum.slice(offset, offset + limit)
+    |> Enum.slice(offset, limit)
     |> from_slice(offset, opts)
   end
 
@@ -394,7 +394,7 @@ defmodule Absinthe.Relay.Connection do
     cursor_to_offset(cursor) + 1
   end
   def offset(%{before: cursor}) do
-    max(cursor_to_offset(cursor) - 1, 0)
+    max(cursor_to_offset(cursor), 0)
   end
   def offset(_), do: nil
 
