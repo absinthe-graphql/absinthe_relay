@@ -217,14 +217,17 @@ defmodule Absinthe.Relay.Connection do
         {offset(args) || 0, limit}
 
       {:backward, limit} ->
-        offset = offset(args) || count
-        {max(offset - limit, 0), limit}
+        end_offset = offset(args) || count
+        start_offset = max(end_offset - limit, 0)
+        limit = if start_offset == 0, do: end_offset, else: limit
+        {start_offset, limit}
     end
 
     opts =
+      ## Arg checks are unintuitive, but Relay connection spec defines false value if certain args not set
       opts
-      |> Keyword.put_new(:has_next_page, count > (offset + limit))
-      |> Keyword.put_new(:has_previous_page, offset > 0)
+      |> Keyword.put_new(:has_next_page, args[:first] != nil && count > (offset + limit))
+      |> Keyword.put_new(:has_previous_page, args[:last] != nil && offset > 0)
 
     data
     |> Enum.slice(offset, limit)
@@ -341,8 +344,8 @@ defmodule Absinthe.Relay.Connection do
         |> repo_fun.()
 
       opts = [
-        has_next_page: !(length(records) < limit),
-        has_previous_page: offset > 0,
+        has_next_page: args[:first] != nil && !(length(records) < limit),
+        has_previous_page: args[:last] != nil && offset > 0,
       ] ++ opts
 
       from_slice(records, offset, opts)
