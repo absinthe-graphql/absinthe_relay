@@ -116,12 +116,12 @@ defmodule Absinthe.Relay.Node do
       %{id: global_id}, info ->
         case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
           {:ok, result} ->
-            Absinthe.Type.Field.call(designer_resolver, result, info)
+            Absinthe.Resolution.call(designer_resolver, result, info)
           other ->
             other
         end
       _, info ->
-        Absinthe.Type.Field.call(designer_resolver, %{}, info)
+        Absinthe.Resolution.call(designer_resolver, %{}, info)
     end
   end
 

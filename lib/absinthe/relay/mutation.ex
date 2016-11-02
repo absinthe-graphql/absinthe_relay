@@ -86,7 +86,7 @@ defmodule Absinthe.Relay.Mutation do
   def resolve_with_input(designer_resolver) do
     fn
       %{input: %{client_mutation_id: mut_id} = input}, info ->
-        case Absinthe.Type.Field.call(designer_resolver, input, info) do
+        case Absinthe.Resolution.call(designer_resolver, input, info) do
           {flag, value} when is_map(value) ->
             {flag, Map.put(value, :client_mutation_id, mut_id)}
           other ->
@@ -94,11 +94,11 @@ defmodule Absinthe.Relay.Mutation do
             other
         end
       args, info ->
-        Absinthe.Type.Field.call(designer_resolver, %{}, info)
+        Absinthe.Resolution.call(designer_resolver, %{}, info)
     end
   end
   def resolve_with_input(_, info, designer_resolver) do
-    Absinthe.Type.Field.call(designer_resolver, %{}, info)
+    Absinthe.Resolution.call(designer_resolver, %{}, info)
   end
 
 end
