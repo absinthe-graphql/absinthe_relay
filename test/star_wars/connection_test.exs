@@ -1,5 +1,5 @@
 defmodule StarWars.ConnectionTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   describe "Backwards Pagination" do
     it "can start from the end of a list" do
@@ -108,7 +108,7 @@ defmodule StarWars.ConnectionTest do
             ],
             "pageInfo" => %{
               "hasPreviousPage" => false,
-              "hasNextPage" => true,
+              "hasNextPage" => false,
             }
           },
         }
@@ -151,7 +151,6 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    @tag :focus
     it "fetches the first two ships of the rebels with a cursor" do
       query = """
         query MoreRebelShipsQuery {

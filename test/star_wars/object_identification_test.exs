@@ -1,5 +1,5 @@
 defmodule StarWars.ObjectIdentificationTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   describe "Star Wars object identification" do
 

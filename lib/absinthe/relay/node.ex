@@ -111,16 +111,18 @@ defmodule Absinthe.Relay.Node do
   # Build a wrapper around a resolve function that
   # parses the global ID before invoking it
   @doc false
-  def resolve_with_global_id(%{id: global_id}, info, designer_resolver) do
-    case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
-      {:ok, result} ->
-        designer_resolver.(result, info)
-      other ->
-        other
+  def resolve_with_global_id(designer_resolver) do
+    fn
+      %{id: global_id}, info ->
+        case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
+          {:ok, result} ->
+            Absinthe.Type.Field.call(designer_resolver, result, info)
+          other ->
+            other
+        end
+      _, info ->
+        Absinthe.Type.Field.call(designer_resolver, %{}, info)
     end
-  end
-  def resolve_with_global_id(_, info, designer_resolver) do
-    designer_resolver.(%{}, info)
   end
 
   @doc """
@@ -263,7 +265,7 @@ defmodule Absinthe.Relay.Node do
   nil
   ```
   """
-  @spec default_id_fetcher(any, Execution.Field.t) :: nil | binary
+  @spec default_id_fetcher(any, Absinthe.Resolution.t) :: nil | binary
   def default_id_fetcher(%{id: id}, _info) when is_nil(id), do: nil
   def default_id_fetcher(%{id: id}, _info), do: id |> to_string
   def default_id_fetcher(_, _), do: nil

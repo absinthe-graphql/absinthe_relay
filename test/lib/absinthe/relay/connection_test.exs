@@ -1,5 +1,5 @@
 defmodule Absinthe.Relay.ConnectionTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   @jack_global_id Base.encode64("Person:jack")
   @jill_global_id Base.encode64("Person:jill")
@@ -160,6 +160,7 @@ defmodule Absinthe.Relay.ConnectionTest do
                 edges {
                   nodeNameBackwards
                   node {
+                    id
                     ... on Node {
                       ... on Pet {
                         name
@@ -173,6 +174,7 @@ defmodule Absinthe.Relay.ConnectionTest do
                 edges {
                   favNodeNameBackwards
                   node {
+                    id
                     ... on Pet {
                       ... on Node {
                         ... on Pet {
@@ -188,8 +190,8 @@ defmodule Absinthe.Relay.ConnectionTest do
         }
       """ |> Absinthe.run(CustomConnectionAndEdgeFieldsSchema, variables: %{"personId" => @jack_global_id})
       assert {:ok, %{data: %{"node" => %{
-                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"name" => "Svenja"}}]},
-                              "favoritePets" => %{"favTwiceEdgesCount" => 2, "edges" => [%{"favNodeNameBackwards" => "kcoJ", "node" => %{"name" => "Jock"}}]}}
+                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"id" => "UGV0OjE=", "name" => "Svenja"}}]},
+                              "favoritePets" => %{"favTwiceEdgesCount" => 2, "edges" => [%{"favNodeNameBackwards" => "kcoJ", "node" => %{"id" => "UGV0OjI=", "name" => "Jock"}}]}}
                             }}} == result
     end
   end

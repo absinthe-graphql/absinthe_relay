@@ -1,5 +1,5 @@
 defmodule Absinthe.Relay.SchemaTest do
-  use ExSpec, async: true
+  use Absinthe.Relay.Case, async: true
 
   alias Absinthe.Type
 
