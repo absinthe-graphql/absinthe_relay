@@ -5,6 +5,9 @@ defmodule Absinthe.Relay.MutationTest do
     use Absinthe.Schema
     use Absinthe.Relay.Schema
 
+    query do
+    end
+
     mutation do
       payload field :simple_mutation do
         input do
