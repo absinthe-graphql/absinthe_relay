@@ -50,9 +50,9 @@ defmodule Absinthe.Relay.Node.Helpers do
     end
   end
 
-  defp check_node_id(%{ type: type, id: id }, expected_types, key) when is_list(expected_types) do
+  defp check_node_id(node_id = %{ type: type }, expected_types, key) when is_list(expected_types) do
     if type in expected_types do
-      {:ok, id}
+      {:ok, node_id}
     else
       {:error, """
       Invalid node type for argument #{key}: #{type}
@@ -61,9 +61,9 @@ defmodule Absinthe.Relay.Node.Helpers do
     end
   end
 
-  defp check_node_id(node_id = %{ type: type }, expected_type, key) do
+  defp check_node_id(%{ type: type, id: id }, expected_type, key) do
     if type == expected_type do
-      {:ok, node_id}
+      {:ok, id}
     else
       {:error, """
       Invalid node type for argument #{key}: #{type}
