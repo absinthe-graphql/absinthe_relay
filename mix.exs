@@ -10,9 +10,9 @@ defmodule AbsintheRelay.Mixfile do
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     package: package,
+     package: package(),
      docs: [source_ref: "v#{@version}", main: "Absinthe.Relay"],
-     deps: deps]
+     deps: deps()]
   end
 
   defp package do
