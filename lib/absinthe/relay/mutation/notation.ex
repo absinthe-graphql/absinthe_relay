@@ -41,7 +41,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
       [
         field_body(field_ident),
         block,
-        finalize
+        finalize()
       ]
     )
   end
@@ -98,7 +98,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
   def record_input_object!(env, base_identifier, block) do
     identifier = ident(base_identifier, :input)
     unless already_recorded?(env.module, :input_object, identifier) do
-      Notation.record_input_object!(env, identifier, [], [client_mutation_id_field, block])
+      Notation.record_input_object!(env, identifier, [], [client_mutation_id_field(), block])
     end
   end
 
@@ -121,7 +121,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
   def record_object!(env, base_identifier, block) do
     identifier = ident(base_identifier, :payload)
     unless already_recorded?(env.module, :object, identifier) do
-      Notation.record_object!(env, identifier, [], [client_mutation_id_field, block])
+      Notation.record_object!(env, identifier, [], [client_mutation_id_field(), block])
     end
   end
 

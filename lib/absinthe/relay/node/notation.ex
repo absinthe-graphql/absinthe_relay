@@ -42,7 +42,7 @@ defmodule Absinthe.Relay.Node.Notation do
       env,
       identifier,
       Keyword.put_new(attrs, :description, "An object with an ID"),
-      [interface_body, block]
+      [interface_body(), block]
     )
   end
 
@@ -71,7 +71,7 @@ defmodule Absinthe.Relay.Node.Notation do
       env,
       identifier,
       Keyword.put_new(attrs, :description, "Fetches an object given its ID"),
-      [field_body, block]
+      [field_body(), block]
     )
   end
 
