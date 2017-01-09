@@ -66,13 +66,10 @@ defmodule Absinthe.Relay.ConnectionTest do
       connection field :pets, node_type: :pet do
         resolve fn
           resolve_args, %{source: person} ->
-            {
-              :ok,
-              Absinthe.Relay.Connection.from_list(
-                Enum.map(person.pets, &Map.get(@pets, &1)),
-                resolve_args
-              )
-            }
+            Absinthe.Relay.Connection.from_list(
+              Enum.map(person.pets, &Map.get(@pets, &1)),
+              resolve_args
+            )
         end
       end
 
@@ -80,13 +77,10 @@ defmodule Absinthe.Relay.ConnectionTest do
       connection field :favorite_pets, connection: :favorite_pets do
         resolve fn
           resolve_args, %{source: person} ->
-            {
-              :ok,
-              Absinthe.Relay.Connection.from_list(
-                Enum.map(person.favorite_pets, &Map.get(@pets, &1)),
-                resolve_args
-              )
-            }
+            Absinthe.Relay.Connection.from_list(
+              Enum.map(person.favorite_pets, &Map.get(@pets, &1)),
+              resolve_args
+            )
         end
       end
 
