@@ -271,7 +271,7 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
   """
-  @spec from_slice(data :: list, offset :: offset) :: t
+  @spec from_slice(data :: list, offset :: offset) :: {:ok, t}
   @spec from_slice(data :: list, offset :: offset, opts :: from_slice_opts) :: {:ok, t}
   def from_slice(items, offset, opts \\ []) do
     opts = Map.new(opts)
