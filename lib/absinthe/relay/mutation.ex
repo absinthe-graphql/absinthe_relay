@@ -93,7 +93,7 @@ defmodule Absinthe.Relay.Mutation do
             # On your own!
             other
         end
-      args, info ->
+      _args, info ->
         Absinthe.Resolution.call(designer_resolver, %{}, info)
     end
   end
