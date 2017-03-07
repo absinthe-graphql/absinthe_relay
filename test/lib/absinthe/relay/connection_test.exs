@@ -2,7 +2,6 @@ defmodule Absinthe.Relay.ConnectionTest do
   use Absinthe.Relay.Case, async: true
 
   @jack_global_id Base.encode64("Person:jack")
-  @jill_global_id Base.encode64("Person:jill")
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema

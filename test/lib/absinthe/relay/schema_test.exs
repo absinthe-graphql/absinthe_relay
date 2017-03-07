@@ -4,7 +4,6 @@ defmodule Absinthe.Relay.SchemaTest do
   alias Absinthe.Type
 
   @jack_global_id Base.encode64("Person:jack")
-  @jill_global_id Base.encode64("Person:jill")
 
   @papers_global_id Base.encode64("Business:papers")
 

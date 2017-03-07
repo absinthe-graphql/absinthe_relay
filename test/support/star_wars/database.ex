@@ -74,7 +74,7 @@ defmodule StarWars.Database do
   def data, do: @data
 
   def get(node_type, id) do
-    case data |> get_in([node_type, id]) do
+    case data() |> get_in([node_type, id]) do
       nil ->
         {:error, "No #{node_type} with ID #{id}"}
       result ->
@@ -83,7 +83,7 @@ defmodule StarWars.Database do
   end
 
   def get_factions(names) do
-    factions = data.factions |> Map.values
+    factions = data().factions |> Map.values
     names
     |> Enum.map(fn
       name ->
