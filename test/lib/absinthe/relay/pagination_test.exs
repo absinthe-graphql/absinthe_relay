@@ -15,7 +15,7 @@ defmodule Absinthe.Relay.PaginationTest do
     query do
       connection field :foos, node_type: :foo do
         resolve fn pagination_args, _ ->
-          {:ok, Absinthe.Relay.Connection.from_list(@foos, pagination_args)}
+          Absinthe.Relay.Connection.from_list(@foos, pagination_args)
         end
       end
 
@@ -305,5 +305,32 @@ defmodule Absinthe.Relay.PaginationTest do
       "edges" => [],
     }} = result
   end
+
+  test "It returns an error if pagination parameters are missing" do
+    query = """
+    {
+      foos {
+        page_info {
+          start_cursor
+          end_cursor
+          has_previous_page
+          has_next_page
+        }
+        edges {
+          cursor
+          node {
+            index
+          }
+        }
+      }
+    }
+    """
+    assert {:ok, result} = Absinthe.run(query, Schema)
+    assert %{data: %{},
+        errors: [%{locations: [%{column: 0, line: 2}],
+                   message: "In field \"foos\": You must either supply `:first` or `:last`"}]}
+      = result
+
+ end
 
 end

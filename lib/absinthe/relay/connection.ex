@@ -205,33 +205,34 @@ defmodule Absinthe.Relay.Connection do
   #in a resolver module
   @items ~w(foo bar baz)
   def list(args, _) do
-    {:ok, Connection.from_list(@items, args)}
+    Connection.from_list(@items, args)
   end
   ```
   """
-  @spec from_list(data :: list, args :: Option.t) :: t
+  @spec from_list(data :: list, args :: Option.t) :: {:ok, t} | {:error, any}
   def from_list(data, args, opts \\ []) do
-    count = length(data)
-    {offset, limit} = case limit(args, opts[:max]) do
-      {:forward, limit} ->
-        {offset(args) || 0, limit}
+    with {:ok, direction, limit} <- limit(args, opts[:max]) do
+      count = length(data)
+      {offset, limit} = case direction do
+        :forward ->
+          {offset(args) || 0, limit}
+        :backward ->
+          end_offset = offset(args) || count
+          start_offset = max(end_offset - limit, 0)
+          limit = if start_offset == 0, do: end_offset, else: limit
+          {start_offset, limit}
+      end
 
-      {:backward, limit} ->
-        end_offset = offset(args) || count
-        start_offset = max(end_offset - limit, 0)
-        limit = if start_offset == 0, do: end_offset, else: limit
-        {start_offset, limit}
+      opts =
+        ## Arg checks are unintuitive, but Relay connection spec defines false value if certain args not set
+        opts
+        |> Keyword.put_new(:has_next_page, args[:first] != nil && count > (offset + limit))
+        |> Keyword.put_new(:has_previous_page, args[:last] != nil && offset > 0)
+
+      data
+      |> Enum.slice(offset, limit)
+      |> from_slice(offset, opts)
     end
-
-    opts =
-      ## Arg checks are unintuitive, but Relay connection spec defines false value if certain args not set
-      opts
-      |> Keyword.put_new(:has_next_page, args[:first] != nil && count > (offset + limit))
-      |> Keyword.put_new(:has_previous_page, args[:last] != nil && offset > 0)
-
-    data
-    |> Enum.slice(offset, limit)
-    |> from_slice(offset, opts)
   end
 
   @type from_slice_opts :: [
@@ -261,19 +262,17 @@ defmodule Absinthe.Relay.Connection do
     {:forward, limit} = Connection.limit(args)
     offset = Connection.offset(args)
 
-    conn =
-      Post
-      |> where(author_id: ^user.id)
-      |> limit(^limit)
-      |> offset(^offset)
-      |> Repo.all
-      |> Relay.Connection.from_slice(offset)
-    {:ok, conn}
+    Post
+    |> where(author_id: ^user.id)
+    |> limit(^limit)
+    |> offset(^offset)
+    |> Repo.all
+    |> Relay.Connection.from_slice(offset)
   end
   ```
   """
-  @spec from_slice(data :: list, offset :: offset) :: t
-  @spec from_slice(data :: list, offset :: offset, opts :: from_slice_opts) :: t
+  @spec from_slice(data :: list, offset :: offset) :: {:ok, t}
+  @spec from_slice(data :: list, offset :: offset, opts :: from_slice_opts) :: {:ok, t}
   def from_slice(items, offset, opts \\ []) do
     opts = Map.new(opts)
     {edges, first, last} = build_cursors(items, offset)
@@ -284,7 +283,7 @@ defmodule Absinthe.Relay.Connection do
       has_previous_page: Map.get(opts, :has_previous_page, false),
       has_next_page: Map.get(opts, :has_next_page, false),
     }
-    %{edges: edges, page_info: page_info}
+    {:ok, %{edges: edges, page_info: page_info}}
   end
 
   @doc """
@@ -305,11 +304,9 @@ defmodule Absinthe.Relay.Connection do
   alias Absinthe.Relay
 
   def list(args, %{context: %{current_user: user}}) do
-    conn =
-      Post
-      |> where(author_id: ^user.id)
-      |> Relay.Connection.from_query(&Repo.all/1, args)
-    {:ok, conn}
+    Post
+    |> where(author_id: ^user.id)
+    |> Relay.Connection.from_query(&Repo.all/1, args)
   end
   ```
   """
@@ -319,36 +316,24 @@ defmodule Absinthe.Relay.Connection do
   ] | from_slice_opts
 
   if Code.ensure_loaded?(Ecto) do
-    @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: map
-    @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: map
+    @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t) :: {:ok, map} | {:error, any}
+    @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: {:ok, map} | {:error, any}
     def from_query(query, repo_fun, args, opts \\ []) do
       require Ecto.Query
+      with {:ok, offset, limit} <- offset_and_limit_for_query(args, opts[:max]) do
+        records =
+          query
+          |> Ecto.Query.limit(^limit)
+          |> Ecto.Query.offset(^offset)
+          |> repo_fun.()
 
-      {offset, limit} = case limit(args, opts[:max]) do
-        {:forward, limit} ->
-          {offset(args) || 0, limit}
+        opts = [
+          has_next_page: args[:first] != nil && !(length(records) < limit),
+          has_previous_page: args[:last] != nil && offset > 0,
+        ] ++ opts
 
-        {:backward, limit} ->
-          offset = case {offset(args), opts[:count]} do
-            {nil, nil} -> raise "You must supply a count if using `last` without `before`"
-            {nil, value} -> max(value - limit, 0)
-            {value, _} -> max(value - limit, 0)
-          end
-          {offset, limit}
+        from_slice(records, offset, opts)
       end
-
-      records =
-        query
-        |> Ecto.Query.limit(^limit)
-        |> Ecto.Query.offset(^offset)
-        |> repo_fun.()
-
-      opts = [
-        has_next_page: args[:first] != nil && !(length(records) < limit),
-        has_previous_page: args[:last] != nil && offset > 0,
-      ] ++ opts
-
-      from_slice(records, offset, opts)
     end
   else
     def from_query(_, _, _, _, _ \\ []) do
@@ -357,6 +342,24 @@ defmodule Absinthe.Relay.Connection do
 
       You cannot use this unless Ecto is also a dependency
       """
+    end
+  end
+
+  @spec offset_and_limit_for_query(Options.t, from_query_opts) :: {:ok, offset, limit} | {:error, any}
+  defp offset_and_limit_for_query(args, opts) do
+    case limit(args, opts[:max]) do
+      {:ok, :forward, limit} ->
+        {:ok, offset(args) || 0, limit}
+
+      {:ok, :backward, limit} ->
+        case {offset(args), opts[:count]} do
+          {nil, nil} -> {:error, "You must supply a count if using `last` without `before`"}
+          {nil, value} -> {:ok, max(value - limit, 0), limit}
+          {value, _} -> {:ok, max(value - limit, 0), limit}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -369,20 +372,21 @@ defmodule Absinthe.Relay.Connection do
   This function provides that capability. For use with `from_list` or `from_query`
   use the `:max` option on those functions.
   """
-  @spec limit(args :: Options.t, max :: pos_integer | nil) :: pos_integer
+  @spec limit(args :: Options.t, max :: pos_integer | nil) :: {:ok, pagination_direction, limit} | {:error, any}
   def limit(args, nil), do: limit(args)
   def limit(args, max) do
-    {direction, limit} = limit(args)
-    {direction, min(max, limit)}
+    with {:ok, direction, limit} <- limit(args) do
+      {:ok, direction, min(max, limit)}
+    end
   end
 
   @doc """
   The direction and desired number of records in the pagination arguments.
   """
-  @spec limit(args :: Options.t) :: {pagination_direction, limit}
-  def limit(%{first: first}), do: {:forward, first}
-  def limit(%{last: last}), do: {:backward, last}
-  def limit(_), do: 0
+  @spec limit(args :: Options.t) :: {:ok, pagination_direction, limit} | {:error, any}
+  def limit(%{first: first}), do: {:ok, :forward, first}
+  def limit(%{last: last}), do: {:ok, :backward, last}
+  def limit(_), do: {:error, "You must either supply `:first` or `:last`"}
 
   @doc """
   Returns the offset for a page.

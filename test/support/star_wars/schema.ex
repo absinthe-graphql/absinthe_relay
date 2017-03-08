@@ -131,7 +131,7 @@ defmodule StarWars.Schema do
     connection field :ships, node_type: :ship do
       resolve fn
         resolve_args, %{source: faction} ->
-          connection = Connection.from_list(
+        Connection.from_list(
           Enum.map(faction.ships, fn
             id ->
               with {:ok, value} <- Database.get(:ship, id) do
@@ -140,7 +140,6 @@ defmodule StarWars.Schema do
           end),
           resolve_args
         )
-        {:ok, connection}
       end
     end
 
