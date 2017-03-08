@@ -237,6 +237,10 @@ defmodule Absinthe.Relay.MutationTest do
       use Absinthe.Schema
       use Absinthe.Relay.Schema
 
+      query do
+
+      end
+
       mutation do
         payload field :without_block, resolve: fn _, _ -> {:ok, %{}} end
         payload field :with_block_and_attrs, resolve: (fn _, _ -> {:ok, %{}} end) do

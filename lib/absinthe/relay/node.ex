@@ -108,21 +108,19 @@ defmodule Absinthe.Relay.Node do
 
   """
 
-  # Build a wrapper around a resolve function that
+  # Middleware to handle a global id
   # parses the global ID before invoking it
   @doc false
-  def resolve_with_global_id(designer_resolver) do
-    fn
-      %{id: global_id}, info ->
-        case Absinthe.Relay.Node.from_global_id(global_id, info.schema) do
-          {:ok, result} ->
-            Absinthe.Resolution.call(designer_resolver, result, info)
-          other ->
-            other
-        end
-      _, info ->
-        Absinthe.Resolution.call(designer_resolver, %{}, info)
+  def resolve_with_global_id(%{state: :unresolved} = res, _) do
+    with %{id: global_id} <- res.arguments,
+    {:ok, result} <- Absinthe.Relay.Node.from_global_id(global_id, res.schema) do
+      %{res | arguments: result}
+    else
+      _ -> res
     end
+  end
+  def resolve_with_global_id(res) do
+    res
   end
 
   @doc """

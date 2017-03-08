@@ -34,12 +34,22 @@ defmodule Absinthe.Relay.Mutation.Notation do
   @doc false
   # Record the mutation field
   def record_field!(env, field_ident, attrs, block) do
+    {maybe_resolve_function, attrs} = case Keyword.pop(attrs, :resolve) do
+      {nil, attrs} ->
+        {[], attrs}
+      {func_ast, attrs} ->
+        ast = quote do
+          resolve unquote(func_ast)
+        end
+        {ast, attrs}
+    end
     Notation.record_field!(
       env,
       field_ident,
       Keyword.put(attrs, :type, ident(field_ident, :payload)),
       [
         field_body(field_ident),
+        maybe_resolve_function,
         block,
         finalize()
       ]
@@ -50,8 +60,10 @@ defmodule Absinthe.Relay.Mutation.Notation do
     input_type_identifier = ident(field_ident, :input)
     quote do
       arg :input, non_null(unquote(input_type_identifier))
+
+      middleware Absinthe.Relay.Mutation
+
       private Absinthe.Relay, :mutation_field_identifier, unquote(field_ident)
-      private Absinthe, :resolve, &Absinthe.Relay.Mutation.resolve_with_input/1
     end
   end
 
