@@ -8,7 +8,8 @@ defmodule Absinthe.Relay.NodeTest do
     use Absinthe.Relay.Schema
 
     @foos %{
-      "1" => %{id: "1", name: "Bar"}
+      "1" => %{id: "1", name: "Bar 1"},
+      "2" => %{id: "2", name: "Bar 2"}
     }
 
     node interface do
@@ -28,19 +29,34 @@ defmodule Absinthe.Relay.NodeTest do
     end
 
     query do
-      field :foo, :foo do
+      field :single_foo, :foo do
         arg :id, non_null(:id)
         resolve parsing_node_ids(&resolve_foo/2, id: :foo)
       end
+
+      field :dual_foo, list_of(:foo) do
+        arg :id1, non_null(:id)
+        arg :id2, non_null(:id)
+        resolve parsing_node_ids(&resolve_foos/2, id1: :foo, id2: :foo)
+      end
     end
 
+    defp resolve_foo({:error, _msg} = error, _info), do: error
     defp resolve_foo(%{id: id}, _) do
       {:ok, Map.get(@foos, id)}
     end
 
+    defp resolve_foos(%{id1: id1, id2: id2}, _) do
+      {:ok, [
+        Map.get(@foos, id1),
+        Map.get(@foos, id2)
+      ]}
+    end
+
   end
 
-  @foo_id Base.encode64("Foo:1")
+  @foo1_id Base.encode64("Foo:1")
+  @foo2_id Base.encode64("Foo:2")
 
   describe "to_global_id" do
 
@@ -72,11 +88,44 @@ defmodule Absinthe.Relay.NodeTest do
 
   describe "parsing_node_id_args" do
 
-    it "parses correctly" do
+    it "parses one id correctly" do
       result = """
-      { foo(id: "#{@foo_id}") { id name } }
+      { singleFoo(id: "#{@foo1_id}") { id name } }
       """ |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{"foo" => %{"name" => "Bar", "id" => @foo_id}}}} == result
+      assert {:ok, %{data: %{"singleFoo" => %{"name" => "Bar 1", "id" => @foo1_id}}}} == result
+    end
+
+    it "handles one incorrect id" do
+      result = """
+      { singleFoo(id: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }
+      """ |> Absinthe.run(Schema)
+      assert {:ok, %{data: %{}, errors: [
+        %{message: "In field \"singleFoo\": Invalid node type for argument `id`; should be foo, was other_foo"}
+      ]}} = result
+    end
+
+    it "parses multiple ids correctly" do
+      result = """
+      { dualFoo(id1: "#{@foo1_id}", id2: "#{@foo2_id}") { id name } }
+      """ |> Absinthe.run(Schema)
+      assert {:ok, %{data: %{"dualFoo" => [
+        %{"name" => "Bar 1", "id" => @foo1_id},
+        %{"name" => "Bar 2", "id" => @foo2_id}
+      ]}}} == result
+    end
+
+    # This never succeeeds.
+    # The current implementation of `parsing_node_ids` clobbers the `args` variable on the first failure of `id1`
+    # causing the next iteration of the `Enum.reduce` when processing `id2` to blow up when it tries to `Map.get`
+    # on the now-clobbered `args` that is actually now a `{:error, ...}` tuple resulting from `id1`
+    it "handles multiple incorrect ids" do
+      result = """
+      { dualFoo(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }
+      """ |> Absinthe.run(Schema)
+      assert {:ok, %{data: %{}, errors: [
+        %{message: "In field \"multipleFoo\": Invalid node type for argument `id1`; should be foo, was other_foo"},
+        %{message: "In field \"multipleFoo\": Invalid node type for argument `id2`; should be foo, was other_foo"}
+      ]}} = result
     end
 
   end
