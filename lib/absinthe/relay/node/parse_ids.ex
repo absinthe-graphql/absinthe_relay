@@ -64,12 +64,41 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
 
   end
+  ```
+
+  See the documentation for `Absinthe.Middleware` for more details.
   """
 
   alias Absinthe.Relay.Node
 
+  @typedoc """
+  The rules used to parse node ID arguments.
+
+  ## Examples
+
+  Declare `:item_id` as only valid with the `:item` node type:
+
+  ```
+  %{
+    item_id: :item
+  }
+  ```
+
+  Declare `:item_id` be valid as either `:foo` or `:bar` types:
+
+  ```
+  %{
+    item_id: [:foo, :bar]
+  }
+  ```
+
+  Note that using these two different forms will result in different argument
+  values being passed for `:item_id` (the former, as a `binary`, the latter
+  as a `map`). See the module documentation for more details.
+  """
   @type rules :: %{atom => atom | [atom]}
 
+  @doc false
   @spec call(Absinthe.Resolution.t, rules) :: Absinthe.Resolution.t
   def call(resolution, rules) do
     case parse(resolution.arguments, rules, resolution) do
@@ -81,6 +110,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
   end
 
+  @doc false
   @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
   def parse(args, rules, resolution) do
     matching_rules(rules, args)
