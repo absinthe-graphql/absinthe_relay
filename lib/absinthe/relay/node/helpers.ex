@@ -3,10 +3,11 @@ defmodule Absinthe.Relay.Node.Helpers do
   Useful schema helper functions for node IDs.
   """
 
-  alias Absinthe.Relay.Node
-
   @doc """
   Wrap a resolver to parse node (global) ID arguments before it is executed.
+
+  Note: This function is deprecated and will be removed in a future release. Use
+  the `Absinthe.Relay.Node.ParseIDs` middleware instead.
 
   For each argument:
 
@@ -15,7 +16,7 @@ defmodule Absinthe.Relay.Node.Helpers do
   - If multiple node types are provided (as a list), the node ID in the
     argument map will be replaced by a map with the node ID specific to your
     application as `:id` and the parsed node type as `:type`.
-7
+
   ## Examples
 
   Parse a node (global) ID argument `:item_id` as an `:item` type. This replaces
@@ -37,44 +38,14 @@ defmodule Absinthe.Relay.Node.Helpers do
   """
   def parsing_node_ids(resolver, rules) do
     fn args, info ->
-      Enum.reduce(rules, {%{}, []}, fn {key, expected_type}, {node_id_args, errors} ->
-        with {:ok, global_id} <- Map.fetch(args, key),
-             {:ok, node_id} <- Node.from_global_id(global_id, info.schema),
-             {:ok, node_id} <- check_node_id(node_id, expected_type, key) do
-          {Map.put(node_id_args, key, node_id), errors}
-        else
-          {:error, msg} ->
-            {node_id_args, [msg | errors]}
-        end
-      end)
+      Absinthe.Relay.Node.ParseIDs.parse(args, rules, info)
       |> case do
-        {node_id_args, []} ->
-          resolver.(Map.merge(args, node_id_args), info)
-        {_, errors} ->
-          {:error, Enum.reverse(errors)}
+        {:ok, parsed_args} ->
+          resolver.(parsed_args, info)
+        error ->
+          error
       end
     end
   end
 
-  defp check_node_id(node_id = %{ type: type }, expected_types, key) when is_list(expected_types) do
-    if type in expected_types do
-      {:ok, node_id}
-    else
-      {
-        :error,
-        ~s<In argument "#{key}": Expected node type in #{inspect(expected_types)}, found #{inspect(type)}.>
-      }
-    end
-  end
-
-  defp check_node_id(%{type: type, id: id}, expected_type, key) do
-    if type == expected_type do
-      {:ok, id}
-    else
-      {
-        :error,
-        ~s<In argument "#{key}": Expected node type #{inspect(expected_type)}, found #{inspect(type)}.>
-      }
-    end
-  end
 end
