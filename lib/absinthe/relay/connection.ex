@@ -100,6 +100,16 @@ defmodule Absinthe.Relay.Connection do
   `pageInfo` is a field that contains information about the current view; the `startCursor`,
   `endCursor`, `hasPreviousPage`, and `hasNextPage` fields.
 
+  ### Pagination Direction
+
+  By default, connections will support bidirectional pagination, but you can
+  also restrict the connection to just the `:forward` or `:backward` direction
+  using the `:paginate` argument:
+
+  ```
+  connection field :pets, node_type: :pet, paginate: :forward do
+  ```
+
   ### Customizing Types
 
   If you'd like to add additional fields to the generated connection and edge
