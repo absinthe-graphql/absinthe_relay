@@ -89,6 +89,8 @@ defmodule Absinthe.Relay.Mutation do
         case Absinthe.Resolution.call(designer_resolver, input, info) do
           {flag, value} when is_map(value) ->
             {flag, Map.put(value, :client_mutation_id, mut_id)}
+          {flag, value, extra} when is_map(value) ->
+            {flag, Map.put(value, :client_mutation_id, mut_id), extra}
           other ->
             # On your own!
             other
