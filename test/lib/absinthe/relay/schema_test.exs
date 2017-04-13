@@ -83,8 +83,8 @@ defmodule Absinthe.Relay.SchemaTest do
 
   describe "using node field" do
     it "creates the :node field" do
-      assert %{fields: %{node: %{name: "node", type: :node, resolve: resolver}}} = Schema.__absinthe_type__(:query)
-      assert !is_nil(resolver)
+      assert %{fields: %{node: %{name: "node", type: :node, middleware: middleware}}} = Schema.__absinthe_type__(:query)
+      assert [{{Absinthe.Relay.Node, :resolve_with_global_id}, []}, {{Absinthe.Resolution, :call}, _}] = middleware
     end
   end
 

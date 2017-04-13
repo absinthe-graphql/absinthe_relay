@@ -1,42 +1,50 @@
 defmodule Absinthe.Relay.Node.Helpers do
-
-  alias Absinthe.Relay.Node
+  @moduledoc """
+  Useful schema helper functions for node IDs.
+  """
 
   @doc """
   Wrap a resolver to parse node (global) ID arguments before it is executed.
 
+  Note: This function is deprecated and will be removed in a future release. Use
+  the `Absinthe.Relay.Node.ParseIDs` middleware instead.
+
+  For each argument:
+
+  - If a single node type is provided, the node ID in the argument map will
+    be replaced by the ID specific to your application.
+  - If multiple node types are provided (as a list), the node ID in the
+    argument map will be replaced by a map with the node ID specific to your
+    application as `:id` and the parsed node type as `:type`.
+
   ## Examples
 
-  Parse a node (global) ID argument `:item_id` (which should be an ID for the
-  `:item` type)
+  Parse a node (global) ID argument `:item_id` as an `:item` type. This replaces
+  the node ID in the argument map (key `:item_id`) with your
+  application-specific ID. For example, `"123"`.
 
   ```
   resolve parsing_node_ids(&my_field_resolver/2, item_id: :item)
   ```
+
+  Parse a node (global) ID argument `:interface_id` into one of multiple node
+  types. This replaces the node ID in the argument map (key `:interface_id`)
+  with map of the parsed node type and your application-specific ID. For
+  example, `%{type: :thing, id: "123"}`.
+
+  ```
+  resolve parsing_node_ids(&my_field_resolver/2, interface_id: [:item, :thing])
+  ```
   """
-  def parsing_node_ids(resolver, id_keys) do
+  def parsing_node_ids(resolver, rules) do
     fn args, info ->
-      args = Enum.reduce(id_keys, args, fn {key, type}, args ->
-        with {:ok, global_id} <- Map.fetch(args, key),
-             {:ok, %{id: id, type: ^type}} <- Node.from_global_id(global_id, info.schema) do
-          {:success, Map.put(args, key, id)}
-        end
-        |> case do
-             {:ok, %{type: bad_type}} ->
-               # The user provided an ID for a different type of field,
-               # notify them in a normal GraphQL error response
-               {:error, "Invalid node type for argument `#{key}`; should be #{type}, was #{bad_type}"}
-             {:error, msg} ->
-               # A more serious error, eg, a missing type, notify
-               # the schema designer with an exception
-               raise ArgumentError, msg
-             {:success, args} ->
-               args
-             _ ->
-               args
-           end
-      end)
-      resolver.(args, info)
+      Absinthe.Relay.Node.ParseIDs.parse(args, rules, info)
+      |> case do
+        {:ok, parsed_args} ->
+          resolver.(parsed_args, info)
+        error ->
+          error
+      end
     end
   end
 

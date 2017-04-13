@@ -1,12 +1,12 @@
 defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
-  @version "1.2.0"
+  @version "1.3.0-beta.1"
 
   def project do
     [app: :absinthe_relay,
      version: @version,
-     elixir: "~> 1.3",
+     elixir: "~> 1.4",
      elixirc_paths: elixirc_paths(Mix.env),
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
@@ -33,7 +33,7 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, "~> 1.2.0"},
+      {:absinthe, "~> 1.3.0-beta.2"},
       {:ecto, "~> 1.0 or ~> 2.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.11.0", only: :dev},

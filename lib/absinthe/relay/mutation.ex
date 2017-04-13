@@ -83,22 +83,25 @@ defmodule Absinthe.Relay.Mutation do
   @doc false
   # System resolver to extract values from the input and return the
   # client mutation ID as part of the response.
-  def resolve_with_input(designer_resolver) do
-    fn
-      %{input: %{client_mutation_id: mut_id} = input}, info ->
-        case Absinthe.Resolution.call(designer_resolver, input, info) do
-          {flag, value} when is_map(value) ->
-            {flag, Map.put(value, :client_mutation_id, mut_id)}
-          other ->
-            # On your own!
-            other
-        end
-      _args, info ->
-        Absinthe.Resolution.call(designer_resolver, %{}, info)
+  def call(%{state: :unresolved} = res, _) do
+    case res.arguments do
+      %{input: %{client_mutation_id: mut_id} = input} ->
+        %{res |
+          arguments: input,
+          private: Map.put(res.private, :__client_mutation_id, mut_id),
+          middleware: res.middleware ++ [__MODULE__]
+        }
+      res ->
+        res
     end
   end
-  def resolve_with_input(_, info, designer_resolver) do
-    Absinthe.Resolution.call(designer_resolver, %{}, info)
+  def call(%{state: :resolved, value: value} = res, _) when is_map(value) do
+    mut_id = res.private[:__client_mutation_id]
+
+    %{res | value: Map.put(value, :client_mutation_id, mut_id)}
+  end
+  def call(res, _) do
+    res
   end
 
 end
