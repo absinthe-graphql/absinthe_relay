@@ -330,7 +330,7 @@ defmodule Absinthe.Relay.Connection do
     @spec from_query(Ecto.Query.t, (Ecto.Query.t -> [term]), Options.t, from_query_opts) :: {:ok, map} | {:error, any}
     def from_query(query, repo_fun, args, opts \\ []) do
       require Ecto.Query
-      with {:ok, offset, limit} <- offset_and_limit_for_query(args, opts[:max]) do
+      with {:ok, offset, limit} <- offset_and_limit_for_query(args, opts) do
         records =
           query
           |> Ecto.Query.limit(^limit)
