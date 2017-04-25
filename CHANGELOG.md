@@ -1,9 +1,8 @@
 # CHANGELOG
 
 ## 1.3.0
-### Status: Beta
 
-- Enhancement: Added `Absinthe.Relay.Node.ParseIDs`. Use it instead of
+- Enhancement: Added `Absinthe.Relay.Node.ParseIDs` middleware. Use it instead of
   `Absinthe.Relay.Helpers.parsing_node_ids/2`, which will be removed in a future
   release.
 - Enhancement: Allow multiple possible node types when parsing node IDs.
