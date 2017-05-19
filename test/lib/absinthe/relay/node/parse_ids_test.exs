@@ -38,14 +38,20 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     query do
 
       field :foo, :foo do
-        arg :foo_id, non_null(:id)
+        arg :foo_id, :id
+        arg :foobar_id, :id
         middleware Absinthe.Relay.Node.ParseIDs, foo_id: :foo
+        middleware Absinthe.Relay.Node.ParseIDs, foobar_id: [:foo, :bar]
         resolve &resolve_foo/2
       end
 
     end
 
     defp resolve_foo(%{foo_id: id}, _) do
+      {:ok, Map.get(@foos, id)}
+    end
+
+    defp resolve_foo(%{foobar_id: %{id: id, type: :foo}}, _) do
       {:ok, Map.get(@foos, id)}
     end
 
@@ -56,6 +62,13 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   it "parses one id correctly" do
     result =
       ~s<{ foo(fooId: "#{@foo1_id}") { id name } }>
+      |> Absinthe.run(Schema)
+    assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
+  end
+
+  it "parses an id into one of multiple node types" do
+    result =
+      ~s<{ foo(foobarId: "#{@foo1_id}") { id name } }>
       |> Absinthe.run(Schema)
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
