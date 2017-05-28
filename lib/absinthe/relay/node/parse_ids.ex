@@ -42,6 +42,40 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   end
   ```
 
+  Parse a nested structure of node (global) IDs. This behaves similarly to the
+  examples above, but acts recursively when given a keyword list.
+
+  ```
+  input_object :parent_input do
+    field :id, non_null(:id)
+    field :children, list_of(:child_input)
+    field :child, non_null(:child_input)
+  end
+
+  input_object :child_input do
+    field :id, non_null(:id)
+  end
+
+  mutation do
+    payload field :update_parent do
+      input do
+        field :parent, :parent_input
+      end
+
+      output do
+        field :parent, :parent
+      end
+
+      middleware Absinthe.Relay.Node.ParseIDs, parent: [
+        id: :parent,
+        children: [id: :child],
+        child: [id: :child]
+      ]
+      resolve &resolve_parent/2
+    end
+  end
+  ```
+
   As with any piece of middleware, this can configured schema-wide using the
   `middleware/3` function in your schema. In this example all top level
   query fields are made to support node IDs with the associated criteria in
@@ -113,18 +147,37 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   @doc false
   @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
   def parse(args, rules, resolution) do
-    matching_rules(rules, args)
-    |> Enum.reduce({%{}, []}, fn {key, expected_type}, {node_id_args, errors} ->
-      with global_id <- Map.get(args, key),
-           {:ok, node_id} <- Node.from_global_id(global_id, resolution.schema),
-           argument_name <- find_argument_name(key, resolution),
-           {:ok, node_id} <- check_node_id(node_id, expected_type, argument_name) do
-        {Map.put(node_id_args, key, node_id), errors}
-      else
-        {:error, msg} ->
-          {node_id_args, [msg | errors]}
-      end
+    case args do
+      list when is_list(list) ->
+        parse_list(list, rules, resolution)
+      _ ->
+        parse_args(args, rules, resolution)
+    end
+  end
+
+  @spec parse(list, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
+  defp parse_list(list, rules, resolution) do
+    Enum.reduce(list, {:ok, []}, fn(map, result) ->
+      parse_list_item(result, map, rules, resolution)
     end)
+  end
+
+  defp parse_list_item({:error, errors} = initial_result, map, rules, resolution) do
+    case parse(map, rules, resolution) do
+      {:error, error} -> {:error, [error | errors]}
+      _ -> initial_result
+    end
+  end
+  defp parse_list_item({:ok, maps}, map, rules, resolution) do
+    case parse(map, rules, resolution) do
+      {:ok, new_map} -> {:ok, [new_map | maps]}
+      {:error, error} -> {:error, [error]}
+    end
+  end
+
+  @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
+  defp parse_args(args, rules, resolution) do
+    parse_all_rules(args, rules, resolution)
     |> case do
       {node_id_args, []} ->
         {:ok, Map.merge(args, node_id_args)}
@@ -133,11 +186,55 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
   end
 
-  @spec matching_rules(rules, map) :: rules
-  defp matching_rules(rules, args) do
-    rules
-    |> Enum.filter(fn {key, _} -> Map.has_key?(args, key) end)
-    |> Map.new
+  defp parse_all_rules(args, rules, resolution) do
+    Enum.reduce(rules, {%{}, []}, fn (rule, result) ->
+      parse_rule(args, resolution, rule, result)
+    end)
+  end
+
+  defp parse_rule(args, resolution, {key, _} = rule, {node_id_args, errors} = result) do
+    with {:ok, global_id} <- get_global_id(args, key),
+         {:ok, expected_type} <- get_expected_type(rule),
+         {:ok, node_id} <- Node.from_global_id(global_id, resolution.schema),
+         argument_name <- find_argument_name(key, resolution),
+         {:ok, node_id} <- check_node_id(node_id, expected_type, argument_name) do
+      {Map.put(node_id_args, key, node_id), errors}
+    else
+      {:error, error} ->
+        {node_id_args, [error | errors]}
+      {:missing_key, _} ->
+        result
+      {:nested_rule, nested_rule} ->
+        args
+        |> Map.get(key)
+        |> parse_nested_rule(resolution, nested_rule, result)
+    end
+  end
+
+  defp parse_nested_rule(args, resolution, {key, rules}, {node_id_args, errors}) do
+    case parse(args, rules, resolution) do
+      {:ok, parsed_args} ->
+        {Map.put(node_id_args, key, parsed_args), errors}
+      {:error, nested_errors} ->
+        {node_id_args, nested_errors ++ errors}
+    end
+  end
+
+  defp get_expected_type({_, expected_type_or_nested_rule} = rule) do
+    if Keyword.keyword?(expected_type_or_nested_rule) do
+      {:nested_rule, rule}
+    else
+      {:ok, expected_type_or_nested_rule}
+    end
+  end
+
+  defp get_global_id(args, key) do
+    case Map.get(args, key) do
+      nil ->
+        {:missing_key, key}
+      global_id ->
+        {:ok, global_id}
+    end
   end
 
   @spec find_argument_name(atom, Absinthe.Resolution.t) :: nil | String.t
