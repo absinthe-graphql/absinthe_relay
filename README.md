@@ -4,9 +4,6 @@ Support for the [Relay framework](https://facebook.github.io/relay/)
 from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
 package.
 
-Please note that this is the initial release of this package and that
-significant API changes are expected before v1.0.
-
 ## Installation
 
 Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
