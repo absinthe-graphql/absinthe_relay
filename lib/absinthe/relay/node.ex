@@ -180,7 +180,7 @@ defmodule Absinthe.Relay.Node do
     end
   end
   defp do_from_global_id(_, decoded, _schema) do
-    {:error, "Could not extract value from decoded ID `#{decoded}'"}
+    {:error, "Could not extract value from decoded ID `#{inspect decoded}'"}
   end
 
   @doc """

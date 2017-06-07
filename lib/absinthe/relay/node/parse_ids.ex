@@ -193,14 +193,18 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   end
 
   defp parse_rule(args, resolution, {key, _} = rule, {node_id_args, errors} = result) do
+    argument_name = find_argument_name(key, resolution)
+
     with {:ok, global_id} <- get_global_id(args, key),
          {:ok, expected_type} <- get_expected_type(rule),
          {:ok, node_id} <- Node.from_global_id(global_id, resolution.schema),
-         argument_name <- find_argument_name(key, resolution),
          {:ok, node_id} <- check_node_id(node_id, expected_type, argument_name) do
       {Map.put(node_id_args, key, node_id), errors}
     else
       {:error, error} ->
+        error = ~s<In argument "#{argument_name}": #{error}.>
+        {node_id_args, [error | errors]}
+      {:check_node_error, error} ->
         {node_id_args, [error | errors]}
       {:missing_key, _} ->
         result
@@ -255,14 +259,14 @@ defmodule Absinthe.Relay.Node.ParseIDs do
       true ->
         {:ok, id_map}
       false ->
-        {:error, ~s<In argument "#{argument_name}": Expected node type in #{inspect(expected_types)}, found #{inspect(type)}.>}
+        {:check_node_error, ~s<In argument "#{argument_name}": Expected node type in #{inspect(expected_types)}, found #{inspect(type)}.>}
     end
   end
   defp check_node_id(%{type: expected_type, id: id}, expected_type, _) do
     {:ok, id}
   end
   defp check_node_id(%{type: type}, expected_type, argument_name) do
-    {:error, ~s<In argument "#{argument_name}": Expected node type #{inspect(expected_type)}, found #{inspect(type)}.>}
+    {:check_node_error, ~s<In argument "#{argument_name}": Expected node type #{inspect(expected_type)}, found #{inspect(type)}.>}
   end
 
 end
