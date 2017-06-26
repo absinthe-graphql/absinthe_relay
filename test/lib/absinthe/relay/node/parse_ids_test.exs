@@ -79,6 +79,12 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         resolve &resolve_foo/2
       end
 
+      field :foos, list_of(:foo) do
+        arg :foo_ids, list_of(:id)
+        middleware Absinthe.Relay.Node.ParseIDs, foo_ids: :foo
+        resolve &resolve_foos/2
+      end
+
       mutation do
         payload field :update_parent do
           input do
@@ -103,9 +109,13 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     defp resolve_foo(%{foo_id: id}, _) do
       {:ok, Map.get(@foos, id)}
     end
-
     defp resolve_foo(%{foobar_id: %{id: id, type: :foo}}, _) do
       {:ok, Map.get(@foos, id)}
+    end
+
+    defp resolve_foos(%{foo_ids: ids}, _) do
+      values = Enum.map(ids, &Map.get(@foos, &1))
+      {:ok, values}
     end
 
     defp resolve_parent(args, _) do
@@ -115,12 +125,29 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   end
 
   @foo1_id Base.encode64("Foo:1")
+  @foo2_id Base.encode64("Foo:2")
 
   it "parses one id correctly" do
     result =
       ~s<{ foo(fooId: "#{@foo1_id}") { id name } }>
       |> Absinthe.run(Schema)
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
+  end
+
+  it "parses a list of ids correctly" do
+    result =
+      ~s<{ foos(fooIds: ["#{@foo1_id}", "#{@foo2_id}"]) { id name } }>
+      |> Absinthe.run(Schema)
+    assert {:ok,
+      %{
+        data: %{
+          "foos" => [
+            %{"name" => "Foo 1", "id" => @foo1_id},
+            %{"name" => "Foo 2", "id" => @foo2_id}
+          ]
+        }
+      }
+    } == result
   end
 
   it "parses an id into one of multiple node types" do
