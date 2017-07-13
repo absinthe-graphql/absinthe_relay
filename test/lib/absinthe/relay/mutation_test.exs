@@ -59,6 +59,58 @@ defmodule Absinthe.Relay.MutationTest do
     end
   end
 
+  describe "mutation WITHOUT clientMutationId" do
+
+    @query """
+    mutation M {
+      simpleMutation {
+        result
+      }
+    }
+    """
+    it "requires an `input' argument" do
+      assert {:ok, %{errors: [%{message: ~s(In argument "input": Expected type "SimpleMutationInput!", found null.)}]}} = Absinthe.run(@query, Schema)
+    end
+
+    @query """
+    mutation M {
+      simpleMutation(input: {input_data: 1}) {
+        result
+        clientMutationId
+      }
+    }
+    """
+    @expected %{
+      data: %{
+        "simpleMutation" => %{
+          "result" => 2,
+          "clientMutationId" => nil
+        }
+      }
+    }
+    it "returns nil clientMutationId" do
+      assert {:ok, @expected} == Absinthe.run(@query, Schema)
+    end
+
+    @query """
+    mutation M {
+      simpleMutation(input: {input_data: 1}) {
+        result
+      }
+    }
+    """
+    @expected %{
+      data: %{
+        "simpleMutation" => %{
+          "result" => 2
+        }
+      }
+    }
+    it "works without querying clientMutationId in the payload" do
+      assert {:ok, @expected} == Absinthe.run(@query, Schema)
+    end
+  end
+
 
   describe "introspection" do
 
@@ -90,12 +142,9 @@ defmodule Absinthe.Relay.MutationTest do
             %{
               "name" => "clientMutationId",
               "type" => %{
-                "name" => nil,
-                "kind" => "NON_NULL",
-                "ofType" => %{
-                  "name" => "String",
-                  "kind" => "SCALAR"
-                }
+                "name" => "String",
+                "kind" => "SCALAR",
+                "ofType" => nil
               }
             },
             %{
@@ -143,12 +192,9 @@ defmodule Absinthe.Relay.MutationTest do
             %{
               "name" => "clientMutationId",
               "type" => %{
-                "name" => nil,
-                "kind" => "NON_NULL",
-                "ofType" => %{
-                  "name" => "String",
-                  "kind" => "SCALAR"
-                }
+                "name" => "String",
+                "kind" => "SCALAR",
+                "ofType" => nil
               }
             },
             %{

@@ -87,7 +87,7 @@ defmodule Absinthe.Relay.Mutation.Notation do
   # Common for both the input and payload objects
   defp client_mutation_id_field do
     quote do
-      field :client_mutation_id, type: non_null(:string)
+      field :client_mutation_id, type: :string
     end
   end
 
