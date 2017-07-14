@@ -5,11 +5,10 @@ defmodule Absinthe.Relay.Schema do
   See `Absinthe.Relay`.
   """
 
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
     quote do
-      use Absinthe.Relay.Schema.Notation
+      use Absinthe.Relay.Schema.Notation, unquote(opts)
       import_types Absinthe.Relay.Connection.Types
     end
   end
-
 end
