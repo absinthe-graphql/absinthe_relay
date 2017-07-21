@@ -268,7 +268,7 @@ defmodule Absinthe.Relay.Connection do
   alias Absinthe.Relay
 
   def list(args, %{context: %{current_user: user}}) do
-    {:forward, limit} = Connection.limit(args)
+    {:ok, :forward, limit} = Connection.limit(args)
     offset = Connection.offset(args)
 
     Post
