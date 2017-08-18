@@ -127,7 +127,7 @@ defmodule Absinthe.Relay.NodeTest do
         ~s<{ singleFoo(id: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
-        %{message: ~s<In field "singleFoo": In argument "id": Expected node type :foo, found :other_foo.>}
+        %{message: ~s<In field "singleFoo": In argument "id": Expected node type in ["Foo"], found "FancyFoo".>}
       ]}} = result
     end
 
@@ -136,7 +136,7 @@ defmodule Absinthe.Relay.NodeTest do
         ~s<{ singleFooWithMultipleNodeTypes(id: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
-        %{message: ~s<In field "singleFooWithMultipleNodeTypes": In argument "id": Expected node type in [:foo, :bar], found :other_foo.>}
+        %{message: ~s<In field "singleFooWithMultipleNodeTypes": In argument "id": Expected node type in ["Foo"], found "FancyFoo".>}
       ]}} = result
     end
 
@@ -162,8 +162,8 @@ defmodule Absinthe.Relay.NodeTest do
         ~s<{ dualFoo(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
-        %{message: ~s(In field "dualFoo": In argument "id1": Expected node type :foo, found :other_foo.)},
-        %{message: ~s(In field "dualFoo": In argument "id2": Expected node type :foo, found :other_foo.)}
+        %{message: ~s(In field "dualFoo": In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)},
+        %{message: ~s(In field "dualFoo": In argument "id2": Expected node type in ["Foo"], found "FancyFoo".)}
       ]}} = result
     end
 
@@ -172,8 +172,8 @@ defmodule Absinthe.Relay.NodeTest do
         ~s<{ dualFooWithMultipleNodeTypes(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
-        %{message: ~s(In field "dualFooWithMultipleNodeTypes": In argument "id1": Expected node type in [:foo, :bar], found :other_foo.)},
-        %{message: ~s(In field "dualFooWithMultipleNodeTypes": In argument "id2": Expected node type in [:foo, :bar], found :other_foo.)}
+        %{message: ~s(In field "dualFooWithMultipleNodeTypes": In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)},
+        %{message: ~s(In field "dualFooWithMultipleNodeTypes": In argument "id2": Expected node type in ["Foo"], found "FancyFoo".)}
       ]}} = result
     end
 

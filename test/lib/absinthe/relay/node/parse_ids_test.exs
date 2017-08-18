@@ -226,9 +226,14 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     result =
       ~s<{ foo(fooId: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
       |> Absinthe.run(Schema)
-    assert {:ok, %{data: %{}, errors: [
-      %{message: ~s<In field "foo": In argument "fooId": Expected node type :foo, found :other_foo.>}
-    ]}} = result
+    assert {
+      :ok, %{
+        data: %{},
+        errors: [
+          %{message: ~s<In field "foo": In argument "fooId": Expected node type in ["Foo"], found "FancyFoo".>}
+        ]
+      }
+    } = result
   end
 
 end
