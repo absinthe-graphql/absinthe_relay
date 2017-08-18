@@ -169,7 +169,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
           :error ->
             {args, errors}
           {:ok, arg_value} ->
-            case find_child_schema_node(key, schema_node) do
+            case find_child_schema_node(key, schema_node, resolution.schema) do
               nil ->
                 {args, ["Could not find schema_node for #{key}" | errors]}
               child_schema_node ->
@@ -198,13 +198,22 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
   end
 
-  @spec find_child_schema_node(atom, Absinthe.Type.Field.t | Absinthe.Type.InputObject.t) :: nil | Absinthe.Type.Argument.t | Absinthe.Type.Field.t
-  defp find_child_schema_node(identifier, %Absinthe.Type.Field{} = field) do
-    field.args[identifier]
+  @spec find_child_schema_node(atom, Absinthe.Type.Field.t | Absinthe.Type.InputObject.t | Absinthe.Type.Argument.t, Absinthe.Schema.t) :: nil | Absinthe.Type.Argument.t | Absinthe.Type.Field.t
+  defp find_child_schema_node(identifier, %Absinthe.Type.Field{} = field, schema) do
+    case Absinthe.Schema.lookup_type(schema, field.type) do
+      %Absinthe.Type.InputObject{} = return_type ->
+        find_child_schema_node(identifier, return_type, schema)
+      _ ->
+        field.args[identifier]
+    end
   end
-  defp find_child_schema_node(identifier, %Absinthe.Type.InputObject{} = input_object) do
+  defp find_child_schema_node(identifier, %Absinthe.Type.InputObject{} = input_object, _schema) do
     input_object.fields[identifier]
   end
+  defp find_child_schema_node(identifier, %Absinthe.Type.Argument{} = argument, schema) do
+    find_child_schema_node(identifier, Absinthe.Schema.lookup_type(schema, argument.type), schema)
+  end
+
 
   @spec check_result(full_result, Rule.t, Absinthe.Resolution.t) :: {:ok, full_result} | {:error, String.t}
   defp check_result(%{type: type} = result, %Rule{expected_types: types} = rule, resolution) do

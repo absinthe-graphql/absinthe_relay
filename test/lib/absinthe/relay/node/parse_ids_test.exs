@@ -86,15 +86,11 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       end
 
       mutation do
+
         payload field :update_parent do
+
           input do
-            field :parent, :parent_input do
-              middleware Absinthe.Relay.Node.ParseIDs, [
-                id: :parent,
-                children: [id: :child],
-                child: [id: :child]
-              ]
-            end
+            field :parent, :parent_input
           end
 
           output do
@@ -120,7 +116,26 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
 
     defp resolve_parent(args, _) do
+      IO.inspect(args: args)
       {:ok, args}
+    end
+
+    @update_parent_ids {
+      Absinthe.Relay.Node.ParseIDs, [
+        input: [
+          parent: [
+            id: :parent,
+            children: [id: :child],
+            child: [id: :child]
+          ]
+        ]
+      ]
+    }
+    def middleware(middleware, %{identifier: :update_parent}, _) do
+      [@update_parent_ids | middleware]
+    end
+    def middleware(middleware, _, _) do
+      middleware
     end
 
   end
@@ -158,6 +173,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
+  @tag :check
   it "parses nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
     encoded_child_id = Base.encode64("Child:1")
@@ -218,7 +234,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       data: %{"updateParent" => nil},
       errors: [%{
         locations: [%{column: 0, line: 2}],
-        message: ~s<In field "updateParent": In argument "": Expected node type :child, found :other_foo.>
+        message: ~s<In field "updateParent": In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
       }]
     } = result
   end
