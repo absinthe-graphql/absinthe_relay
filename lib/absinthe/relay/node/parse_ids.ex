@@ -103,8 +103,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   See the documentation for `Absinthe.Middleware` for more details.
   """
 
-  alias Absinthe.Relay.Node
-  alias __MODULE__.{Config, Rule, Namespace}
+  alias __MODULE__.{Config, Rule}
 
   @typedoc """
   The rules used to parse node ID arguments.
@@ -156,7 +155,6 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     config = Config.parse!(rules)
     case process(config, args, resolution, resolution.definition.schema_node, []) do
       {processed_args, []} ->
-        IO.inspect(args: args, processed: processed_args)
         {:ok, processed_args}
       {_, errors} ->
         {:error, errors}
@@ -169,7 +167,6 @@ defmodule Absinthe.Relay.Node.ParseIDs do
       %{key: key} = child, {args, errors} ->
         case Map.fetch(args, key) do
           :error ->
-            IO.puts("Could not find arg value #{key}")
             {args, errors}
           {:ok, arg_value} ->
             case find_child_schema_node(key, schema_node) do
@@ -184,7 +181,6 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end)
   end
   defp process(%Rule{} = rule, arg_values, resolution, schema_node, errors) when is_list(arg_values) do
-    IO.inspect(using_list: arg_values)
     {processed, errors} = Enum.reduce(arg_values, {[], errors}, fn
       element_value, {values, errors} ->
         {processed_element_value, errors} = process(rule, element_value, resolution, schema_node, errors)
@@ -192,7 +188,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end)
     {Enum.reverse(processed), errors}
   end
-  defp process(%Rule{} = rule, arg_value, resolution, schema_node, errors) do
+  defp process(%Rule{} = rule, arg_value, resolution, _schema_node, errors) do
     with {:ok, node_id} <- Absinthe.Relay.Node.from_global_id(arg_value, resolution.schema),
          {:ok, node_id} <- check_result(node_id, rule, resolution) do
       {Rule.output(rule, node_id), errors}
