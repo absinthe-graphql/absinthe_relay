@@ -148,7 +148,6 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
   end
 
-
   @doc false
   @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
   def parse(args, rules, resolution) do
@@ -161,9 +160,10 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
   end
 
+  # Process values based on the matching configuration rules
   @spec process(Config.node_t, any, Absinthe.Resolution.t, Absinthe.Type.t, list) :: {any, list}
   defp process(%{children: children}, args, resolution, schema_node, errors) do
-    Enum.reduce(children, {args, errors}, &process_namespace_child(&1, &2, resolution, schema_node))
+    Enum.reduce(children, {args, errors}, &reduce_namespace_child_values(&1, &2, resolution, schema_node))
   end
   defp process(%Rule{} = rule, arg_values, resolution, schema_node, errors) when is_list(arg_values) do
     {processed, errors} = Enum.reduce(arg_values, {[], errors}, fn
@@ -183,36 +183,45 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     end
   end
 
-  defp process_namespace_child(%{key: key} = child, {raw_values, errors}, resolution, schema_node) do
-    {processed_values, processed_errors} = Enum.reduce(List.wrap(raw_values), {[], []}, fn
-      raw_value, {processed_values, processed_errors} ->
-        case Map.fetch(raw_value, key) do
-          :error ->
-            {[raw_value | processed_values], processed_errors}
-          {:ok, raw_value_for_key} ->
-            case find_child_schema_node(key, schema_node, resolution.schema) do
-              nil ->
-                {processed_values, ["Could not find schema_node for #{key}" | processed_errors]}
-              child_schema_node ->
-                {processed_value_for_key, child_errors} = process(child, raw_value_for_key, resolution, child_schema_node, [])
-                child_errors = Enum.map(child_errors, &(error_prefix(child_schema_node, resolution.adapter) <> &1))
-                {[Map.put(raw_value, key, processed_value_for_key) | processed_values], processed_errors ++ child_errors}
-          end
-      end
-    end)
-    case processed_errors do
-      [] ->
-        if is_list(raw_values) do
-          {processed_values |> Enum.reverse, errors}
-        else
-          {List.last(processed_values), errors}
-        end
-      _ ->
+  # Since the raw value for a child may be a list, we normalize the raw value with a `List.wrap/1`, process that list,
+  # then return a single value or a list of values, as appropriate, with any errors that are collected.
+  @spec reduce_namespace_child_values(Config.node_t, {any, [String.t]}, Absinthe.Resolution.t, Absinthe.Type.t) :: {any, [String.t]}
+  defp reduce_namespace_child_values(child, {raw_values, errors}, resolution, schema_node) do
+    raw_values
+    |> List.wrap
+    |> Enum.reduce({[], []}, &reduce_namespace_child_value_element(child, &1, &2, resolution, schema_node))
+    |> case do
+      {values, []} ->
+        {format_child_value(raw_values, values), errors}
+      {_, processed_errors} ->
         {raw_values, errors ++ processed_errors}
     end
   end
 
-  @spec find_child_schema_node(atom, Absinthe.Type.Field.t | Absinthe.Type.InputObject.t | Absinthe.Type.Argument.t, Absinthe.Schema.t) :: nil | Absinthe.Type.Argument.t | Absinthe.Type.Field.t
+  # Process a single value for a child and collect that value with any associated errors
+  @spec reduce_namespace_child_value_element(Config.node_t, any, {[any], [String.t]}, Absinthe.Resolution.t, Absinthe.Type.t) :: {[any], [String.t]}
+  defp reduce_namespace_child_value_element(%{key: key} = child, raw_value, {processed_values, processed_errors}, resolution, schema_node) do
+    case Map.fetch(raw_value, key) do
+      :error ->
+        {[raw_value | processed_values], processed_errors}
+      {:ok, raw_value_for_key} ->
+        case find_child_schema_node(key, schema_node, resolution.schema) do
+          nil ->
+            {processed_values, ["Could not find schema_node for #{key}" | processed_errors]}
+          child_schema_node ->
+            {processed_value_for_key, child_errors} = process(child, raw_value_for_key, resolution, child_schema_node, [])
+            child_errors = Enum.map(child_errors, &(error_prefix(child_schema_node, resolution.adapter) <> &1))
+            {[Map.put(raw_value, key, processed_value_for_key) | processed_values], processed_errors ++ child_errors}
+        end
+    end
+  end
+
+  # Return a value or a list of values based on how the original raw values were structured
+  @spec format_child_value(a | [a], [a]) :: a | [a] when a: any
+  defp format_child_value(raw_values, values) when is_list(raw_values), do: values |> Enum.reverse
+  defp format_child_value(_, [value]), do: value
+
+  @spec find_child_schema_node(Absinthe.Type.identifier_t, Absinthe.Type.Field.t | Absinthe.Type.InputObject.t | Absinthe.Type.Argument.t, Absinthe.Schema.t) :: nil | Absinthe.Type.Argument.t | Absinthe.Type.Field.t
   defp find_child_schema_node(identifier, %Absinthe.Type.Field{} = field, schema) do
     case Absinthe.Schema.lookup_type(schema, field.type) do
       %Absinthe.Type.InputObject{} = return_type ->
