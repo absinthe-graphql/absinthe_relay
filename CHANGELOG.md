@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.3.1
+
+- Enhancement: `Absinthe.Relay.Node.ParseIDs` can now decode nested values! See
+  the module docs for details.
+- Enhancement: Improved error message when node ids cannot be parsed at all.
+
 ## 1.3.0
 
 - Breaking Change: The functions in the `Connection` module that produce connections
