@@ -415,6 +415,7 @@ defmodule Absinthe.Relay.Connection do
 
   defp build_cursors([], _offset), do: {[], nil, nil}
   defp build_cursors([item | items], offset) do
+    offset = offset || 0
     first = offset_to_cursor(offset)
     first_edge = %{
       node: item,

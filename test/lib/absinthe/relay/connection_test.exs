@@ -1,6 +1,8 @@
 defmodule Absinthe.Relay.ConnectionTest do
   use Absinthe.Relay.Case, async: true
 
+  alias Absinthe.Relay.Connection
+
   @jack_global_id Base.encode64("Person:jack")
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
@@ -189,4 +191,9 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
   end
 
+  describe ".from_slice/2" do
+    it "when the offset is nil it will not do arithmetic on nil" do
+      Connection.from_slice([%{foo: :bar}], nil)
+    end
+  end
 end
