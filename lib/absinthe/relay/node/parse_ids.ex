@@ -163,22 +163,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
   @spec process(Config.node_t, any, Absinthe.Resolution.t, Absinthe.Type.t, list) :: {any, list}
   defp process(%{children: children}, args, resolution, schema_node, errors) do
-    Enum.reduce(children, {args, errors}, fn
-      %{key: key} = child, {args, errors} ->
-        case Map.fetch(args, key) do
-          :error ->
-            {args, errors}
-          {:ok, arg_value} ->
-            case find_child_schema_node(key, schema_node, resolution.schema) do
-              nil ->
-                {args, ["Could not find schema_node for #{key}" | errors]}
-              child_schema_node ->
-                {processed_arg_value, child_errors} = process(child, arg_value, resolution, child_schema_node, [])
-                child_errors = Enum.map(child_errors, &(error_prefix(child_schema_node, resolution.adapter) <> &1))
-                {Map.put(args, key, processed_arg_value), errors ++ child_errors}
-            end
-        end
-    end)
+    Enum.reduce(children, {args, errors}, &process_namespace_child(&1, &2, resolution, schema_node))
   end
   defp process(%Rule{} = rule, arg_values, resolution, schema_node, errors) when is_list(arg_values) do
     {processed, errors} = Enum.reduce(arg_values, {[], errors}, fn
@@ -195,6 +180,35 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     else
       {:error, message} ->
         {arg_value, [message | errors]}
+    end
+  end
+
+  defp process_namespace_child(%{key: key} = child, {raw_values, errors}, resolution, schema_node) do
+    {processed_values, processed_errors} = Enum.reduce(List.wrap(raw_values), {[], []}, fn
+      raw_value, {processed_values, processed_errors} ->
+        case Map.fetch(raw_value, key) do
+          :error ->
+            {[raw_value | processed_values], processed_errors}
+          {:ok, raw_value_for_key} ->
+            case find_child_schema_node(key, schema_node, resolution.schema) do
+              nil ->
+                {processed_values, ["Could not find schema_node for #{key}" | processed_errors]}
+              child_schema_node ->
+                {processed_value_for_key, child_errors} = process(child, raw_value_for_key, resolution, child_schema_node, [])
+                child_errors = Enum.map(child_errors, &(error_prefix(child_schema_node, resolution.adapter) <> &1))
+                {[Map.put(raw_value, key, processed_value_for_key) | processed_values], processed_errors ++ child_errors}
+          end
+      end
+    end)
+    case processed_errors do
+      [] ->
+        if is_list(raw_values) do
+          {processed_values |> Enum.reverse, errors}
+        else
+          {List.last(processed_values), errors}
+        end
+      _ ->
+        {raw_values, errors ++ processed_errors}
     end
   end
 

@@ -116,7 +116,6 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
 
     defp resolve_parent(args, _) do
-      IO.inspect(args: args)
       {:ok, args}
     end
 
@@ -173,7 +172,6 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
-  @tag :check
   it "parses nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
     encoded_child_id = Base.encode64("Child:1")
