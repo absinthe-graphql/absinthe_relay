@@ -88,18 +88,19 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       mutation do
         payload field :update_parent do
           input do
-            field :parent, :parent_input
+            field :parent, :parent_input do
+              middleware Absinthe.Relay.Node.ParseIDs, [
+                id: :parent,
+                children: [id: :child],
+                child: [id: :child]
+              ]
+            end
           end
 
           output do
             field :parent, :parent
           end
 
-          middleware Absinthe.Relay.Node.ParseIDs, parent: [
-            id: :parent,
-            children: [id: :child],
-            child: [id: :child]
-          ]
           resolve &resolve_parent/2
         end
       end
