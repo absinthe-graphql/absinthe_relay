@@ -86,10 +86,10 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
     # Schema ...
 
-    @node_id_rules %{
+    @node_id_rules [
       item_id: :item,
       interface_id: [:item, :thing],
-    }
+    ]
     def middleware(middleware, _, %Absinthe.Type.Object{identifier: :query}) do
       [{Absinthe.Relay.Node.ParseIDs, @node_id_rules} | middleware]
     end
@@ -103,7 +103,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   See the documentation for `Absinthe.Middleware` for more details.
   """
 
-  alias Absinthe.Relay.Node
+  alias __MODULE__.{Config, Rule}
 
   @typedoc """
   The rules used to parse node ID arguments.
@@ -113,24 +113,28 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   Declare `:item_id` as only valid with the `:item` node type:
 
   ```
-  %{
+  [
     item_id: :item
-  }
+  ]
   ```
 
   Declare `:item_id` be valid as either `:foo` or `:bar` types:
 
   ```
-  %{
+  [
     item_id: [:foo, :bar]
-  }
+  ]
   ```
 
   Note that using these two different forms will result in different argument
   values being passed for `:item_id` (the former, as a `binary`, the latter
   as a `map`). See the module documentation for more details.
   """
-  @type rules :: %{atom => atom | [atom]}
+  @type rules :: [{atom, atom | [atom]}] | %{atom => atom | [atom]}
+
+  @type simple_result :: binary
+  @type full_result :: %{type: atom, id: simple_result}
+  @type result :: full_result | simple_result
 
   @doc false
   @spec call(Absinthe.Resolution.t, rules) :: Absinthe.Resolution.t
@@ -147,126 +151,120 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   @doc false
   @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
   def parse(args, rules, resolution) do
-    case args do
-      list when is_list(list) ->
-        parse_list(list, rules, resolution)
-      _ ->
-        parse_args(args, rules, resolution)
-    end
-  end
-
-  @spec parse(list, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
-  defp parse_list(list, rules, resolution) do
-    Enum.reduce(list, {:ok, []}, fn(map, result) ->
-      parse_list_item(result, map, rules, resolution)
-    end)
-  end
-
-  defp parse_list_item({:error, errors} = initial_result, map, rules, resolution) do
-    case parse(map, rules, resolution) do
-      {:error, error} -> {:error, [error | errors]}
-      _ -> initial_result
-    end
-  end
-  defp parse_list_item({:ok, maps}, map, rules, resolution) do
-    case parse(map, rules, resolution) do
-      {:ok, new_map} -> {:ok, [new_map | maps]}
-      {:error, error} -> {:error, [error]}
-    end
-  end
-
-  @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
-  defp parse_args(args, rules, resolution) do
-    parse_all_rules(args, rules, resolution)
-    |> case do
-      {node_id_args, []} ->
-        {:ok, Map.merge(args, node_id_args)}
+    config = Config.parse!(rules)
+    case process(config, args, resolution, resolution.definition.schema_node, []) do
+      {processed_args, []} ->
+        {:ok, processed_args}
       {_, errors} ->
-        {:error, Enum.reverse(errors)}
+        {:error, errors}
     end
   end
 
-  defp parse_all_rules(args, rules, resolution) do
-    Enum.reduce(rules, {%{}, []}, fn (rule, result) ->
-      parse_rule(args, resolution, rule, result)
+  # Process values based on the matching configuration rules
+  @spec process(Config.node_t, any, Absinthe.Resolution.t, Absinthe.Type.t, list) :: {any, list}
+  defp process(%{children: children}, args, resolution, schema_node, errors) do
+    Enum.reduce(children, {args, errors}, &reduce_namespace_child_values(&1, &2, resolution, schema_node))
+  end
+  defp process(%Rule{} = rule, arg_values, resolution, schema_node, errors) when is_list(arg_values) do
+    {processed, errors} = Enum.reduce(arg_values, {[], errors}, fn
+      element_value, {values, errors} ->
+        {processed_element_value, errors} = process(rule, element_value, resolution, schema_node, errors)
+        {[processed_element_value | values], errors}
     end)
+    {Enum.reverse(processed), errors}
   end
-
-  defp parse_rule(args, resolution, {key, _} = rule, {node_id_args, errors} = result) do
-    argument_name = find_argument_name(key, resolution)
-
-    with {:ok, global_id} <- get_global_id(args, key),
-         {:ok, expected_type} <- get_expected_type(rule),
-         {:ok, node_id} <- Node.from_global_id(global_id, resolution.schema),
-         {:ok, node_id} <- check_node_id(node_id, expected_type, argument_name) do
-      {Map.put(node_id_args, key, node_id), errors}
+  defp process(%Rule{} = rule, arg_value, resolution, _schema_node, errors) do
+    with {:ok, node_id} <- Absinthe.Relay.Node.from_global_id(arg_value, resolution.schema),
+         {:ok, node_id} <- check_result(node_id, rule, resolution) do
+      {Rule.output(rule, node_id), errors}
     else
-      {:error, error} ->
-        error = ~s<In argument "#{argument_name}": #{error}.>
-        {node_id_args, [error | errors]}
-      {:check_node_error, error} ->
-        {node_id_args, [error | errors]}
-      {:missing_key, _} ->
-        result
-      {:nested_rule, nested_rule} ->
-        args
-        |> Map.get(key)
-        |> parse_nested_rule(resolution, nested_rule, result)
+      {:error, message} ->
+        {arg_value, [message | errors]}
     end
   end
 
-  defp parse_nested_rule(args, resolution, {key, rules}, {node_id_args, errors}) do
-    case parse(args, rules, resolution) do
-      {:ok, parsed_args} ->
-        {Map.put(node_id_args, key, parsed_args), errors}
-      {:error, nested_errors} ->
-        {node_id_args, nested_errors ++ errors}
+  # Since the raw value for a child may be a list, we normalize the raw value with a `List.wrap/1`, process that list,
+  # then return a single value or a list of values, as appropriate, with any errors that are collected.
+  @spec reduce_namespace_child_values(Config.node_t, {any, [String.t]}, Absinthe.Resolution.t, Absinthe.Type.t) :: {any, [String.t]}
+  defp reduce_namespace_child_values(child, {raw_values, errors}, resolution, schema_node) do
+    raw_values
+    |> List.wrap
+    |> Enum.reduce({[], []}, &reduce_namespace_child_value_element(child, &1, &2, resolution, schema_node))
+    |> case do
+      {values, []} ->
+        {format_child_value(raw_values, values), errors}
+      {_, processed_errors} ->
+        {raw_values, errors ++ processed_errors}
     end
   end
 
-  defp get_expected_type({_, expected_type_or_nested_rule} = rule) do
-    if Keyword.keyword?(expected_type_or_nested_rule) do
-      {:nested_rule, rule}
-    else
-      {:ok, expected_type_or_nested_rule}
+  # Process a single value for a child and collect that value with any associated errors
+  @spec reduce_namespace_child_value_element(Config.node_t, any, {[any], [String.t]}, Absinthe.Resolution.t, Absinthe.Type.t) :: {[any], [String.t]}
+  defp reduce_namespace_child_value_element(%{key: key} = child, raw_value, {processed_values, processed_errors}, resolution, schema_node) do
+    case Map.fetch(raw_value, key) do
+      :error ->
+        {[raw_value | processed_values], processed_errors}
+      {:ok, raw_value_for_key} ->
+        case find_child_schema_node(key, schema_node, resolution.schema) do
+          nil ->
+            {processed_values, ["Could not find schema_node for #{key}" | processed_errors]}
+          child_schema_node ->
+            {processed_value_for_key, child_errors} = process(child, raw_value_for_key, resolution, child_schema_node, [])
+            child_errors = Enum.map(child_errors, &(error_prefix(child_schema_node, resolution.adapter) <> &1))
+            {[Map.put(raw_value, key, processed_value_for_key) | processed_values], processed_errors ++ child_errors}
+        end
     end
   end
 
-  defp get_global_id(args, key) do
-    case Map.get(args, key) do
-      nil ->
-        {:missing_key, key}
-      global_id ->
-        {:ok, global_id}
-    end
-  end
+  # Return a value or a list of values based on how the original raw values were structured
+  @spec format_child_value(a | [a], [a]) :: a | [a] when a: any
+  defp format_child_value(raw_values, values) when is_list(raw_values), do: values |> Enum.reverse
+  defp format_child_value(_, [value]), do: value
 
-  @spec find_argument_name(atom, Absinthe.Resolution.t) :: nil | String.t
-  defp find_argument_name(identifier, resolution) do
-    resolution.definition.arguments
-    |> Enum.find_value(fn
-      %{schema_node: %{__reference__: %{identifier: ^identifier}}} = arg ->
-        arg.name
+  @spec find_child_schema_node(Absinthe.Type.identifier_t, Absinthe.Type.Field.t | Absinthe.Type.InputObject.t | Absinthe.Type.Argument.t, Absinthe.Schema.t) :: nil | Absinthe.Type.Argument.t | Absinthe.Type.Field.t
+  defp find_child_schema_node(identifier, %Absinthe.Type.Field{} = field, schema) do
+    case Absinthe.Schema.lookup_type(schema, field.type) do
+      %Absinthe.Type.InputObject{} = return_type ->
+        find_child_schema_node(identifier, return_type, schema)
       _ ->
-        false
-    end)
-  end
-
-  @spec check_node_id(map, atom, String.t) :: {:ok, binary} | {:error, String.t}
-  @spec check_node_id(map, [atom], String.t) :: {:ok, %{type: atom, id: binary}} | {:error, String.t}
-  defp check_node_id(%{type: type} = id_map, expected_types, argument_name) when is_list(expected_types) do
-    case Enum.member?(expected_types, type) do
-      true ->
-        {:ok, id_map}
-      false ->
-        {:check_node_error, ~s<In argument "#{argument_name}": Expected node type in #{inspect(expected_types)}, found #{inspect(type)}.>}
+        field.args[identifier]
     end
   end
-  defp check_node_id(%{type: expected_type, id: id}, expected_type, _) do
-    {:ok, id}
+  defp find_child_schema_node(identifier, %Absinthe.Type.InputObject{} = input_object, _schema) do
+    input_object.fields[identifier]
   end
-  defp check_node_id(%{type: type}, expected_type, argument_name) do
-    {:check_node_error, ~s<In argument "#{argument_name}": Expected node type #{inspect(expected_type)}, found #{inspect(type)}.>}
+  defp find_child_schema_node(identifier, %Absinthe.Type.Argument{} = argument, schema) do
+    find_child_schema_node(identifier, Absinthe.Schema.lookup_type(schema, argument.type), schema)
   end
 
+
+  @spec check_result(full_result, Rule.t, Absinthe.Resolution.t) :: {:ok, full_result} | {:error, String.t}
+  defp check_result(%{type: type} = result, %Rule{expected_types: types} = rule, resolution) do
+    if type in types do
+      {:ok, result}
+    else
+      type_name =
+        result.type
+        |> describe_type(resolution)
+      expected_types =
+        Enum.map(rule.expected_types, &describe_type(&1, resolution))
+        |> Enum.filter(&(&1 != nil))
+      {:error, ~s<Expected node type in #{inspect expected_types}, found #{inspect type_name}.>}
+    end
+  end
+
+  defp describe_type(identifier, resolution) do
+    with %{name: name} <- Absinthe.Schema.lookup_type(resolution.schema, identifier) do
+      name
+    end
+  end
+
+  defp error_prefix(%Absinthe.Type.Argument{} = node, adapter) do
+    name = node.name |> adapter.to_external_name(:argument)
+    ~s<In argument "#{name}": >
+  end
+  defp error_prefix(%Absinthe.Type.Field{} = node, adapter) do
+    name = node.name |> adapter.to_external_name(:field)
+    ~s<In field "#{name}": >
+  end
 end

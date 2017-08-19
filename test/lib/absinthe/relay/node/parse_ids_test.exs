@@ -79,8 +79,16 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         resolve &resolve_foo/2
       end
 
+      field :foos, list_of(:foo) do
+        arg :foo_ids, list_of(:id)
+        middleware Absinthe.Relay.Node.ParseIDs, foo_ids: :foo
+        resolve &resolve_foos/2
+      end
+
       mutation do
+
         payload field :update_parent do
+
           input do
             field :parent, :parent_input
           end
@@ -89,11 +97,6 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
             field :parent, :parent
           end
 
-          middleware Absinthe.Relay.Node.ParseIDs, parent: [
-            id: :parent,
-            children: [id: :child],
-            child: [id: :child]
-          ]
           resolve &resolve_parent/2
         end
       end
@@ -103,63 +106,118 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     defp resolve_foo(%{foo_id: id}, _) do
       {:ok, Map.get(@foos, id)}
     end
-
     defp resolve_foo(%{foobar_id: %{id: id, type: :foo}}, _) do
       {:ok, Map.get(@foos, id)}
+    end
+
+    defp resolve_foos(%{foo_ids: ids}, _) do
+      values = Enum.map(ids, &Map.get(@foos, &1))
+      {:ok, values}
     end
 
     defp resolve_parent(args, _) do
       {:ok, args}
     end
 
+    @update_parent_ids {
+      Absinthe.Relay.Node.ParseIDs, [
+        input: [
+          parent: [
+            id: :parent,
+            children: [id: :child],
+            child: [id: :child]
+          ]
+        ]
+      ]
+    }
+    def middleware(middleware, %{identifier: :update_parent}, _) do
+      [@update_parent_ids | middleware]
+    end
+    def middleware(middleware, _, _) do
+      middleware
+    end
+
   end
 
   @foo1_id Base.encode64("Foo:1")
+  @foo2_id Base.encode64("Foo:2")
 
   it "parses one id correctly" do
     result =
-      ~s<{ foo(fooId: "#{@foo1_id}") { id name } }>
+      """
+      {
+        foo(fooId: "#{@foo1_id}") {
+          id
+          name
+        }
+      }
+      """
       |> Absinthe.run(Schema)
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
+  it "parses a list of ids correctly" do
+    result =
+      """
+      {
+        foos(fooIds: ["#{@foo1_id}", "#{@foo2_id}"]) { id name }
+      }
+      """
+      |> Absinthe.run(Schema)
+    assert {:ok,
+      %{
+        data: %{
+          "foos" => [
+            %{"name" => "Foo 1", "id" => @foo1_id},
+            %{"name" => "Foo 2", "id" => @foo2_id}
+          ]
+        }
+      }
+    } == result
+  end
+
   it "parses an id into one of multiple node types" do
     result =
-      ~s<{ foo(foobarId: "#{@foo1_id}") { id name } }>
+      """
+      {
+        foo(foobarId: "#{@foo1_id}") { id name }
+      }
+      """
       |> Absinthe.run(Schema)
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
   it "parses nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
-    encoded_child_id = Base.encode64("Child:1")
+    encoded_child1_id = Base.encode64("Child:1")
+    encoded_child2_id = Base.encode64("Child:1")
     result =
-      ~s<mutation Foobar {
-            updateParent(input: {
-              clientMutationId: "abc",
-              parent: {
-                id: "#{encoded_parent_id}",
-                children: [{ id: "#{encoded_child_id}"}],
-                child: { id: "#{encoded_child_id}"}
-              }
-            }) {
-                parent {
-                  id
-                  children { id }
-                  child { id }
-                }
+      """
+      mutation Foobar {
+        updateParent(input: {
+          clientMutationId: "abc",
+          parent: {
+            id: "#{encoded_parent_id}",
+            children: [{ id: "#{encoded_child1_id}"}, {id: "#{encoded_child2_id}"}],
+            child: { id: "#{encoded_child2_id}"}
+          }
+        }) {
+          parent {
+            id
+            children { id }
+            child { id }
             }
-        }>
+          }
+      }
+      """
       |> Absinthe.run(Schema)
 
     expected_parent_data = %{
       "parent" => %{
         "id" => encoded_parent_id, # The output re-converts everything to global_ids.
-        "children" => [%{
-          "id" => encoded_child_id
-        }],
+        "children" => [%{"id" => encoded_child1_id}, %{"id" => encoded_child2_id}],
         "child" => %{
-          "id" => encoded_child_id
+          "id" => encoded_child2_id
         }
       }
     }
@@ -170,38 +228,51 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     encoded_parent_id = Base.encode64("Parent:1")
     incorrect_id = Node.to_global_id(:other_foo, 1, Schema)
     mutation =
-      ~s<mutation Foobar {
-            updateParent(input: {
-              clientMutationId: "abc",
-              parent: {
-                id: "#{encoded_parent_id}",
-                child: { id: "#{incorrect_id}"}
-              }
-            }) {
-                parent {
-                  id
-                  child { id }
-                }
-            }
-        }>
-
+      """
+      mutation Foobar {
+        updateParent(input: {
+          clientMutationId: "abc",
+          parent: {
+            id: "#{encoded_parent_id}",
+            child: {id: "#{incorrect_id}"}
+          }
+        }) {
+          parent {
+          id
+          child { id }
+        }
+      }
+    }
+    """
     assert {:ok, result} = Absinthe.run(mutation, Schema)
     assert %{
       data: %{"updateParent" => nil},
       errors: [%{
         locations: [%{column: 0, line: 2}],
-        message: ~s<In field "updateParent": In argument "": Expected node type :child, found :other_foo.>
+        message: ~s<In field "updateParent": In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
       }]
     } = result
   end
 
   it "handles one incorrect id correctly" do
     result =
-      ~s<{ foo(fooId: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
+      """
+      {
+        foo(fooId: "#{Node.to_global_id(:other_foo, 1, Schema)}") {
+          id
+          name
+        }
+      }
+      """
       |> Absinthe.run(Schema)
-    assert {:ok, %{data: %{}, errors: [
-      %{message: ~s<In field "foo": In argument "fooId": Expected node type :foo, found :other_foo.>}
-    ]}} = result
+    assert {
+      :ok, %{
+        data: %{},
+        errors: [
+          %{message: ~s<In field "foo": In argument "fooId": Expected node type in ["Foo"], found "FancyFoo".>}
+        ]
+      }
+    } = result
   end
 
 end
