@@ -115,7 +115,7 @@ In your project, check out the documentation with:
 mix help absinthe.schema.json
 ```
 
-### An Active Community
+## An Active Community
 
 The project is under constant improvement by a growing list of contributors,
 and your feedback is important. Please
