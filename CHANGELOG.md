@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 1.3.2
+
+- Enhancement: `Absinthe.Relay.Node.ParseIDs` can now decode lists of IDs. See
+  the module docs, [PR #69](https://github.com/absinthe-graphql/absinthe_relay/pull/69) for details.
+- Bug Fix: Make `Absinthe.Connection.from_slice/2` more forgiving if a `nil`
+  value is passed in as the `offset`. See [PR #70](https://github.com/absinthe-graphql/absinthe_relay/pull/70)
+  for details.
+
 ## 1.3.1
 
 - Enhancement: `Absinthe.Relay.Node.ParseIDs` can now decode nested values! See
