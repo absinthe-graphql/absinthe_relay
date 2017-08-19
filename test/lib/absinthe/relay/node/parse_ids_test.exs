@@ -144,14 +144,25 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   it "parses one id correctly" do
     result =
-      ~s<{ foo(fooId: "#{@foo1_id}") { id name } }>
+      """
+      {
+        foo(fooId: "#{@foo1_id}") {
+          id
+          name
+        }
+      }
+      """
       |> Absinthe.run(Schema)
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
   it "parses a list of ids correctly" do
     result =
-      ~s<{ foos(fooIds: ["#{@foo1_id}", "#{@foo2_id}"]) { id name } }>
+      """
+      {
+        foos(fooIds: ["#{@foo1_id}", "#{@foo2_id}"]) { id name }
+      }
+      """
       |> Absinthe.run(Schema)
     assert {:ok,
       %{
@@ -167,41 +178,46 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   it "parses an id into one of multiple node types" do
     result =
-      ~s<{ foo(foobarId: "#{@foo1_id}") { id name } }>
+      """
+      {
+        foo(foobarId: "#{@foo1_id}") { id name }
+      }
+      """
       |> Absinthe.run(Schema)
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
   it "parses nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
-    encoded_child_id = Base.encode64("Child:1")
+    encoded_child1_id = Base.encode64("Child:1")
+    encoded_child2_id = Base.encode64("Child:1")
     result =
-      ~s<mutation Foobar {
-            updateParent(input: {
-              clientMutationId: "abc",
-              parent: {
-                id: "#{encoded_parent_id}",
-                children: [{ id: "#{encoded_child_id}"}],
-                child: { id: "#{encoded_child_id}"}
-              }
-            }) {
-                parent {
-                  id
-                  children { id }
-                  child { id }
-                }
+      """
+      mutation Foobar {
+        updateParent(input: {
+          clientMutationId: "abc",
+          parent: {
+            id: "#{encoded_parent_id}",
+            children: [{ id: "#{encoded_child1_id}"}, {id: "#{encoded_child2_id}"}],
+            child: { id: "#{encoded_child2_id}"}
+          }
+        }) {
+          parent {
+            id
+            children { id }
+            child { id }
             }
-        }>
+          }
+      }
+      """
       |> Absinthe.run(Schema)
 
     expected_parent_data = %{
       "parent" => %{
         "id" => encoded_parent_id, # The output re-converts everything to global_ids.
-        "children" => [%{
-          "id" => encoded_child_id
-        }],
+        "children" => [%{"id" => encoded_child1_id}, %{"id" => encoded_child2_id}],
         "child" => %{
-          "id" => encoded_child_id
+          "id" => encoded_child2_id
         }
       }
     }
@@ -212,21 +228,22 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     encoded_parent_id = Base.encode64("Parent:1")
     incorrect_id = Node.to_global_id(:other_foo, 1, Schema)
     mutation =
-      ~s<mutation Foobar {
-            updateParent(input: {
-              clientMutationId: "abc",
-              parent: {
-                id: "#{encoded_parent_id}",
-                child: { id: "#{incorrect_id}"}
-              }
-            }) {
-                parent {
-                  id
-                  child { id }
-                }
-            }
-        }>
-
+      """
+      mutation Foobar {
+        updateParent(input: {
+          clientMutationId: "abc",
+          parent: {
+            id: "#{encoded_parent_id}",
+            child: {id: "#{incorrect_id}"}
+          }
+        }) {
+          parent {
+          id
+          child { id }
+        }
+      }
+    }
+    """
     assert {:ok, result} = Absinthe.run(mutation, Schema)
     assert %{
       data: %{"updateParent" => nil},
@@ -239,7 +256,14 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   it "handles one incorrect id correctly" do
     result =
-      ~s<{ foo(fooId: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
+      """
+      {
+        foo(fooId: "#{Node.to_global_id(:other_foo, 1, Schema)}") {
+          id
+          name
+        }
+      }
+      """
       |> Absinthe.run(Schema)
     assert {
       :ok, %{
