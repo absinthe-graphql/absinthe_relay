@@ -85,20 +85,42 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         resolve &resolve_foos/2
       end
 
-      mutation do
+    end
 
-        payload field :update_parent do
+    mutation do
 
-          input do
-            field :parent, :parent_input
-          end
+      payload field :update_parent do
 
-          output do
-            field :parent, :parent
-          end
-
-          resolve &resolve_parent/2
+        input do
+          field :parent, :parent_input
         end
+
+        output do
+          field :parent, :parent
+        end
+
+        resolve &resolve_parent/2
+
+      end
+
+      payload field :update_parent_local_middleware do
+
+        input do
+          field :parent, :parent_input
+        end
+
+        output do
+          field :parent, :parent
+        end
+
+        middleware Absinthe.Relay.Node.ParseIDs, parent: [
+          id: :parent,
+          children: [id: :child],
+          child: [id: :child]
+        ]
+
+        resolve &resolve_parent/2
+
       end
 
     end
@@ -121,6 +143,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     @update_parent_ids {
       Absinthe.Relay.Node.ParseIDs, [
+        # Needs `input` because this is being inserted
+        # before the mutation middleware.
         input: [
           parent: [
             id: :parent,
@@ -187,6 +211,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
+  @tag :focus
   it "parses nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
     encoded_child1_id = Base.encode64("Child:1")
@@ -273,6 +298,43 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         ]
       }
     } = result
+  end
+
+ it "parses nested ids with local middleware" do
+    encoded_parent_id = Base.encode64("Parent:1")
+    encoded_child1_id = Base.encode64("Child:1")
+    encoded_child2_id = Base.encode64("Child:1")
+    result =
+      """
+      mutation FoobarLocal {
+        updateParentLocalMiddleware(input: {
+          clientMutationId: "abc",
+          parent: {
+            id: "#{encoded_parent_id}",
+            children: [{ id: "#{encoded_child1_id}"}, {id: "#{encoded_child2_id}"}],
+            child: { id: "#{encoded_child2_id}"}
+          }
+        }) {
+          parent {
+            id
+            children { id }
+            child { id }
+            }
+          }
+      }
+      """
+      |> Absinthe.run(Schema)
+
+    expected_parent_data = %{
+      "parent" => %{
+        "id" => encoded_parent_id, # The output re-converts everything to global_ids.
+        "children" => [%{"id" => encoded_child1_id}, %{"id" => encoded_child2_id}],
+        "child" => %{
+          "id" => encoded_child2_id
+        }
+      }
+    }
+    assert {:ok, %{data: %{"updateParentLocalMiddleware" => expected_parent_data}}} == result
   end
 
 end
