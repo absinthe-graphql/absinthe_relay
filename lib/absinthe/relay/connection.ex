@@ -281,7 +281,7 @@ defmodule Absinthe.Relay.Connection do
   alias Absinthe.Relay
 
   def list(args, %{context: %{current_user: user}}) do
-    {:forward, limit} = Connection.limit(args)
+    {:ok, :forward, limit} = Connection.limit(args)
     offset = Connection.offset(args)
 
     Post
@@ -374,7 +374,7 @@ defmodule Absinthe.Relay.Connection do
 
       {:ok, :backward, limit} ->
         case {offset(args), opts[:count]} do
-          {nil, nil} -> {:error, "You must supply a count if using `last` without `before`"}
+          {nil, nil} -> {:error, "You must supply a count (total number of records) option if using `last` without `before`"}
           {nil, value} -> {:ok, max(value - limit, 0), limit}
           {value, _} -> {:ok, max(value - limit, 0), limit}
         end
