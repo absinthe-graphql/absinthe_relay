@@ -100,7 +100,56 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   end
   ```
 
-  See the documentation for `Absinthe.Middleware` for more details.
+  ### Using with Mutations
+
+  Important: Remember that middleware is applied in order. If you're
+  using `middleware/3` to apply this middleware to a mutation field
+  (defined using the `Absinthe.Relay.Mutation` macros) _before_ the
+  `Absinthe.Relay.Mutation` middleware, you need to include a wrapping
+  top-level `:input`, since the argument won't be stripped out yet.
+
+  So, this configuration defined _inside_ of a `payload field` block:
+
+  ```
+  mutation do
+
+    payload field :change_something do
+
+      # ...
+      middleware Absinthe.Relay.Node.ParseIDs, profile: [
+        user_id: :user
+     ]
+
+    end
+
+  end
+  ```
+
+  Needs to look like this if you put the `ParseIDs` middleware first:
+
+  ``
+  def middleware(middleware, %Absinthe.Type.Field{identifier: :change_something}, _) do
+    # Note the addition of the `input` level:
+    [{Absinthe.Relay.Node.ParseIDs, input: [profile: [user_id: :user]]} | middleware]
+  end
+  def middleware(middleware, _, _) do
+    middleware
+  end
+  ```
+
+  If, however, you do a bit more advanced surgery to the `middleware`
+  list and insert `Absinthe.Relay.Node.ParseIDs` _after_
+  `Absinthe.Relay.Mutation`, you don't include the wrapping `:input`.
+
+  ## Compatibility Note for Middleware Developers
+
+  If you're defining a piece of middleware that modifies field
+  arguments similar to `Absinthe.Relay.Mutation` does (stripping the
+  outer `input` argument), you need to set the private
+  `:__parse_ids_root` so that this middleware can find the root schema
+  node used to apply its configuration. See `Absinthe.Relay.Mutation`
+  for an example of setting the value, and the `find_schema_root!/2`
+  function in this module for how it's used.
   """
 
   alias __MODULE__.{Config, Rule}
@@ -152,11 +201,27 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   @spec parse(map, rules, Absinthe.Resolution.t) :: {:ok, map} | {:error, [String.t]}
   def parse(args, rules, resolution) do
     config = Config.parse!(rules)
-    case process(config, args, resolution, resolution.definition.schema_node, []) do
+    {root, error_editor} = find_schema_root!(resolution.definition.schema_node, resolution)
+    case process(config, args, resolution, root, []) do
       {processed_args, []} ->
         {:ok, processed_args}
       {_, errors} ->
-        {:error, errors}
+        {:error, Enum.map(errors, error_editor)}
+    end
+  end
+
+  # To support middleware that may run earlier and strip away toplevel arguments (eg, `Absinthe.Relay.Mutation` stripping
+  # away `input`), we check for a private value on the resolution to see how to find the root schema definition.
+  @spec find_schema_root!(Absinthe.Type.Field.t, Absinthe.Resolution.t) :: {{Absinthe.Type.Field.t | Absinthe.Type.Argument.t, String.t}, (String.t -> String.t)}
+  defp find_schema_root!(field, resolution) do
+    case Map.get(resolution.private, :__parse_ids_root) do
+      nil ->
+        {field, &(&1)}
+      root_argument ->
+        argument = Map.get(field.args, root_argument) || raise "Can't find ParseIDs schema root argument #{inspect root_argument}"
+        field_error_prefix = error_prefix(field, resolution.adapter)
+        argument_error_prefix = error_prefix(argument, resolution.adapter)
+        {argument, &String.replace_leading(&1, field_error_prefix, field_error_prefix <> argument_error_prefix)}
     end
   end
 
@@ -217,7 +282,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   end
 
   # Return a value or a list of values based on how the original raw values were structured
-  @spec format_child_value(a | [a], [a]) :: a | [a] when a: any
+  @spec format_child_value(a | [a], [a]) :: a | [a] | nil when a: any
   defp format_child_value(raw_values, values) when is_list(raw_values), do: values |> Enum.reverse
   defp format_child_value(_, [value]), do: value
 

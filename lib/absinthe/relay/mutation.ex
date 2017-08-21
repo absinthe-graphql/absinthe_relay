@@ -88,7 +88,7 @@ defmodule Absinthe.Relay.Mutation do
       %{input: %{client_mutation_id: mut_id} = input} ->
         %{res |
           arguments: input,
-          private: Map.put(res.private, :__client_mutation_id, mut_id),
+          private: Map.merge(res.private, %{__client_mutation_id: mut_id, __parse_ids_root: :input}),
           middleware: res.middleware ++ [__MODULE__]
         }
       res ->
