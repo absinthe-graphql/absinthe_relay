@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.3.3
+
+- Bug Fix: Fix regression with the `Absinthe.Relay.Node.ParseIDs` middleware when used in conjunction with
+  the `Absinthe.Relay.Mutation` middleware. See [PR #73](https://github.com/absinthe-graphql/absinthe_relay/pull/73)
+  for details.
+
 ## 1.3.2
 
 - Enhancement: `Absinthe.Relay.Node.ParseIDs` can now decode lists of IDs. See
