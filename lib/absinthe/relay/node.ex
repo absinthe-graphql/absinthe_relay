@@ -228,9 +228,7 @@ defmodule Absinthe.Relay.Node do
       type = Absinthe.Schema.lookup_type(info.schema, identifier)
       case id_fetcher.(info.source, info) do
         nil ->
-          err = "#{@missing_internal_id_error} (type #{type.name})"
-          Logger.warn(err)
-          {:error, err}
+          report_fetch_id_error(type.name, info.source)
         internal_id ->
           {:ok, to_global_id(type.name, internal_id)}
       end
@@ -240,13 +238,19 @@ defmodule Absinthe.Relay.Node do
     fn _, info ->
       case id_fetcher.(info.source, info) do
         nil ->
-          err = "#{@missing_internal_id_error} (type #{type_name})"
-          Logger.warn(err)
-          {:error, err}
+          report_fetch_id_error(type_name, info.source)
         internal_id ->
           {:ok, to_global_id(type_name, internal_id)}
       end
     end
+  end
+
+  # Reports a failure to fetch an ID
+  @spec report_fetch_id_error(type_name :: String.t, source :: any) :: {:error, String.t}
+  defp report_fetch_id_error(type_name, source) do
+    Logger.warn(@missing_internal_id_error <> " (type #{type_name})")
+    Logger.debug(inspect source)
+    {:error, @missing_internal_id_error}
   end
 
   @doc """

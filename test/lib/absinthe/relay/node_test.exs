@@ -1,5 +1,6 @@
 defmodule Absinthe.Relay.NodeTest do
   use Absinthe.Relay.Case, async: true
+  import ExUnit.CaptureLog
 
   alias Absinthe.Relay.Node
 
@@ -88,8 +89,20 @@ defmodule Absinthe.Relay.NodeTest do
   describe "global_id_resolver" do
 
     it "returns a function that returns an error when a global id can't be resolved" do
-      resolver = Absinthe.Relay.Node.global_id_resolver(:other_foo, nil)
-      assert {:error, "No source non-global ID value could be fetched from the source object (type FancyFoo)"} == resolver.(%{}, %{schema: Schema, source: %{}})
+      fun = fn ->
+        resolver = Absinthe.Relay.Node.global_id_resolver(:other_foo, nil)
+        resolver.(%{}, %{schema: Schema, source: %{}})
+      end
+
+      base = "No source non-global ID value could be fetched from the source object"
+      # User error
+      capture_log(fn -> assert {:error, base} == fun.() end)
+      # Developer: warn level
+      assert capture_log(fun) =~ base <> " (type FancyFoo)"
+      # Developer: debug level
+      debug = capture_log(fun)
+      assert debug =~ base
+      assert debug =~ "%{"
     end
 
   end
