@@ -60,9 +60,9 @@ defmodule Absinthe.Relay.Connection do
   `first`, and `last`. We create the connection by using
   `Absinthe.Relay.Connection.from_list/2`, which takes a list and the pagination
   arguments passed to the resolver.
-  
+
   It is possible to provide additional pagination arguments to a relay connection:
-  
+
   ```
   connection field :pets, node_type: :pet do
     arg :custom_arg, :custom
@@ -349,7 +349,7 @@ defmodule Absinthe.Relay.Connection do
           |> repo_fun.()
 
         opts = [
-          has_next_page: args[:first] != nil && !(length(records) < limit),
+          has_next_page: args[:first] != nil && length(records) > limit,
           has_previous_page: args[:last] != nil && offset > 0,
         ] ++ opts
 
