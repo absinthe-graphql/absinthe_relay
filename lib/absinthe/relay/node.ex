@@ -108,6 +108,8 @@ defmodule Absinthe.Relay.Node do
 
   """
 
+  require Logger
+
   # Middleware to handle a global id
   # parses the global ID before invoking it
   @doc false
@@ -226,7 +228,9 @@ defmodule Absinthe.Relay.Node do
       type = Absinthe.Schema.lookup_type(info.schema, identifier)
       case id_fetcher.(info.source, info) do
         nil ->
-          {:error, @missing_internal_id_error}
+          err = "#{@missing_internal_id_error} (type #{type.name})"
+          Logger.warn(err)
+          {:error, err}
         internal_id ->
           {:ok, to_global_id(type.name, internal_id)}
       end
@@ -236,7 +240,9 @@ defmodule Absinthe.Relay.Node do
     fn _, info ->
       case id_fetcher.(info.source, info) do
         nil ->
-          {:error, @missing_internal_id_error}
+          err = "#{@missing_internal_id_error} (type #{type_name})"
+          Logger.warn(err)
+          {:error, err}
         internal_id ->
           {:ok, to_global_id(type_name, internal_id)}
       end

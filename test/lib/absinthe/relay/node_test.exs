@@ -85,6 +85,15 @@ defmodule Absinthe.Relay.NodeTest do
   @foo1_id Base.encode64("Foo:1")
   @foo2_id Base.encode64("Foo:2")
 
+  describe "global_id_resolver" do
+
+    it "returns a function that returns an error when a global id can't be resolved" do
+      resolver = Absinthe.Relay.Node.global_id_resolver(:other_foo, nil)
+      assert {:error, "No source non-global ID value could be fetched from the source object (type FancyFoo)"} == resolver.(%{}, %{schema: Schema, source: %{}})
+    end
+
+  end
+
   describe "to_global_id" do
 
     it "works given an atom for an existing type" do
