@@ -344,7 +344,7 @@ defmodule Absinthe.Relay.Connection do
       with {:ok, offset, limit} <- offset_and_limit_for_query(args, opts) do
         records =
           query
-          |> Ecto.Query.limit(^limit)
+          |> Ecto.Query.limit(^limit + 1)
           |> Ecto.Query.offset(^offset)
           |> repo_fun.()
 
@@ -353,7 +353,7 @@ defmodule Absinthe.Relay.Connection do
           has_previous_page: args[:last] != nil && offset > 0,
         ] ++ opts
 
-        from_slice(records, offset, opts)
+        from_slice(Enum.take(records, limit), offset, opts)
       end
     end
   else
