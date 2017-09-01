@@ -26,13 +26,14 @@ defmodule Absinthe.Relay.Schema.Notation do
     [
       # TODO: Remove warning in v1.5
       quote do
-        warning =
-          "Defaulting to :classic as the flavor of Relay to target. " <>
-          "Note this defaulting behavior will change to :modern in absinthe_relay v1.5. " <>
-          "To prevent seeing this notice in the future, provide :classic " <>
-          "or :modern as an option when using Absinthe.Relay.Schema or " <>
-          "Absinthe.Relay.Schema.Notation. See the Absinthe.Relay @moduledoc " <>
-          "for more information."
+        warning = """
+        Defaulting to :classic as the flavor of Relay to target. \
+        Note this defaulting behavior will change to :modern in absinthe_relay v1.5. \
+        To prevent seeing this notice in the meantime, explicitly provide :classic \
+        or :modern as an option when you use Absinthe.Relay.Schema or \
+        Absinthe.Relay.Schema.Notation. See the Absinthe.Relay @moduledoc \
+        for more information. \
+        """
         IO.warn(warning)
       end,
       notations(@default_flavor)

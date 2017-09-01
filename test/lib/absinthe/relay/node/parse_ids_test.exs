@@ -17,7 +17,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     alias Absinthe.Relay.Node.ParseIDsTest.Foo
     alias Absinthe.Relay.Node.ParseIDsTest.Parent
@@ -166,7 +166,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   @foo1_id Base.encode64("Foo:1")
   @foo2_id Base.encode64("Foo:2")
 
-  it "parses one id correctly" do
+  test "parses one id correctly" do
     result =
       """
       {
@@ -180,7 +180,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
   end
 
-  it "parses a list of ids correctly" do
+  test "parses a list of ids correctly" do
     result =
       """
       {
@@ -200,7 +200,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     } == result
   end
 
-  it "parses an id into one of multiple node types" do
+  test "parses an id into one of multiple node types" do
     result =
       """
       {
@@ -212,7 +212,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   end
 
   @tag :focus
-  it "parses nested ids" do
+  test "parses nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
     encoded_child1_id = Base.encode64("Child:1")
     encoded_child2_id = Base.encode64("Child:1")
@@ -249,7 +249,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
   end
 
-  it "parses incorrect nested ids" do
+  test "parses incorrect nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
     incorrect_id = Node.to_global_id(:other_foo, 1, Schema)
     mutation =
@@ -279,7 +279,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     } = result
   end
 
-  it "handles one incorrect id correctly" do
+  test "handles one incorrect id correctly" do
     result =
       """
       {
@@ -300,7 +300,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     } = result
   end
 
- it "parses nested ids with local middleware" do
+ test "parses nested ids with local middleware" do
     encoded_parent_id = Base.encode64("Parent:1")
     encoded_child1_id = Base.encode64("Child:1")
     encoded_child2_id = Base.encode64("Child:1")

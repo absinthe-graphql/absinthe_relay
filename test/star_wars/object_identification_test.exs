@@ -3,7 +3,7 @@ defmodule StarWars.ObjectIdentificationTest do
 
   describe "Star Wars object identification" do
 
-    it "fetches the ID and name of the rebels" do
+    test "fetches the ID and name of the rebels" do
       """
       query RebelsQuery {
         rebels {
@@ -15,7 +15,7 @@ defmodule StarWars.ObjectIdentificationTest do
       |> assert_data(%{"rebels" => %{"id" => "RmFjdGlvbjox", "name" => "Alliance to Restore the Republic"}})
     end
 
-    it "fetches the ID and name of the empire" do
+    test "fetches the ID and name of the empire" do
       """
       query EmpireQuery {
         empire {
@@ -27,7 +27,7 @@ defmodule StarWars.ObjectIdentificationTest do
       |> assert_data(%{"empire" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
     end
 
-    it "refetches the empire" do
+    test "refetches the empire" do
       """
       query EmpireRefetchQuery {
         node(id: "RmFjdGlvbjoy") {
@@ -41,7 +41,7 @@ defmodule StarWars.ObjectIdentificationTest do
       |> assert_data(%{"node" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
     end
 
-    it "refetches the empire, with nested redundant Node fragment" do
+    test "refetches the empire, with nested redundant Node fragment" do
       """
       query EmpireRefetchQueryWithExtraNodeFragment {
         node(id: "RmFjdGlvbjoy") {
@@ -59,7 +59,7 @@ defmodule StarWars.ObjectIdentificationTest do
       |> assert_data(%{"node" => %{"id" => "RmFjdGlvbjoy", "name" => "Galactic Empire"}})
     end
 
-    it "refetches the X-Wing" do
+    test "refetches the X-Wing" do
       """
       query XWingRefetchQuery {
         node(id: "U2hpcDox") {

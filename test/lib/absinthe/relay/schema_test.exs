@@ -11,7 +11,7 @@ defmodule Absinthe.Relay.SchemaTest do
 
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     @people %{"jack" => %{id: "jack", name: "Jack", age: 35},
               "jill" => %{id: "jill", name: "Jill", age: 31}}
@@ -76,20 +76,20 @@ defmodule Absinthe.Relay.SchemaTest do
   end
 
   describe "using node interface" do
-    it "creates the :node type" do
+    test "creates the :node type" do
       assert %Type.Interface{name: "Node", description: "My Interface", fields: %{id: %Type.Field{name: "id", type: %Type.NonNull{of_type: :id}}}} = Schema.__absinthe_type__(:node)
     end
   end
 
   describe "using node field" do
-    it "creates the :node field" do
+    test "creates the :node field" do
       assert %{fields: %{node: %{name: "node", type: :node, middleware: middleware}}} = Schema.__absinthe_type__(:query)
       assert [{{Absinthe.Relay.Node, :resolve_with_global_id}, []}, {{Absinthe.Resolution, :call}, _}] = middleware
     end
   end
 
   describe "using node object" do
-    it "creates the object" do
+    test "creates the object" do
       assert %{name: "Kitten"} = Schema.__absinthe_type__(:cat)
     end
   end
@@ -103,7 +103,7 @@ defmodule Absinthe.Relay.SchemaTest do
       }
     }
     """
-    it "resolves using the global ID" do
+    test "resolves using the global ID" do
       assert {:ok, %{data: %{"node" => %{"id" => @jack_global_id, "name" => "Jack"}}}} = Absinthe.run(@query, Schema)
     end
   end
@@ -117,7 +117,7 @@ defmodule Absinthe.Relay.SchemaTest do
       }
     }
     """
-    it "resolves using the global ID" do
+    test "resolves using the global ID" do
       assert {:ok, %{data: %{"node" => %{"id" => @papers_global_id, "name" => "Papers, Inc!"}}}} = Absinthe.run(@query, Schema)
     end
   end
@@ -130,7 +130,7 @@ defmodule Absinthe.Relay.SchemaTest do
       }
     }
     """
-    it "resolves using the global ID" do
+    test "resolves using the global ID" do
       assert {:ok, %{data: %{"node" => %{"id" => @binx_global_id}}}} = Absinthe.run(@query, Schema)
     end
   end
