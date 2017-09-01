@@ -2,7 +2,7 @@ defmodule StarWars.ConnectionTest do
   use Absinthe.Relay.Case, async: true
 
   describe "Backwards Pagination" do
-    it "can start from the end of a list" do
+    test "can start from the end of a list" do
       query = """
         query RebelsShipsQuery {
           rebels {
@@ -54,7 +54,7 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    it "should calculate hasNextPage correctly" do
+    test "should calculate hasNextPage correctly" do
       query = """
         query RebelsShipsQuery {
           rebels {
@@ -119,7 +119,7 @@ defmodule StarWars.ConnectionTest do
 
   describe "Star Wars connections" do
 
-    it "fetches the first ship of the rebels" do
+    test "fetches the first ship of the rebels" do
       query = """
         query RebelsShipsQuery {
           rebels {
@@ -151,7 +151,7 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    it "fetches the first two ships of the rebels with a cursor" do
+    test "fetches the first two ships of the rebels with a cursor" do
       query = """
         query MoreRebelShipsQuery {
           rebels {
@@ -191,7 +191,7 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    it "fetches the next three ships of the rebels with a cursor" do
+    test "fetches the next three ships of the rebels with a cursor" do
       query = """
         query EndOfRebelShipsQuery {
           rebels {
@@ -237,7 +237,7 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    it "fetches no ships of the rebels at the end of connection" do
+    test "fetches no ships of the rebels at the end of connection" do
       query = """
         query RebelsQuery {
           rebels {
@@ -264,7 +264,7 @@ defmodule StarWars.ConnectionTest do
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
-    it "identifies the end of the list" do
+    test "identifies the end of the list" do
       query = """
         query EndOfRebelShipsQuery {
           rebels {
@@ -341,11 +341,4 @@ defmodule StarWars.ConnectionTest do
 
   end
 
-  @tag :pending
-  describe "Ecto Helper" do
-    describe "build_query/2" do
-      it "should set the appropriate limit and offset" do
-      end
-    end
-  end
 end

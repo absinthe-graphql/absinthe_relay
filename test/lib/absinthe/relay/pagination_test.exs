@@ -3,7 +3,7 @@ defmodule Absinthe.Relay.PaginationTest do
 
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     @foos 0..9 |> Enum.map(&(%{id: &1, index: &1}))
 

@@ -33,12 +33,11 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, "~> 1.3.0"},
+      {:absinthe, "~> 1.4.0-beta or ~> 1.4.0-rc or ~> 1.4"},
       {:ecto, "~> 1.0 or ~> 2.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
-      {:ex_doc, "~> 0.11.0", only: :dev},
-      {:earmark, "~> 0.2", only: :dev},
-      {:ex_spec, "~> 1.0.0", only: :test}
+      {:ex_doc, "~> 0.16", only: :dev},
+      {:earmark, "~> 1.1", only: :dev}
     ]
   end
 

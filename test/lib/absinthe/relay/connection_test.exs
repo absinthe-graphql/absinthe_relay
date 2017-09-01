@@ -7,7 +7,7 @@ defmodule Absinthe.Relay.ConnectionTest do
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     @people %{
       "jack" => %{id: "jack", name: "Jack", age: 35, pets: ["1", "2"], favorite_pets: ["2"]},
@@ -110,7 +110,7 @@ defmodule Absinthe.Relay.ConnectionTest do
   end
 
   describe "Defining custom connection and edge fields" do
-    it " allows querying those additional fields" do
+    test " allows querying those additional fields" do
       result = """
         query FirstPetName($personId: ID!) {
           node(id: $personId) {
@@ -145,7 +145,7 @@ defmodule Absinthe.Relay.ConnectionTest do
   end
 
   describe "Defining custom connection and edge fields, with redundant spread fragments" do
-    it " allows querying those additional fields" do
+    test " allows querying those additional fields" do
       result = """
         query FirstPetName($personId: ID!) {
           node(id: $personId) {
@@ -192,7 +192,7 @@ defmodule Absinthe.Relay.ConnectionTest do
   end
 
   describe ".from_slice/2" do
-    it "when the offset is nil it will not do arithmetic on nil" do
+    test "when the offset is nil test will not do arithmetic on nil" do
       Connection.from_slice([%{foo: :bar}], nil)
     end
   end
