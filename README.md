@@ -128,4 +128,4 @@ Conduct](./CODE_OF_CONDUCT.md).
 
 ## License
 
-Released under the BSD license. See [LICENCE.md](./LICENSE.md)
+See [LICENSE.md](./LICENSE.md)
