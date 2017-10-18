@@ -212,4 +212,58 @@ defmodule Absinthe.Relay.NodeTest do
 
   end
 
+  defmodule ErrorMiddlewareSchema do
+    defmodule ErrorMiddleware do
+      @behaviour Absinthe.Middleware
+
+      def call(resolution, _config) do
+        Absinthe.Resolution.put_result(resolution, {:error, "Error"})
+      end
+    end
+
+    defmodule Root do
+      defstruct id: "root"
+    end
+
+    use Absinthe.Schema
+    use Absinthe.Relay.Schema
+
+    def middleware(middleware, _field, _object) do
+      [ErrorMiddleware | middleware]
+    end
+
+    node interface do
+      resolve_type fn
+        %Root{}, _ -> :root
+        _, _ -> nil
+      end
+    end
+
+    node object :root do
+
+    end
+
+    query do
+      node field do
+        resolve fn
+          %{type: :root}, _info -> {:ok, %Root{}}
+        end
+      end
+    end
+  end
+
+  describe "node resolution" do
+    it "fails gracefully when middleware puts an error into the resolution" do
+      result = """
+        query node($id: ID!) {
+          node(id: $id) {
+            id
+          }
+        }
+      """
+      |> Absinthe.run(ErrorMiddlewareSchema, variables: %{"id" => Base.encode64("Root:root")})
+
+      assert {:ok, %{data: %{"node" => nil}, errors: [%{message: "In field \"node\": Error"}]}} = result
+    end
+  end
 end

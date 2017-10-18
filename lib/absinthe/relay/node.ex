@@ -121,6 +121,9 @@ defmodule Absinthe.Relay.Node do
       _ -> res
     end
   end
+  def resolve_with_global_id(res, _) do
+    res
+  end
   def resolve_with_global_id(res) do
     res
   end
