@@ -124,9 +124,6 @@ defmodule Absinthe.Relay.Node do
   def resolve_with_global_id(res, _) do
     res
   end
-  def resolve_with_global_id(res) do
-    res
-  end
 
   @doc """
   Parse a global ID, given a schema.

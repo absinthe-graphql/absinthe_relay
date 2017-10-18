@@ -1,7 +1,7 @@
 defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
-  @version "1.3.6"
+  @version "1.4.0-rc.0"
 
   def project do
     [app: :absinthe_relay,
@@ -33,11 +33,11 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, "~> 1.3.0"},
+      {:absinthe, "~> 1.4.0-rc.0"},
       {:ecto, "~> 1.0 or ~> 2.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
-      {:ex_doc, "~> 0.11.0", only: :dev},
-      {:earmark, "~> 0.2", only: :dev},
+      {:ex_doc, "~> 0.11", only: :dev},
+      {:earmark, "~> 1.0", only: :dev},
       {:ex_spec, "~> 1.0.0", only: :test}
     ]
   end
