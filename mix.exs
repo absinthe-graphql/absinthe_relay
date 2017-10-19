@@ -19,7 +19,7 @@ defmodule AbsintheRelay.Mixfile do
     [description: "Relay framework support for Absinthe",
      files: ["lib", "mix.exs", "README*"],
      maintainers: ["Bruce Williams"],
-     licenses: ["BSD"],
+     licenses: ["MIT"],
      links: %{github: "https://github.com/absinthe-graphql/absinthe_relay"}]
   end
 

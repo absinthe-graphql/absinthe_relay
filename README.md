@@ -1,5 +1,7 @@
 # Absinthe.Relay
 
+[![Hex pm](http://img.shields.io/hexpm/v/absinthe_relay.svg?style=flat)](https://hex.pm/packages/absinthe_relay)[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 Support for the [Relay framework](https://facebook.github.io/relay/)
 from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
 package.
@@ -126,4 +128,4 @@ Conduct](./CODE_OF_CONDUCT.md).
 
 ## License
 
-Released under the BSD license. See [LICENCE.md](./LICENSE.md)
+See [LICENSE.md](./LICENSE.md)
