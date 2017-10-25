@@ -462,6 +462,7 @@ defmodule Absinthe.Relay.Connection do
   Rederives the offset from the cursor string.
   """
   @spec cursor_to_offset(binary) :: integer | :error
+  def cursor_to_offset(nil), do: 0
   def cursor_to_offset(cursor) do
     with {:ok, @cursor_prefix <> raw} <- Base.decode64(cursor),
          {parsed, _} <- Integer.parse(raw) do
