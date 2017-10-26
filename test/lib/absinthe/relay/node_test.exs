@@ -88,7 +88,7 @@ defmodule Absinthe.Relay.NodeTest do
 
   describe "global_id_resolver" do
 
-    it "returns a function that returns an error when a global id can't be resolved" do
+    test "returns a function that returns an error when a global id can't be resolved" do
       fun = fn ->
         resolver = Absinthe.Relay.Node.global_id_resolver(:other_foo, nil)
         resolver.(%{}, %{schema: Schema, source: %{}})
