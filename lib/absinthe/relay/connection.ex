@@ -366,8 +366,9 @@ defmodule Absinthe.Relay.Connection do
     end
   end
 
+  @doc false
   @spec offset_and_limit_for_query(Options.t, from_query_opts) :: {:ok, offset, limit} | {:error, any}
-  defp offset_and_limit_for_query(args, opts) do
+  def offset_and_limit_for_query(args, opts) do
     case limit(args, opts[:max]) do
       {:ok, :forward, limit} ->
         {:ok, offset(args) || 0, limit}
