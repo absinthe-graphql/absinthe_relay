@@ -37,8 +37,8 @@ defmodule Absinthe.Relay.PaginationTest do
 
   test "It handles forward pagination correctly" do
     query = """
-    query first ($first: Int!) {
-      foos(first: $first) {
+    query FirstSupportingNullAfter($first: Int!) {
+      foos(first: $first, after: null) {
         page_info {
           start_cursor
           end_cursor
@@ -81,7 +81,7 @@ defmodule Absinthe.Relay.PaginationTest do
 
 
     query = """
-    query firstAfter($first: Int!, $after: ID!) {
+    query firstSupportingNonNullAfter($first: Int!, $after: ID!) {
       foos(first: $first, after: $after) {
         page_info {
           start_cursor
@@ -173,8 +173,8 @@ defmodule Absinthe.Relay.PaginationTest do
 
   test "It handles backward pagination correctly" do
     query = """
-    query first ($last: Int!) {
-      foos(last: $last) {
+    query LastSupportingNullBefore($last: Int!) {
+      foos(last: $last, before: null) {
         page_info {
           start_cursor
           end_cursor
@@ -217,7 +217,7 @@ defmodule Absinthe.Relay.PaginationTest do
 
 
     query = """
-    query firstAfter($last: Int!, $before: ID!) {
+    query LastSupportingNonNullBefore($last: Int!, $before: ID!) {
       foos(last: $last, before: $before) {
         page_info {
           start_cursor

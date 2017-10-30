@@ -1,5 +1,11 @@
 # CHANGELOG
 
+# 1.4.0
+
+Status: RC
+
+- Bug Fix: Support `null` values for `before` and `after` pagination arguments
+
 ## 1.3.6
 - Type Spec Fix: Relax type constraints around `Connection.from_query`
 

@@ -418,10 +418,10 @@ defmodule Absinthe.Relay.Connection do
   If no offset is specified in the pagination arguments, this will return `nil`.
   """
   @spec offset(args :: Options.t) :: offset | nil
-  def offset(%{after: cursor}) do
+  def offset(%{after: cursor}) when not is_nil(cursor) do
     cursor_to_offset(cursor) + 1
   end
-  def offset(%{before: cursor}) do
+  def offset(%{before: cursor}) when not is_nil(cursor) do
     max(cursor_to_offset(cursor), 0)
   end
   def offset(_), do: nil
