@@ -1,5 +1,15 @@
 # CHANGELOG
 
+# 1.4.0
+
+Status: RC
+
+- Feature: Support `null` values in `ParseIDs` middleware (passed through as `nil` args)
+- Bug Fix: Support `null` values for `before` and `after` pagination arguments (expected by Relay Modern)
+
+## 1.3.6
+- Type Spec Fix: Relax type constraints around `Connection.from_query`
+
 ## 1.3.5
 
 - Bug Fix: (Connection) Fix original issue with `from_query` where `has_next_page` wasn't correctly reported in some instances. We now request `limit + 1` records to determine if there's a next page (vs using a second count query), use the overage to determine if there are more records, and return `limit` records. See [PR #79](https://github.com/absinthe-graphql/absinthe_relay/pull/79).

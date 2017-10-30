@@ -121,7 +121,7 @@ defmodule Absinthe.Relay.Node do
       _ -> res
     end
   end
-  def resolve_with_global_id(res) do
+  def resolve_with_global_id(res, _) do
     res
   end
 
@@ -129,6 +129,13 @@ defmodule Absinthe.Relay.Node do
   Parse a global ID, given a schema.
 
   ## Examples
+
+  For `nil`, pass-through:
+
+  ```
+  iex> from_global_id(nil, Schema)
+  {:ok, nil}
+  ```
 
   For a valid, existing type in `Schema`:
 
@@ -158,7 +165,11 @@ defmodule Absinthe.Relay.Node do
   {:error, "Type `Item' is not a valid node type"}
   ```
   """
+  @spec from_global_id(nil, atom) :: {:ok, nil}
   @spec from_global_id(binary, atom) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
+  def from_global_id(nil, _schema) do
+    {:ok, nil}
+  end
   def from_global_id(global_id, schema) do
     case Base.decode64(global_id) do
       {:ok, decoded} ->

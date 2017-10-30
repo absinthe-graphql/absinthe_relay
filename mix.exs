@@ -1,7 +1,7 @@
 defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
-  @version "1.3.5"
+  @version "1.4.0-rc.0"
 
   def project do
     [app: :absinthe_relay,
@@ -18,8 +18,8 @@ defmodule AbsintheRelay.Mixfile do
   defp package do
     [description: "Relay framework support for Absinthe",
      files: ["lib", "mix.exs", "README*"],
-     maintainers: ["Bruce Williams"],
-     licenses: ["BSD"],
+     maintainers: ["Bruce Williams", "Ben Wilson"],
+     licenses: ["MIT"],
      links: %{github: "https://github.com/absinthe-graphql/absinthe_relay"}]
   end
 
