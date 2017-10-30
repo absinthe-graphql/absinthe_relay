@@ -366,8 +366,9 @@ defmodule Absinthe.Relay.Connection do
     end
   end
 
+  @doc false
   @spec offset_and_limit_for_query(Options.t, from_query_opts) :: {:ok, offset, limit} | {:error, any}
-  defp offset_and_limit_for_query(args, opts) do
+  def offset_and_limit_for_query(args, opts) do
     case limit(args, opts[:max]) do
       {:ok, :forward, limit} ->
         {:ok, offset(args) || 0, limit}
@@ -418,9 +419,11 @@ defmodule Absinthe.Relay.Connection do
   If no offset is specified in the pagination arguments, this will return `nil`.
   """
   @spec offset(args :: Options.t) :: offset | nil
+  def offset(%{after: cursor}) when is_nil(cursor), do: nil
   def offset(%{after: cursor}) do
     cursor_to_offset(cursor) + 1
   end
+  def offset(%{before: cursor}) when is_nil(cursor), do: nil
   def offset(%{before: cursor}) do
     max(cursor_to_offset(cursor), 0)
   end
