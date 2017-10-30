@@ -15,7 +15,9 @@ defmodule Absinthe.Relay.Node.ParseIDs.Rule do
     output_mode: :full | :simple,
   }
 
+  @spec output(t, nil) :: nil
   @spec output(t, ParseIDs.result) :: ParseIDs.full_result | ParseIDs.simple_result
+  def output(_rule, nil), do: nil
   def output(%{output_mode: :full}, result), do: result
   def output(%{output_mode: :simple}, %{id: id}), do: id
 

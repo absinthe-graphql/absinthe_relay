@@ -130,6 +130,13 @@ defmodule Absinthe.Relay.Node do
 
   ## Examples
 
+  For `nil`, pass-through:
+
+  ```
+  iex> from_global_id(nil, Schema)
+  {:ok, nil}
+  ```
+
   For a valid, existing type in `Schema`:
 
   ```
@@ -158,7 +165,11 @@ defmodule Absinthe.Relay.Node do
   {:error, "Type `Item' is not a valid node type"}
   ```
   """
+  @spec from_global_id(nil, atom) :: {:ok, nil}
   @spec from_global_id(binary, atom) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
+  def from_global_id(nil, _schema) do
+    {:ok, nil}
+  end
   def from_global_id(global_id, schema) do
     case Base.decode64(global_id) do
       {:ok, decoded} ->
