@@ -13,4 +13,10 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
     end
   end
 
+  defp input_argument(input_type_identifier) do
+    quote do
+      arg :input, unquote(input_type_identifier)
+    end
+  end
+
 end

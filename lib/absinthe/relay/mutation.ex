@@ -95,8 +95,8 @@ defmodule Absinthe.Relay.Mutation do
         %{res |
           arguments: input,
           middleware: res.middleware ++ [__MODULE__]
-        }
-      res ->
+         }
+      _ ->
         res
     end
   end

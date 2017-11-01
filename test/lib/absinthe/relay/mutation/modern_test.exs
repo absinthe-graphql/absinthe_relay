@@ -19,6 +19,8 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
         resolve fn
           %{input_data: input_data}, _ ->
             {:ok, %{result: input_data * 2}}
+          %{}, _ ->
+            {:ok, %{result: 1}}
         end
       end
     end
@@ -31,11 +33,12 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
     mutation M {
       simpleMutation {
         result
+        clientMutationId
       }
     }
     """
-    test "requires an `input' argument" do
-      assert {:ok, %{errors: [%{message: ~s(In argument "input": Expected type "SimpleMutationInput!", found null.)}]}} = Absinthe.run(@query, Schema)
+    test "without an `input' argument returns `nil' for the clientMutationId" do
+      assert {:ok, %{data: %{"simpleMutation" => %{"result" => 1, "clientMutationId" => nil}}}} = Absinthe.run(@query, Schema)
     end
 
     @query """
@@ -68,8 +71,15 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
       }
     }
     """
-    test "requires an `input' argument" do
-      assert {:ok, %{errors: [%{message: ~s(In argument "input": Expected type "SimpleMutationInput!", found null.)}]}} = Absinthe.run(@query, Schema)
+    @expected %{
+      data: %{
+        "simpleMutation" => %{
+          "result" => 1
+        }
+      }
+    }
+    test "does not require an `input' argument" do
+      assert {:ok, %{data: %{"simpleMutation" => %{"result" => 1}}}} = Absinthe.run(@query, Schema)
     end
 
     @query """
@@ -253,12 +263,9 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
                 %{
                   "name" => "input",
                   "type" => %{
-                    "name" => nil,
-                    "kind" => "NON_NULL",
-                    "ofType" => %{
-                      "name" => "SimpleMutationInput",
-                      "kind" => "INPUT_OBJECT"
-                    }
+                    "name" => "SimpleMutationInput",
+                    "kind" => "INPUT_OBJECT",
+                    "ofType" => nil,
                   },
                 }
               ],
@@ -303,6 +310,13 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
     end
 
     @cm_id "abc"
+
+    test "input argument is optional" do
+      type = Absinthe.Schema.lookup_type(EmptyInputAndResultSchema, :mutation)
+      for field <- Map.values(type.fields) do
+        assert !match?(%Absinthe.Type.NonNull{}, field.args.input.type)
+      end
+    end
 
     @query """
     mutation M {

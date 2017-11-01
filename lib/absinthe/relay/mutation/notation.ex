@@ -63,13 +63,15 @@ defmodule Absinthe.Relay.Mutation.Notation do
 
       defp field_body(field_ident) do
         input_type_identifier = ident(field_ident, :input)
-        quote do
-          arg :input, non_null(unquote(input_type_identifier))
+        [
+          input_argument(input_type_identifier),
+          quote do
 
-          middleware Absinthe.Relay.Mutation
+            middleware Absinthe.Relay.Mutation
 
-          private Absinthe.Relay, :mutation_field_identifier, unquote(field_ident)
-        end
+            private Absinthe.Relay, :mutation_field_identifier, unquote(field_ident)
+          end
+        ]
       end
 
       defp finalize do
@@ -97,6 +99,12 @@ defmodule Absinthe.Relay.Mutation.Notation do
       end
       defoverridable [client_mutation_id_field: 0]
 
+      defp input_argument(input_type_identifier) do
+        quote do
+          arg :input, non_null(unquote(input_type_identifier))
+        end
+      end
+      defoverridable [input_argument: 1]
       #
       # INPUT
       #
