@@ -3,7 +3,7 @@ defmodule Absinthe.Relay.PaginationTest do
 
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     @foos 0..9 |> Enum.map(&(%{id: &1, index: &1}))
 
@@ -328,7 +328,7 @@ defmodule Absinthe.Relay.PaginationTest do
     assert {:ok, result} = Absinthe.run(query, Schema)
     assert %{data: %{},
         errors: [%{locations: [%{column: 0, line: 2}],
-                   message: "In field \"foos\": You must either supply `:first` or `:last`"}]}
+                   message: "You must either supply `:first` or `:last`"}]}
       = result
 
  end

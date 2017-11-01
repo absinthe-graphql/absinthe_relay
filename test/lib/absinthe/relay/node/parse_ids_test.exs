@@ -17,7 +17,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     alias Absinthe.Relay.Node.ParseIDsTest.Foo
     alias Absinthe.Relay.Node.ParseIDsTest.Parent
@@ -192,9 +192,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   @foo1_id Base.encode64("Foo:1")
   @foo2_id Base.encode64("Foo:2")
 
-  context "parses one id" do
+  describe "parses one id" do
 
-    it "succeeds with a non-null value" do
+    test "succeeds with a non-null value" do
       result =
         """
         {
@@ -208,7 +208,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
     end
 
-    it "succeeds with a null value" do
+    test "succeeds with a null value" do
       result =
         """
         {
@@ -224,9 +224,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   end
 
-  context "parses a list of ids" do
+  describe "parses a list of ids" do
 
-    it "succeeds with a non-null value" do
+    test "succeeds with a non-null value" do
       result =
         """
         {
@@ -246,7 +246,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       } == result
     end
 
-    it "succeeds with a null value" do
+    test "succeeds with a null value" do
       result =
         """
         {
@@ -268,8 +268,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   end
 
-  context "parsing an id into one of multiple node types" do
-    it "parses an non-null id into one of multiple node types" do
+  describe "parsing an id into one of multiple node types" do
+    test "parses an non-null id into one of multiple node types" do
       result =
         """
         {
@@ -279,7 +279,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
     end
-    it "parses null" do
+    test "parses null" do
       result =
         """
         {
@@ -291,8 +291,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
   end
 
-  context "parsing nested ids" do
-    it "works with non-null values" do
+  describe "parsing nested ids" do
+    test "works with non-null values" do
       encoded_parent_id = Base.encode64("Parent:1")
       encoded_child1_id = Base.encode64("Child:1")
       encoded_child2_id = Base.encode64("Child:1")
@@ -328,7 +328,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       }
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
-    it "works with null leaf values" do
+    test "works with null leaf values" do
       encoded_parent_id = Base.encode64("Parent:1")
       encoded_child1_id = Base.encode64("Child:1")
       result =
@@ -364,7 +364,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   end
 
-  it "parses incorrect nested ids" do
+  test "parses incorrect nested ids" do
     encoded_parent_id = Base.encode64("Parent:1")
     incorrect_id = Node.to_global_id(:other_foo, 1, Schema)
     mutation =
@@ -389,12 +389,12 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       data: %{"updateParent" => nil},
       errors: [%{
         locations: [%{column: 0, line: 2}],
-        message: ~s<In field "updateParent": In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
+        message: ~s<In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
       }]
     } = result
   end
 
-  it "handles one incorrect id correctly" do
+  test "handles one incorrect id correctly" do
     result =
       """
       {
@@ -409,13 +409,13 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       :ok, %{
         data: %{},
         errors: [
-          %{message: ~s<In field "foo": In argument "fooId": Expected node type in ["Foo"], found "FancyFoo".>}
+          %{message: ~s<In argument "fooId": Expected node type in ["Foo"], found "FancyFoo".>}
         ]
       }
     } = result
   end
 
- it "parses nested ids with local middleware" do
+ test "parses nested ids with local middleware" do
     encoded_parent_id = Base.encode64("Parent:1")
     encoded_child1_id = Base.encode64("Child:1")
     encoded_child2_id = Base.encode64("Child:1")
