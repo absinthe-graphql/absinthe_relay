@@ -1,16 +1,99 @@
 defmodule Absinthe.Relay.Mutation.Notation.Modern do
 
   @moduledoc """
-  Macros used to define Mutation-related schema entities for Relay Modern.
+  Convenience macros for Relay Modern mutations.
 
-  See `Absinthe.Relay.Mutation` for examples of use.
+  (If you want `clientMutationId` handling, see `Absinthe.Relay.Mutation.Notation.Classic`!)
+
+  The `payload` macro can be used by schema designers to support mutation
+  fields that receive either:
+
+  - A single non-null input object argument (using the `input` macro in this module)
+  - Any arguments you want to use (using the normal `arg` macro)
+
+  More information can be found at https://facebook.github.io/relay/docs/mutations.html
+
+  ## Example
+
+  In this example we add a mutation field `:simple_mutation` that
+  accepts an `input` argument of a new type (which is defined for us
+  because we use the `input` macro), which contains an `:input_data`
+  field.
+
+  We also declare the output will contain a field, `:result`.
+
+  Notice the `resolve` function doesn't need to know anything about the
+  wrapping `input` argument -- it only concerns itself with the contents.
+  The input fields are passed to the resolver just like they were declared
+  as separate top-level arguments.
+
+  ```
+  mutation do
+    payload field :simple_mutation do
+      input do
+        field :input_data, non_null(:integer)
+      end
+      output do
+        field :result, :integer
+      end
+      resolve fn
+        %{input_data: input_data}, _ ->
+          # Some mutation side-effect here
+          {:ok, %{result: input_data * 2}}
+      end
+    end
+  end
+  ```
+
+  Here's a query document that would hit this field:
+
+  ```graphql
+  mutation DoSomethingSimple {
+    simpleMutation(input: {inputData: 2}) {
+      result
+    }
+  }
+  ```
+
+  And here's the response:
+
+  ```json
+  {
+    "data": {
+      "simpleMutation": {
+        "result": 4
+      }
+    }
+  }
+  ```
+
+  Note the above code would create the following types in our schema, ad hoc:
+
+  - `SimpleMutationInput`
+  - `SimpleMutationPayload`
+
+  For this reason, the identifier passed to `payload field` must be unique
+  across your schema.
+
+  ## Using your own arguments
+
+  You are free to just declare your own arguments instead. The `input` argument and type behavior
+  is only activated for your mutation field if you use the `input` macro (and, importantly, it needs) to
+  be the first definition inside the `payload` block.
+
+  You're free to define your own arguments using `arg`, as usual, with one caveat: don't call one `:input`.
+
+  ## The Escape Hatch
+
+  The mutation macros defined here are just for convenience; if you want something that goes against these
+  restrictions, don't worry! You can always just define your types and fields using normal (`field`, `arg`,
+  `input_object`, etc) schema notation macros as usual.
   """
-
   use Absinthe.Schema.Notation
   alias Absinthe.Schema.Notation
 
   @doc """
-  Define a mutation with a single input and a client mutation ID. See the `Absinthe.Relay.Mutation` module documentation for more information.
+  Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
   """
   defmacro payload({:field, _, [field_ident]}, [do: block]) do
     __CALLER__
@@ -91,19 +174,16 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
     end
   end
 
-  #
-  # SHARED
-  #
-
   @private_field_identifier_path [Absinthe.Relay, :mutation_field_identifier]
-
 
   #
   # INPUT
   #
 
   @doc """
-  Defines the input type for your payload field. See the `Absinthe.Relay.Mutation` module documentation for an example.
+  Defines the input type for your payload field. See the module documentation for an example.
+
+  Note that this _must_ be the first declaration inside the `payload` block for it to work.
   """
   defmacro input([do: block]) do
     env = __CALLER__
@@ -126,7 +206,7 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   #
 
   @doc """
-  Defines the output (payload) type for your payload field. See the `Absinthe.Relay.Mutation` module documentation for an example.
+  Defines the output (payload) type for your payload field. See the module documentation for an example.
   """
   defmacro output([do: block]) do
     env = __CALLER__
