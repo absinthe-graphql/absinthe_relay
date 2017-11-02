@@ -1,7 +1,7 @@
 defmodule Absinthe.Relay.Mutation.ModernTest do
   use Absinthe.Relay.Case, async: true
 
-  defmodule Schema do
+  defmodule SchemaWithInputAndOutput do
     use Absinthe.Schema
     use Absinthe.Relay.Schema, :modern
 
@@ -27,42 +27,7 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
 
   end
 
-  describe "mutation with clientMutationId" do
-
-    @query """
-    mutation M {
-      simpleMutation {
-        result
-        clientMutationId
-      }
-    }
-    """
-    test "without an `input' argument returns `nil' for the clientMutationId" do
-      assert {:ok, %{data: %{"simpleMutation" => %{"result" => 1, "clientMutationId" => nil}}}} = Absinthe.run(@query, Schema)
-    end
-
-    @query """
-    mutation M {
-      simpleMutation(input: {clientMutationId: "abc", input_data: 1}) {
-        result
-        clientMutationId
-      }
-    }
-    """
-    @expected %{
-      data: %{
-        "simpleMutation" => %{
-          "result" => 2,
-          "clientMutationId" => "abc"
-        }
-      }
-    }
-    test "returns the same client mutation ID and resolves as expected" do
-      assert {:ok, @expected} == Absinthe.run(@query, Schema)
-    end
-  end
-
-  describe "mutation WITHOUT clientMutationId" do
+  describe "mutation field with input declaration" do
 
     @query """
     mutation M {
@@ -71,35 +36,9 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
       }
     }
     """
-    @expected %{
-      data: %{
-        "simpleMutation" => %{
-          "result" => 1
-        }
-      }
-    }
-    test "does not require an `input' argument" do
-      assert {:ok, %{data: %{"simpleMutation" => %{"result" => 1}}}} = Absinthe.run(@query, Schema)
-    end
-
-    @query """
-    mutation M {
-      simpleMutation(input: {input_data: 1}) {
-        result
-        clientMutationId
-      }
-    }
-    """
-    @expected %{
-      data: %{
-        "simpleMutation" => %{
-          "result" => 2,
-          "clientMutationId" => nil
-        }
-      }
-    }
-    test "returns nil clientMutationId" do
-      assert {:ok, @expected} == Absinthe.run(@query, Schema)
+    test "requires the input argument" do
+      assert {:ok,
+              %{errors: [%{message: "In argument \"input\": Expected type \"SimpleMutationInput!\", found null."}]}} = Absinthe.run(@query, SchemaWithInputAndOutput)
     end
 
     @query """
@@ -116,13 +55,12 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
         }
       }
     }
-    test "works without querying clientMutationId in the payload" do
-      assert {:ok, @expected} == Absinthe.run(@query, Schema)
+    test "resolves SchemaWithInputAndOutput" do
+      assert {:ok, @expected} == Absinthe.run(@query, SchemaWithInputAndOutput)
     end
   end
 
-
-  describe "introspection" do
+  describe "__type introspection on SchemaWithInputAndOutput" do
 
     @query """
     {
@@ -150,14 +88,6 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
           "kind" => "INPUT_OBJECT",
           "inputFields" => [
             %{
-              "name" => "clientMutationId",
-              "type" => %{
-                "name" => "String",
-                "kind" => "SCALAR",
-                "ofType" => nil
-              }
-            },
-            %{
               "name" => "inputData",
               "type" => %{
                 "name" => "Int",
@@ -170,8 +100,8 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
         }
       }
     }
-    test "contains correct input" do
-      assert {:ok, @expected} = Absinthe.run(@query, Schema)
+    test "contains correct input type" do
+      assert {:ok, @expected} = Absinthe.run(@query, SchemaWithInputAndOutput)
     end
 
     @query """
@@ -200,13 +130,170 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
           "kind" => "OBJECT",
           "fields" => [
             %{
-              "name" => "clientMutationId",
+              "name" => "result",
               "type" => %{
-                "name" => "String",
+                "name" => "Int",
                 "kind" => "SCALAR",
                 "ofType" => nil
               }
-            },
+            }
+          ]
+        }
+      }
+    }
+    test "contains correct payload type" do
+      assert {:ok, @expected} == Absinthe.run(@query, SchemaWithInputAndOutput)
+    end
+
+  end
+
+  describe "__schema introspection for SchemaWithInputAndOutput" do
+
+    @query """
+    {
+      __schema {
+        mutationType {
+          fields {
+            name
+            args {
+              name
+              type {
+                name
+                kind
+                ofType {
+                  name
+                  kind
+                }
+              }
+            }
+            type {
+              name
+              kind
+            }
+          }
+        }
+      }
+    }
+    """
+    @expected %{
+      data: %{
+        "__schema" => %{
+          "mutationType" => %{
+            "fields" => [
+              %{
+                "name" => "simpleMutation",
+                "args" => [
+                  %{
+                    "name" => "input",
+                    "type" => %{
+                      "name" => nil,
+                      "kind" => "NON_NULL",
+                      "ofType" => %{
+                        "name" => "SimpleMutationInput",
+                        "kind" => "INPUT_OBJECT",
+                      },
+                    },
+                  }
+                ],
+                "type" => %{
+                  "name" => "SimpleMutationPayload",
+                  "kind" => "OBJECT",
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+
+    test "returns the correct field" do
+      assert {:ok, @expected} == Absinthe.run(@query, SchemaWithInputAndOutput)
+    end
+
+  end
+
+  defmodule SchemaWithOutputButNoInput do
+    use Absinthe.Schema
+    use Absinthe.Relay.Schema, :modern
+
+    query do
+    end
+
+    mutation do
+      payload field :simple_mutation do
+        output do
+          field :result, :integer
+        end
+        resolve fn _, _ -> {:ok, %{result: 1}} end
+      end
+    end
+
+  end
+
+  describe "executing for SchemaWithOutputButNoInput" do
+
+    @query """
+    mutation M {
+      simpleMutation {
+        result
+      }
+    }
+    """
+    @expected %{
+      data: %{
+        "simpleMutation" => %{
+          "result" => 1
+        }
+      }
+    }
+    test "resolves as expected" do
+      assert {:ok, @expected} == Absinthe.run(@query, SchemaWithOutputButNoInput)
+    end
+  end
+
+  describe "__type introspection on SchemaWithOutputButNoInput" do
+
+    @query """
+    {
+      __type(name: "SimpleMutationInput") {
+        name
+      }
+    }
+    """
+    @expected  %{
+      data: %{
+        "__type" => nil
+      }
+    }
+    test "return nil for the input type" do
+      assert {:ok, @expected} = Absinthe.run(@query, SchemaWithOutputButNoInput)
+    end
+
+    @query """
+    {
+      __type(name: "SimpleMutationPayload") {
+        name
+        kind
+        fields {
+          name
+          type {
+            name
+            kind
+            ofType {
+              name
+              kind
+            }
+          }
+        }
+      }
+    }
+    """
+    @expected %{
+      data: %{
+        "__type" => %{
+          "name" => "SimpleMutationPayload",
+          "kind" => "OBJECT",
+          "fields" => [
             %{
               "name" => "result",
               "type" => %{
@@ -219,74 +306,68 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
         }
       }
     }
-
     test "contains correct payload" do
-      assert {:ok, @expected} == Absinthe.run(@query, Schema)
+      assert {:ok, @expected} == Absinthe.run(@query, SchemaWithOutputButNoInput)
     end
 
   end
 
-  @query """
-  {
-    __schema {
-      mutationType {
-        fields {
-          name
-          args {
+  describe "__schema introspection on SchemaWithOutputButNoInput" do
+
+    @query """
+    {
+      __schema {
+        mutationType {
+          fields {
             name
+            args {
+              name
+              type {
+                name
+                kind
+                ofType {
+                  name
+                  kind
+                }
+              }
+            }
             type {
               name
               kind
-              ofType {
-                name
-                kind
-              }
             }
-          }
-          type {
-            name
-            kind
           }
         }
       }
     }
-  }
-  """
-  @expected %{
-    data: %{
-      "__schema" => %{
-        "mutationType" => %{
-          "fields" => [
-            %{
-              "name" => "simpleMutation",
-              "args" => [
-                %{
-                  "name" => "input",
-                  "type" => %{
-                    "name" => "SimpleMutationInput",
-                    "kind" => "INPUT_OBJECT",
-                    "ofType" => nil,
-                  },
+    """
+    @expected %{
+      data: %{
+        "__schema" => %{
+          "mutationType" => %{
+            "fields" => [
+              %{
+                "name" => "simpleMutation",
+                "args" => [],
+                "type" => %{
+                  "name" => "SimpleMutationPayload",
+                  "kind" => "OBJECT",
                 }
-              ],
-              "type" => %{
-                "name" => "SimpleMutationPayload",
-                "kind" => "OBJECT",
               }
-            }
-          ]
+            ]
+          }
         }
       }
     }
-  }
 
-  test "returns the correct field" do
-    assert {:ok, @expected} == Absinthe.run(@query, Schema)
+    test "returns the correct field" do
+      assert {:ok, @expected} == Absinthe.run(@query, SchemaWithOutputButNoInput)
+    end
+
   end
 
   describe "an empty definition" do
 
-    defmodule EmptyInputAndResultSchema do
+    defmodule SchemaWithoutInputOrOutput do
       use Absinthe.Schema
       use Absinthe.Relay.Schema, :modern
 
@@ -309,51 +390,13 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
 
     end
 
-    @cm_id "abc"
-
-    test "input argument is optional" do
-      type = Absinthe.Schema.lookup_type(EmptyInputAndResultSchema, :mutation)
+    test "input argument isn't present" do
+      type = Absinthe.Schema.lookup_type(SchemaWithoutInputOrOutput, :mutation)
       for field <- Map.values(type.fields) do
-        assert !match?(%Absinthe.Type.NonNull{}, field.args.input.type)
+        assert !Map.get(field.args, :input)
       end
     end
 
-    @query """
-    mutation M {
-      withoutBlock(input: {clientMutationId: "#{@cm_id}"}) {
-        clientMutationId
-      }
-    }
-    """
-    test "supports returning the client mutation id intact when defined without a block" do
-      assert {:ok, %{data: %{"withoutBlock" => %{"clientMutationId" => @cm_id}}}} == Absinthe.run(@query, EmptyInputAndResultSchema)
-    end
-
-    @query """
-    mutation M {
-      withBlock(input: {clientMutationId: "#{@cm_id}"}) {
-        clientMutationId
-      }
-    }
-    """
-    test "supports returning the client mutation id intact when defined with a block" do
-      assert {:ok, %{data: %{"withBlock" => %{"clientMutationId" => @cm_id}}}} == Absinthe.run(@query, EmptyInputAndResultSchema)
-    end
-
-    @query """
-    mutation M {
-      withBlockAndAttrs(input: {clientMutationId: "#{@cm_id}"}) {
-        clientMutationId
-      }
-    }
-    """
-    test "supports returning the client mutation id intact when defined with a block and attrs" do
-      assert {:ok, %{data: %{"withBlockAndAttrs" => %{"clientMutationId" => @cm_id}}}} == Absinthe.run(@query, EmptyInputAndResultSchema)
-    end
-
-
   end
-
-
 
 end
