@@ -78,8 +78,7 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   ## Using your own arguments
 
   You are free to just declare your own arguments instead. The `input` argument and type behavior
-  is only activated for your mutation field if you use the `input` macro (and, importantly, it needs) to
-  be the first definition inside the `payload` block.
+  is only activated for your mutation field if you use the `input` macro.
 
   You're free to define your own arguments using `arg`, as usual, with one caveat: don't call one `:input`.
 
@@ -134,10 +133,10 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
     ]
 
     block_param =
-      case block do
-        {:__block__, [], [{:input, _, _} | _]} ->
+      case block_has_input?(block) do
+        true ->
           [field_body(field_ident)] ++ block_param
-        _ ->
+        false ->
           [simple_field_body(field_ident)] ++ block_param
       end
 
@@ -147,6 +146,13 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
       Keyword.put(attrs, :type, ident(field_ident, :payload)),
       block_param
     )
+  end
+
+  defp block_has_input?({:__block__, [], declarations}) do
+    Enum.any?(declarations, &match?({:input, _, _}, &1))
+  end
+  defp block_has_input?(_) do
+    false
   end
 
   defp field_body(field_ident) do
@@ -182,8 +188,6 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
 
   @doc """
   Defines the input type for your payload field. See the module documentation for an example.
-
-  Note that this _must_ be the first declaration inside the `payload` block for it to work.
   """
   defmacro input([do: block]) do
     env = __CALLER__
