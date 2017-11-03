@@ -4,10 +4,12 @@ defmodule Absinthe.Relay.ConnectionTest do
   alias Absinthe.Relay.Connection
 
   @jack_global_id Base.encode64("Person:jack")
+  @offset_cursor_1 Base.encode64("arrayconnection:1")
+  @offset_cursor_2 Base.encode64("arrayconnection:5")
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema
+    use Absinthe.Relay.Schema, :classic
 
     @people %{
       "jack" => %{id: "jack", name: "Jack", age: 35, pets: ["1", "2"], favorite_pets: ["2"]},
@@ -110,7 +112,7 @@ defmodule Absinthe.Relay.ConnectionTest do
   end
 
   describe "Defining custom connection and edge fields" do
-    it " allows querying those additional fields" do
+    test " allows querying those additional fields" do
       result = """
         query FirstPetName($personId: ID!) {
           node(id: $personId) {
@@ -145,7 +147,7 @@ defmodule Absinthe.Relay.ConnectionTest do
   end
 
   describe "Defining custom connection and edge fields, with redundant spread fragments" do
-    it " allows querying those additional fields" do
+    test " allows querying those additional fields" do
       result = """
         query FirstPetName($personId: ID!) {
           node(id: $personId) {
@@ -192,8 +194,26 @@ defmodule Absinthe.Relay.ConnectionTest do
   end
 
   describe ".from_slice/2" do
-    it "when the offset is nil it will not do arithmetic on nil" do
+    test "when the offset is nil test will not do arithmetic on nil" do
       Connection.from_slice([%{foo: :bar}], nil)
+    end
+  end
+
+  describe ".offset_and_limit_for_query/2" do
+    test "with a cursor" do
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @offset_cursor_1}, []) == {:ok, 1, 10}
+      assert Connection.offset_and_limit_for_query(%{first: 5, before: @offset_cursor_2}, []) == {:ok, 5, 5}
+
+      assert Connection.offset_and_limit_for_query(%{last: 10, before: @offset_cursor_1}, []) == {:ok, 0, 10}
+      assert Connection.offset_and_limit_for_query(%{last: 5, before: @offset_cursor_2}, []) == {:ok, 0, 5}
+    end
+
+    test "without a cursor" do
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: nil}, []) == {:ok, 0, 10}
+      assert Connection.offset_and_limit_for_query(%{first: 5, after: nil}, []) == {:ok, 0, 5}
+
+      assert Connection.offset_and_limit_for_query(%{last: 10, before: nil}, [count: 30]) == {:ok, 20, 10}
+      assert Connection.offset_and_limit_for_query(%{last: 5, after: nil}, [count: 30]) == {:ok, 25, 5}
     end
   end
 end

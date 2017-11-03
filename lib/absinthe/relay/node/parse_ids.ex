@@ -13,6 +13,9 @@ defmodule Absinthe.Relay.Node.ParseIDs do
     argument map will be replaced by a map with the node ID specific to your
     application as `:id` and the parsed node type as `:type`.
 
+  If a GraphQL `null` value for an ID is found, it will be passed through as
+  `nil` in either case, since no type can be associated with the value.
+
   ## Examples
 
   Parse a node (global) ID argument `:item_id` as an `:item` type. This replaces
@@ -177,11 +180,15 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
   Note that using these two different forms will result in different argument
   values being passed for `:item_id` (the former, as a `binary`, the latter
-  as a `map`). See the module documentation for more details.
+  as a `map`).
+
+  In the event that the ID is a `null`, it will be passed-through as `nil`.
+
+  See the module documentation for more details.
   """
   @type rules :: [{atom, atom | [atom]}] | %{atom => atom | [atom]}
 
-  @type simple_result :: binary
+  @type simple_result :: nil | binary
   @type full_result :: %{type: atom, id: simple_result}
   @type result :: full_result | simple_result
 
@@ -303,7 +310,11 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   end
 
 
+  @spec check_result(nil, Rule.t, Absinthe.Resolution.t) :: {:ok, nil}
   @spec check_result(full_result, Rule.t, Absinthe.Resolution.t) :: {:ok, full_result} | {:error, String.t}
+  defp check_result(nil, _rule, _resolution) do
+    {:ok, nil}
+  end
   defp check_result(%{type: type} = result, %Rule{expected_types: types} = rule, resolution) do
     if type in types do
       {:ok, result}

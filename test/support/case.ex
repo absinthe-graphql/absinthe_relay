@@ -2,10 +2,7 @@ defmodule Absinthe.Relay.Case do
   defmacro __using__(opts) do
     quote do
       use ExUnit.Case, unquote(opts)
-      import ExUnit.Case, except: [describe: 2]
-      import ExSpec
-
-      Module.put_attribute(__MODULE__, :ex_spec_contexts, [])
+      import ExUnit.Case
     end
   end
 end
