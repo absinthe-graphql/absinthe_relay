@@ -130,7 +130,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
   Needs to look like this if you put the `ParseIDs` middleware first:
 
-  ``
+  ```
   def middleware(middleware, %Absinthe.Type.Field{identifier: :change_something}, _) do
     # Note the addition of the `input` level:
     [{Absinthe.Relay.Node.ParseIDs, input: [profile: [user_id: :user]]} | middleware]
