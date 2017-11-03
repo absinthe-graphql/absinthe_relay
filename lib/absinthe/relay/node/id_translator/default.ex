@@ -1,6 +1,9 @@
 defmodule Absinthe.Relay.Node.IDTranslator.Default do
-    
   @behaviour Absinthe.Relay.Node.IDTranslator
+
+  @moduledoc """
+  A basic implementation of `Absinthe.Relay.Node.IDTranslator` using Base64 encoding.
+  """
 
   def to_global_id(type_name, source_id, _schema) do
     {:ok, Base.encode64("#{type_name}:#{source_id}")}

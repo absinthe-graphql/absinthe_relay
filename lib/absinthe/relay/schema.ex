@@ -12,7 +12,9 @@ defmodule Absinthe.Relay.Schema do
     do_using(flavor, [])
   end
   defmacro __using__(opts) when is_list(opts) do
-    do_using(Keyword.get(opts, :flavor, []), opts)
+    opts
+    |> Keyword.get(:flavor, [])
+    |> do_using(opts)
   end
 
   defp do_using(flavor, opts) do
