@@ -21,9 +21,7 @@ defmodule Absinthe.Relay.Schema do
       import_types Absinthe.Relay.Connection.Types
       
       def __absinthe_relay_global_id_translator__ do
-        Application.get_env(Absinthe.Relay, :global_id_translator) ||
-        Keyword.get(unquote(opts), :global_id_translator) ||
-        Absinthe.Relay.Node.IDTranslator.Default
+        Keyword.get(unquote(opts), :global_id_translator, nil)
       end
     end
   end

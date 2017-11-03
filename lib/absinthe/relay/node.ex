@@ -222,16 +222,24 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
+  defp translate_global_id(schema, direction, args) when direction in [:to_global_id, :from_global_id] do
+    (global_id_translator(:env, schema) || global_id_translator(:schema, schema) || Absinthe.Relay.Node.IDTranslator.Default)
+    |> apply(direction, args ++ [schema])
+  end
+
   @non_relay_schema_error "Non relay schema provided"
 
-  defp translate_global_id(schema, direction, args) when direction in [:to_global_id, :from_global_id] do
+  defp global_id_translator(:env, schema) do
+    Absinthe.Relay
+    |> Application.get_env(schema, [])
+    |> Keyword.get(:global_id_translator, nil)
+  end
+  defp global_id_translator(:schema, schema) do
     case Keyword.get(schema.__info__(:functions), :__absinthe_relay_global_id_translator__) do
       0 ->
-        schema
-        |> apply(:__absinthe_relay_global_id_translator__, [])
-        |> apply(direction, args ++ [schema])
+        apply(schema, :__absinthe_relay_global_id_translator__, [])
       nil ->
-        {:error, @non_relay_schema_error}
+        raise ArgumentError, message: @non_relay_schema_error
     end
   end
 
