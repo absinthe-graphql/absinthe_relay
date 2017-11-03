@@ -365,8 +365,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   end
 
   test "parses incorrect nested ids" do
-    {:ok, encoded_parent_id} = Node.to_global_id("Parent", 1, Schema)
-    {:ok, incorrect_id} = Node.to_global_id(:other_foo, 1, Schema)
+    encoded_parent_id = Node.to_global_id!("Parent", 1, Schema)
+    incorrect_id = Node.to_global_id!(:other_foo, 1, Schema)
     mutation =
       """
       mutation Foobar {
@@ -395,12 +395,10 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   end
 
   test "handles one incorrect id correctly" do
-    {:ok, bad_global_id} = Node.to_global_id(:other_foo, 1, Schema)
-
     result =
       """
       {
-        foo(fooId: "#{bad_global_id}") {
+        foo(fooId: "#{Node.to_global_id!(:other_foo, 1, Schema)}") {
           id
           name
         }

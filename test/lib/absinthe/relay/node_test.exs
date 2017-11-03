@@ -110,16 +110,15 @@ defmodule Absinthe.Relay.NodeTest do
   describe "to_global_id" do
 
     test "works given an atom for an existing type" do
-      assert {:ok, global_id} = Node.to_global_id(:foo, 1, Schema)
-      assert !is_nil(global_id)
+      assert !is_nil(Node.to_global_id!(:foo, 1, Schema))
     end
 
     test "returns an atom for an non-existing type" do
-      assert {:ok, nil} = Node.to_global_id(:not_foo, 1, Schema)
+      assert is_nil(Node.to_global_id!(:not_foo, 1, Schema))
     end
 
     test "works given a binary and internal ID" do
-      assert Node.to_global_id("Foo", 1, Schema)
+      assert Node.to_global_id!("Foo", 1, Schema)
     end
 
     test "gives the same global ID for different type, equivalent references" do
@@ -131,7 +130,7 @@ defmodule Absinthe.Relay.NodeTest do
     end
 
     test "fails given a bad ID" do
-      assert {:ok, nil} = Node.to_global_id("Foo", nil, Schema)
+      assert is_nil(Node.to_global_id!("Foo", nil, Schema))
     end
 
   end
@@ -145,10 +144,9 @@ defmodule Absinthe.Relay.NodeTest do
       assert {:ok, %{data: %{"singleFoo" => %{"name" => "Bar 1", "id" => @foo1_id}}}} == result
     end
 
-    test "handles one incorrect id with a single expected type" do
-      {:ok, incorrect_id} = Node.to_global_id(:other_foo, 1, Schema)
+    test "handles one incorrect id with a single expected type" do 
       result =
-        ~s<{ singleFoo(id: "#{incorrect_id}") { id name } }>
+        ~s<{ singleFoo(id: "#{Node.to_global_id!(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
         %{message: ~s<In argument "id": Expected node type in ["Foo"], found "FancyFoo".>}
@@ -156,9 +154,8 @@ defmodule Absinthe.Relay.NodeTest do
     end
 
     test "handles one incorrect id with a multiple expected types" do
-      {:ok, incorrect_id} = Node.to_global_id(:other_foo, 1, Schema)
       result =
-        ~s<{ singleFooWithMultipleNodeTypes(id: "#{incorrect_id}") { id name } }>
+        ~s<{ singleFooWithMultipleNodeTypes(id: "#{Node.to_global_id!(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
         %{message: ~s<In argument "id": Expected node type in ["Foo"], found "FancyFoo".>}
@@ -183,10 +180,8 @@ defmodule Absinthe.Relay.NodeTest do
     end
 
     test "handles multiple incorrect ids" do
-      {:ok, incorrect_id1} = Node.to_global_id(:other_foo, 1, Schema)
-      {:ok, incorrect_id2} = Node.to_global_id(:other_foo, 2, Schema)
       result =
-        ~s<{ dualFoo(id1: "#{incorrect_id1}", id2: "#{incorrect_id2}") { id name } }>
+        ~s<{ dualFoo(id1: "#{Node.to_global_id!(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id!(:other_foo, 2, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
         %{message: ~s(In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)},
@@ -195,10 +190,8 @@ defmodule Absinthe.Relay.NodeTest do
     end
 
     test "handles multiple incorrect ids with multiple node types" do
-      {:ok, incorrect_id1} = Node.to_global_id(:other_foo, 1, Schema)
-      {:ok, incorrect_id2} = Node.to_global_id(:other_foo, 2, Schema)
       result =
-        ~s<{ dualFooWithMultipleNodeTypes(id1: "#{incorrect_id1}", id2: "#{incorrect_id2}") { id name } }>
+        ~s<{ dualFooWithMultipleNodeTypes(id1: "#{Node.to_global_id!(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id!(:other_foo, 2, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
       assert {:ok, %{data: %{}, errors: [
         %{message: ~s(In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)},

@@ -192,6 +192,15 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
+  def from_global_id!(global_id, schema) do
+    case from_global_id(global_id, schema) do
+      {:ok, result} ->
+        result
+      {:error, err} ->
+        raise RuntimeError, message: err
+    end
+  end
+
   @doc """
   Generate a global ID given a node type name and an internal (non-global) ID
 
@@ -219,6 +228,15 @@ defmodule Absinthe.Relay.Node do
         {:ok, nil}
       type ->
         to_global_id(type.name, source_id, schema)
+    end
+  end
+
+  def to_global_id!(node_type, source_id, schema) do
+    case to_global_id(node_type, source_id, schema) do
+      {:ok, global_id} ->
+        global_id
+      {:error, err} ->
+        raise RuntimeError, message: err
     end
   end
 
