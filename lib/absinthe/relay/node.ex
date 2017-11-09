@@ -83,9 +83,9 @@ defmodule Absinthe.Relay.Node do
 
   This will create an object type, `:person`, as you might expect. An `:id`
   field is created for you automatically, and this field generates a global ID;
-  a Base64 string that's built using the object type name and the raw, internal
-  identifier. All of this is handled for you automatically by prefixing your
-  object type definition with `"node "`.
+  an opaque string that's built using a global ID translator (by default a 
+  Base64 implementation). All of this is handled for you automatically by 
+  prefixing your object type definition with `"node "`.
 
   The raw, internal value is retrieved using `default_id_fetcher/2` which just
   pattern matches an `:id` field from the resolved object. If you need to
@@ -100,6 +100,9 @@ defmodule Absinthe.Relay.Node do
     field :name, :string
   end
   ```
+
+  For instructions on how to change the underlying method of decoding/encoding
+  a global ID, see `Absinthe.Relay.Node.IDTranslator`.
 
   ## Macros
 
@@ -127,6 +130,9 @@ defmodule Absinthe.Relay.Node do
 
   @doc """
   Parse a global ID, given a schema.
+
+  To change the underlying method of decoding a global ID,
+  see `Absinthe.Relay.Node.IDTranslator`.
 
   ## Examples
 
@@ -202,7 +208,10 @@ defmodule Absinthe.Relay.Node do
   end
 
   @doc """
-  Generate a global ID given a node type name and an internal (non-global) ID
+  Generate a global ID given a node type name and an internal (non-global) ID given a schema.
+
+  To change the underlying method of encoding a global ID,
+  see `Absinthe.Relay.Node.IDTranslator`.
 
   ## Examples
 
