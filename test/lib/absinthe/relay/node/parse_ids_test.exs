@@ -15,9 +15,29 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     defstruct [:id, :name]
   end
 
+  defmodule CustomIDTranslator do
+    @behaviour Absinthe.Relay.Node.IDTranslator
+    
+    def to_global_id(type_name, source_id, _schema) do
+      {:ok, "#{type_name}:#{source_id}"}
+    end
+        
+    def from_global_id(global_id, _schema) do
+      case String.split(global_id, ":", parts: 2) do
+        [type_name, source_id] ->
+          {:ok, type_name, source_id}
+        _ ->
+          {:error, "Could not extract value from ID `#{inspect global_id}`"}
+      end
+    end
+  end
+
   defmodule Schema do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema, :classic
+    use Absinthe.Relay.Schema, [
+      flavor: :classic,
+      global_id_translator: CustomIDTranslator,
+    ]
 
     alias Absinthe.Relay.Node.ParseIDsTest.Foo
     alias Absinthe.Relay.Node.ParseIDsTest.Parent
@@ -189,8 +209,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   end
 
-  @foo1_id Base.encode64("Foo:1")
-  @foo2_id Base.encode64("Foo:2")
+  @foo1_id "Foo:1"
+  @foo2_id "Foo:2"
 
   describe "parses one id" do
 
@@ -293,9 +313,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
   describe "parsing nested ids" do
     test "works with non-null values" do
-      encoded_parent_id = Base.encode64("Parent:1")
-      encoded_child1_id = Base.encode64("Child:1")
-      encoded_child2_id = Base.encode64("Child:1")
+      encoded_parent_id = "Parent:1"
+      encoded_child1_id = "Child:1"
+      encoded_child2_id = "Child:1"
       result =
         """
         mutation Foobar {
@@ -329,8 +349,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
     test "works with null leaf values" do
-      encoded_parent_id = Base.encode64("Parent:1")
-      encoded_child1_id = Base.encode64("Child:1")
+      encoded_parent_id = "Parent:1"
+      encoded_child1_id = "Child:1"
       result =
         """
         mutation Foobar {
@@ -416,9 +436,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   end
 
  test "parses nested ids with local middleware" do
-    encoded_parent_id = Base.encode64("Parent:1")
-    encoded_child1_id = Base.encode64("Child:1")
-    encoded_child2_id = Base.encode64("Child:1")
+    encoded_parent_id = "Parent:1"
+    encoded_child1_id = "Child:1"
+    encoded_child2_id = "Child:1"
     result =
       """
       mutation FoobarLocal {
