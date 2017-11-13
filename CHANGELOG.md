@@ -2,8 +2,6 @@
 
 # 1.4.0
 
-Status: RC
-
 - Feature: Support `null` values in `ParseIDs` middleware (passed through as `nil` args)
 - Bug Fix: Support `null` values for `before` and `after` pagination arguments (expected by Relay Modern)
 
