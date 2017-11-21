@@ -31,9 +31,8 @@ defmodule Absinthe.Relay.Node.IDTranslator do
   end
   ```
   """
-    
-  @callback to_global_id(type_name :: binary, source_id :: binary | integer, schema :: atom) :: {:ok, binary} | {:error, binary}
-    
-  @callback from_global_id(global_id :: binary, schema :: atom) :: {:ok, binary, binary} | {:error, binary}
+
+  @callback to_global_id(binary, binary | integer, Absinthe.Schema.t) :: {:ok, Absinthe.Relay.Node.global_id_t} | {:error, binary}
+  @callback from_global_id(Absinthe.Relay.Node.global_id_t, Absinthe.Schema.t | nil) :: {:ok, binary, binary} | {:error, binary}
 
 end

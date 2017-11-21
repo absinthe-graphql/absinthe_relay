@@ -113,6 +113,8 @@ defmodule Absinthe.Relay.Node do
 
   require Logger
 
+  @type global_id_t :: binary
+
   # Middleware to handle a global id
   # parses the global ID before invoking it
   @doc false
@@ -171,8 +173,8 @@ defmodule Absinthe.Relay.Node do
   {:error, "Type `Item' is not a valid node type"}
   ```
   """
-  @spec from_global_id(nil, atom) :: {:ok, nil}
-  @spec from_global_id(binary, atom) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
+  @spec from_global_id(nil, Absinthe.Schema.t) :: {:ok, nil}
+  @spec from_global_id(global_id_t, Absinthe.Schema.t) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
   def from_global_id(nil, _schema) do
     {:ok, nil}
   end
@@ -198,6 +200,7 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
+  @spec from_global_id!(global_id_t | nil, Absinthe.Schema.t) :: %{type: atom, id: binary} | nil
   def from_global_id!(global_id, schema) do
     case from_global_id(global_id, schema) do
       {:ok, result} ->
@@ -216,7 +219,7 @@ defmodule Absinthe.Relay.Node do
   ## Examples
 
   ```
-  iex> to_global_id("Person", "123", SchemaWithPersonType)
+  iex> to_global_id("Person", "123")
   "UGVyc29uOjEyMw=="
   iex> to_global_id(:person, "123", SchemaWithPersonType)
   "UGVyc29uOjEyMw=="
@@ -224,14 +227,15 @@ defmodule Absinthe.Relay.Node do
   "No source non-global ID value given"
   ```
   """
-  @spec to_global_id(atom | binary, integer | binary | nil, atom) :: {:ok, binary | nil} | {:error, binary}
+  @spec to_global_id(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: {:ok, global_id_t | nil} | {:error, binary}
+  def to_global_id(node_type, source_id, schema \\ nil)
   def to_global_id(_node_type, nil, _schema) do
     {:ok, nil}
   end
   def to_global_id(node_type, source_id, schema) when is_binary(node_type) do
     translate_global_id(schema, :to_global_id, [node_type, source_id])
   end
-  def to_global_id(node_type, source_id, schema) when is_atom(node_type) do
+  def to_global_id(node_type, source_id, schema) when is_atom(node_type) and not is_nil(schema) do
     case Absinthe.Schema.lookup_type(schema, node_type) do
       nil ->
         {:ok, nil}
@@ -240,7 +244,8 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
-  def to_global_id!(node_type, source_id, schema) do
+  @spec to_global_id!(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: global_id_t | nil
+  def to_global_id!(node_type, source_id, schema \\ nil) do
     case to_global_id(node_type, source_id, schema) do
       {:ok, global_id} ->
         global_id
@@ -249,7 +254,11 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
-  defp translate_global_id(schema, direction, args) when direction in [:to_global_id, :from_global_id] do
+  defp translate_global_id(nil, direction, args) do
+    apply(Absinthe.Relay.Node.IDTranslator.Default, direction, args ++ [nil])
+  end
+
+  defp translate_global_id(schema, direction, args) do
     (global_id_translator(:env, schema) || global_id_translator(:schema, schema) || Absinthe.Relay.Node.IDTranslator.Default)
     |> apply(direction, args ++ [schema])
   end
