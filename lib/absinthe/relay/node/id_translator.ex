@@ -4,10 +4,30 @@ defmodule Absinthe.Relay.Node.IDTranslator do
   used in a relay node.
 
   This module provides the behaviour for implementing an ID Translator.
-  Example use cases of this module would be a translator that encypts the 
-  global ID or perhaps use a different base encoding.
+  An example use case of this module would be a translator that encypts the 
+  global ID.
+
+  To use a ID Translator in your schema their are two methods.
+
+  #### Inline Config
+  ```
+  defmodule MyApp.Schema do
+    use Absinthe.Schema
+    use Absinthe.Relay.Schema, [
+      flavor: :modern,
+      global_id_translator: MyApp.Absinthe.IDTranslator
+    ]
+    # ...
+  end
+  ```
+
+  #### Mix Config
+  ```
+  config Absinthe.Relay, MyApp.Schema,
+    global_id_translator: MyApp.Absinthe.IDTranslator
+  ```
   
-  ## Example
+  ## Example ID Translator
 
   A basic example that encodes the global ID by joining the `type_name` and
   `source_id` with `":"`.
@@ -32,7 +52,10 @@ defmodule Absinthe.Relay.Node.IDTranslator do
   ```
   """
 
-  @callback to_global_id(binary, binary | integer, Absinthe.Schema.t) :: {:ok, Absinthe.Relay.Node.global_id_t} | {:error, binary}
-  @callback from_global_id(Absinthe.Relay.Node.global_id_t, Absinthe.Schema.t | nil) :: {:ok, binary, binary} | {:error, binary}
+  @callback to_global_id(type_name :: binary, source_id :: binary | integer, schema :: Absinthe.Schema.t) ::
+    {:ok, global_id :: Absinthe.Relay.Node.global_id_t} | {:error, binary}
+  
+  @callback from_global_id(global_id :: Absinthe.Relay.Node.global_id_t, schema :: Absinthe.Schema.t | nil) ::
+    {:ok, type_name :: binary, source_id :: binary} | {:error, binary}
 
 end
