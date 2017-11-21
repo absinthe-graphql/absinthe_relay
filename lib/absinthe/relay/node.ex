@@ -200,6 +200,9 @@ defmodule Absinthe.Relay.Node do
     end
   end
 
+  @doc """
+  Similar to `from_global_id/2` but raises `RuntimeError` if fails to decode global ID.
+  """
   @spec from_global_id!(global_id_t | nil, Absinthe.Schema.t) :: %{type: atom, id: binary} | nil
   def from_global_id!(global_id, schema) do
     case from_global_id(global_id, schema) do
@@ -243,7 +246,10 @@ defmodule Absinthe.Relay.Node do
         to_global_id(type.name, source_id, schema)
     end
   end
-
+  
+  @doc """
+  Similar to `to_global_id/3` but raises `RuntimeError` if fails to encode global ID.
+  """
   @spec to_global_id!(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: global_id_t | nil
   def to_global_id!(node_type, source_id, schema \\ nil) do
     case to_global_id(node_type, source_id, schema) do
@@ -257,7 +263,6 @@ defmodule Absinthe.Relay.Node do
   defp translate_global_id(nil, direction, args) do
     apply(Absinthe.Relay.Node.IDTranslator.Default, direction, args ++ [nil])
   end
-
   defp translate_global_id(schema, direction, args) do
     (global_id_translator(:env, schema) || global_id_translator(:schema, schema) || Absinthe.Relay.Node.IDTranslator.Default)
     |> apply(direction, args ++ [schema])
