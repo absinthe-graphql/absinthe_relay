@@ -113,7 +113,7 @@ defmodule Absinthe.Relay.Node do
 
   require Logger
 
-  @type global_id_t :: binary
+  @type global_id :: binary
 
   # Middleware to handle a global id
   # parses the global ID before invoking it
@@ -174,7 +174,7 @@ defmodule Absinthe.Relay.Node do
   ```
   """
   @spec from_global_id(nil, Absinthe.Schema.t) :: {:ok, nil}
-  @spec from_global_id(global_id_t, Absinthe.Schema.t) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
+  @spec from_global_id(global_id, Absinthe.Schema.t) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
   def from_global_id(nil, _schema) do
     {:ok, nil}
   end
@@ -201,15 +201,15 @@ defmodule Absinthe.Relay.Node do
   end
 
   @doc """
-  Similar to `from_global_id/2` but raises `RuntimeError` if fails to decode global ID.
+  Similar to `from_global_id/2` but raises `Absinthe.Relay.Node.IDTranslator.Error` if fails to decode global ID.
   """
-  @spec from_global_id!(global_id_t | nil, Absinthe.Schema.t) :: %{type: atom, id: binary} | nil
+  @spec from_global_id!(global_id | nil, Absinthe.Schema.t) :: %{type: atom, id: binary} | nil
   def from_global_id!(global_id, schema) do
     case from_global_id(global_id, schema) do
       {:ok, result} ->
         result
       {:error, err} ->
-        raise RuntimeError, message: err
+        raise Absinthe.Relay.Node.IDTranslator.Error, message: err
     end
   end
 
@@ -230,7 +230,7 @@ defmodule Absinthe.Relay.Node do
   "No source non-global ID value given"
   ```
   """
-  @spec to_global_id(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: {:ok, global_id_t | nil} | {:error, binary}
+  @spec to_global_id(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: {:ok, global_id | nil} | {:error, binary}
   def to_global_id(node_type, source_id, schema \\ nil)
   def to_global_id(_node_type, nil, _schema) do
     {:ok, nil}
@@ -248,40 +248,46 @@ defmodule Absinthe.Relay.Node do
   end
   
   @doc """
-  Similar to `to_global_id/3` but raises `RuntimeError` if fails to encode global ID.
+  Similar to `to_global_id/3` but raises `Absinthe.Relay.Node.IDTranslator.Error` if fails to encode global ID.
   """
-  @spec to_global_id!(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: global_id_t | nil
+  @spec to_global_id!(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: global_id | nil
   def to_global_id!(node_type, source_id, schema \\ nil) do
     case to_global_id(node_type, source_id, schema) do
       {:ok, global_id} ->
         global_id
       {:error, err} ->
-        raise RuntimeError, message: err
+        raise Absinthe.Relay.Node.IDTranslator.Error, message: err
     end
   end
 
-  defp translate_global_id(nil, direction, args) do
-    apply(Absinthe.Relay.Node.IDTranslator.Default, direction, args ++ [nil])
-  end
   defp translate_global_id(schema, direction, args) do
-    (global_id_translator(:env, schema) || global_id_translator(:schema, schema) || Absinthe.Relay.Node.IDTranslator.Default)
+    schema
+    |> global_id_translator
     |> apply(direction, args ++ [schema])
   end
 
-  @non_relay_schema_error "Non relay schema provided"
-
-  defp global_id_translator(:env, schema) do
-    Absinthe.Relay
-    |> Application.get_env(schema, [])
-    |> Keyword.get(:global_id_translator, nil)
+  @non_relay_schema_error "Non Relay schema provided"
+  @doc false
+  # Returns an ID Translator from either the schema config, env config.
+  # or a default Base64 implementation.
+  def global_id_translator(nil) do
+    Absinthe.Relay.Node.IDTranslator.Base64
   end
-  defp global_id_translator(:schema, schema) do
-    case Keyword.get(schema.__info__(:functions), :__absinthe_relay_global_id_translator__) do
-      0 ->
-        apply(schema, :__absinthe_relay_global_id_translator__, [])
-      nil ->
-        raise ArgumentError, message: @non_relay_schema_error
-    end
+  def global_id_translator(schema) do
+    from_schema =
+      case Keyword.get(schema.__info__(:functions), :__absinthe_relay_global_id_translator__) do
+        0 ->
+          apply(schema, :__absinthe_relay_global_id_translator__, [])
+        nil ->
+          raise ArgumentError, message: @non_relay_schema_error
+      end
+
+    from_env =
+      Absinthe.Relay
+      |> Application.get_env(schema, [])
+      |> Keyword.get(:global_id_translator, nil)
+
+    from_schema || from_env || Absinthe.Relay.Node.IDTranslator.Base64
   end
 
   @missing_internal_id_error "No source non-global ID value could be fetched from the source object"

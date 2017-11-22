@@ -5,9 +5,6 @@ defmodule Absinthe.Relay.Schema do
   See `Absinthe.Relay`.
   """
 
-  defmacro __using__ do
-    do_using([], [])
-  end
   defmacro __using__(flavor) when is_atom(flavor) do
     do_using(flavor, [])
   end
@@ -23,7 +20,7 @@ defmodule Absinthe.Relay.Schema do
       import_types Absinthe.Relay.Connection.Types
       
       def __absinthe_relay_global_id_translator__ do
-        Keyword.get(unquote(opts), :global_id_translator, nil)
+        Keyword.get(unquote(opts), :global_id_translator)
       end
     end
   end

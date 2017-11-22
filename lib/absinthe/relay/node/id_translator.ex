@@ -1,7 +1,7 @@
 defmodule Absinthe.Relay.Node.IDTranslator do
   @moduledoc """
   An ID translator handles encoding and decoding a global ID
-  used in a relay node.
+  used in a Relay node.
 
   This module provides the behaviour for implementing an ID Translator.
   An example use case of this module would be a translator that encrypts the 
@@ -54,10 +54,24 @@ defmodule Absinthe.Relay.Node.IDTranslator do
   ```
   """
 
-  @callback to_global_id(type_name :: binary, source_id :: binary | integer, schema :: Absinthe.Schema.t) ::
-    {:ok, global_id :: Absinthe.Relay.Node.global_id_t} | {:error, binary}
+  @doc """
+  Converts a node's type name and ID to a globally unique ID.
 
-  @callback from_global_id(global_id :: Absinthe.Relay.Node.global_id_t, schema :: Absinthe.Schema.t | nil) ::
+  Returns `{:ok, global_id}` on success.
+
+  Returns `{:error, binary}` on failure.
+  """
+  @callback to_global_id(type_name :: binary, source_id :: binary | integer, schema :: Absinthe.Schema.t) ::
+    {:ok, global_id :: Absinthe.Relay.Node.global_id} | {:error, binary}
+
+  @doc """
+  Converts a globally unique ID to a node's type name and ID.
+
+  Returns `{:ok, type_name, source_id}` on success.
+
+  Returns `{:error, binary}` on failure.
+  """
+  @callback from_global_id(global_id :: Absinthe.Relay.Node.global_id, schema :: Absinthe.Schema.t | nil) ::
     {:ok, type_name :: binary, source_id :: binary} | {:error, binary}
 
 end

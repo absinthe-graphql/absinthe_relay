@@ -135,6 +135,18 @@ defmodule Absinthe.Relay.NodeTest do
 
   end
 
+  describe "global_id_translator" do
+
+    test "default is base64 when schema passed is nil" do
+      assert Node.global_id_translator(nil) == Absinthe.Relay.Node.IDTranslator.Base64
+    end
+
+    test "default is base64 when not schema is not configured" do
+      assert Node.global_id_translator(Schema) == Absinthe.Relay.Node.IDTranslator.Base64
+    end
+
+  end
+
   describe "parsing_node_id" do
 
     test "parses one id correctly" do
