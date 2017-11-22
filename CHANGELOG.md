@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.4.1
+
+- Bug Fix: Fix issue with `:modern` flavor + ParseIDs middleware. See [PR #96](https://github.com/absinthe-graphql/absinthe_relay/pull/96) for more information.
+
 # 1.4.0
 
 - Feature: Support `null` values in `ParseIDs` middleware (passed through as `nil` args)
