@@ -239,13 +239,14 @@ defmodule Absinthe.Relay.Connection.Notation do
     end
   end
 
-  defp defines_field?(nil, _), do: false
-  defp defines_field?({:__block__, [], fields}, field_name), do: defines_field?(fields, field_name)
-  defp defines_field?([{:field, _, [field_name | _]} | _], field_name), do: true
-  defp defines_field?([_ | fields], field_name), do: defines_field?(fields, field_name)
-  defp defines_field?({:field, _, [field_name | _]}, field_name), do: true
-  defp defines_field?({_, _, _}, _), do: false
-  defp defines_field?([], _), do: false
+
+  defp defines_field?(ast, field_name) do
+    {_, defined?} = Macro.prewalk(ast, false, fn
+      {:field, _, [^field_name | _]}, _ = node -> {node, true}
+      expr, acc -> {expr, acc}
+    end)
+    defined?
+  end
 
   # Forward pagination arguments.
   #
