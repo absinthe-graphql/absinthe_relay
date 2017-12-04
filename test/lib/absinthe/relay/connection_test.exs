@@ -25,6 +25,7 @@ defmodule Absinthe.Relay.ConnectionTest do
     node object :pet do
       field :name, :string
       field :age, :string
+      field :custom_resolver, :boolean
     end
 
     connection node_type: :pet do
@@ -40,6 +41,11 @@ defmodule Absinthe.Relay.ConnectionTest do
             _, %{source: edge} ->
               {:ok, edge.node.name |> String.reverse}
           end
+        end
+
+        field :node, :pet do
+          resolve fn _, %{source: source} ->
+            {:ok, Map.put(source.node, :custom_resolver, true)} end
         end
       end
     end
@@ -123,6 +129,7 @@ defmodule Absinthe.Relay.ConnectionTest do
                   nodeNameBackwards
                   node {
                     name
+                    custom_resolver
                   }
                 }
               }
@@ -140,7 +147,7 @@ defmodule Absinthe.Relay.ConnectionTest do
         }
       """ |> Absinthe.run(CustomConnectionAndEdgeFieldsSchema, variables: %{"personId" => @jack_global_id})
       assert {:ok, %{data: %{"node" => %{
-                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"name" => "Svenja"}}]},
+                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"name" => "Svenja", "custom_resolver" => true}}]},
                               "favoritePets" => %{"favTwiceEdgesCount" => 2, "edges" => [%{"favNodeNameBackwards" => "kcoJ", "node" => %{"name" => "Jock"}}]}}
                             }}} == result
     end
