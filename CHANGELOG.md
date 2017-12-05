@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.4.2
+
+- Feature: Support overriding the resolver for `Absinthe.Relay.Connection` edge node fields. See [PR #99](https://github.com/absinthe-graphql/absinthe_relay/pull/99) for more details.
+
 # 1.4.1
 
 - Bug Fix: Fix issue with `:modern` flavor + ParseIDs middleware. See [PR #96](https://github.com/absinthe-graphql/absinthe_relay/pull/96) for more information.
