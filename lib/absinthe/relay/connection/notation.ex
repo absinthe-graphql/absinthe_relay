@@ -196,7 +196,8 @@ defmodule Absinthe.Relay.Connection.Notation do
       env,
       naming.edge_type_identifier,
       attrs,
-      [edge_object_body(naming), block]
+
+      [block, edge_object_body(naming, block)]
     )
   end
 
@@ -212,17 +213,39 @@ defmodule Absinthe.Relay.Connection.Notation do
     end
   end
 
-  defp edge_object_body(naming) do
+  defp edge_object_body(naming, block) do
     node_type = naming.node_type_identifier
-    quote do
 
+    node_field = default_field(block, :node, quote do
       @desc "The item at the end of the edge"
       field :node, unquote(node_type)
+    end)
 
+    cursor_field = default_field(block, :cursor, quote do
       @desc "A cursor for use in pagination"
       field :cursor, non_null(:string)
+    end)
 
+    quote do
+      unquote(node_field)
+      unquote(cursor_field)
     end
+  end
+
+  defp default_field(definition, field, block) do
+    case defines_field?(definition, field) do
+      true -> nil
+      false -> block
+    end
+  end
+
+
+  defp defines_field?(ast, field_name) do
+    {_, defined?} = Macro.prewalk(ast, false, fn
+      {:field, _, [^field_name | _]}, _ = node -> {node, true}
+      expr, acc -> {expr, acc}
+    end)
+    defined?
   end
 
   # Forward pagination arguments.
