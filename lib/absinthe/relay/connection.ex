@@ -139,9 +139,9 @@ defmodule Absinthe.Relay.Connection do
     end
     edge do
       field :node_name_backwards, :string do
-      resolve fn
-        _, %{source: edge} ->
-          {:ok, edge.node.name |> String.reverse}
+        resolve fn
+          _, %{source: edge} ->
+            {:ok, edge.node.name |> String.reverse}
         end
       end
     end
