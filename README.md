@@ -77,7 +77,7 @@ specific usage information.
 ### Node Interface
 
 Relay
-[requires an interface](https://facebook.github.io/relay/docs/graphql-object-identification.html),
+[requires an interface](https://facebook.github.io/relay/docs/en/graphql-server-specification.html#object-identification),
 `"Node"`, be defined in your schema to provide a simple way to fetch
 objects using a global ID scheme.
 
@@ -87,24 +87,24 @@ module documentation for specific instructions on how do design a schema that ma
 ### Connection
 
 Relay uses
-[Connection](http://facebook.github.io/relay/docs/graphql-connections.html)
+[Connection](https://facebook.github.io/relay/docs/en/graphql-in-relay.html#connectionkey-string-filters-string)
 (and other related) types to provide a standardized way of slicing and
 paginating a one-to-many relationship.
 
-Support in this package is designed to match the [Relay Cursor Connection Specification](http://facebook.github.io/relay/graphql/connections.htm).
+Support in this package is designed to match the [Relay Cursor Connection Specification](https://facebook.github.io/relay/docs/en/graphql-server-specification.html#connections).
 
 See the [Absinthe.Relay.Connection](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Connection.html)
 module documentation for specific instructions on how do design a schema that makes use of nodes.
 
 ### Mutation
 
-Relay supports mutation via [a contract](https://facebook.github.io/relay/docs/graphql-mutations.html) involving single input object arguments (optionally for Relay Modern) with client mutation IDs (only for Relay Classic).
+Relay supports mutation via [a contract](https://facebook.github.io/relay/docs/en/graphql-server-specification.html#mutations) involving single input object arguments (optionally for Relay Modern) with client mutation IDs (only for Relay Classic).
 
 See the [Absinthe.Relay.Mutation](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Mutation.html) module documentation for specific instructions on how to design a schema that makes use of mutations.
 
 ## Supporting the Babel Relay Plugin
 
-To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/guides-babel-plugin.html#schema-json), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
+To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/en/installation-and-setup.html#set-up-babel-plugin-relay), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
 
 In your project, check out the documentation with:
 
