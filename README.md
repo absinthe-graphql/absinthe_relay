@@ -1,6 +1,7 @@
 # Absinthe.Relay
 
 [![Hex pm](http://img.shields.io/hexpm/v/absinthe_relay.svg?style=flat)](https://hex.pm/packages/absinthe_relay)[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Open Source Helpers](https://www.codetriage.com/absinthe-graphql/absinthe_relay/badges/users.svg)](https://www.codetriage.com/absinthe-graphql/absinthe_relay)
 
 Support for the [Relay framework](https://facebook.github.io/relay/)
 from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
