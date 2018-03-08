@@ -139,9 +139,9 @@ defmodule Absinthe.Relay.Connection do
     end
     edge do
       field :node_name_backwards, :string do
-      resolve fn
-        _, %{source: edge} ->
-          {:ok, edge.node.name |> String.reverse}
+        resolve fn
+          _, %{source: edge} ->
+            {:ok, edge.node.name |> String.reverse}
         end
       end
     end
@@ -150,6 +150,44 @@ defmodule Absinthe.Relay.Connection do
 
   Just remember that if you use the block form of `connection`, you must call
   the `edge` macro within the block.
+
+  ### Customizing the node itself
+
+  It's also possible to customize the way the `node` field of the connection's edge is resolved.
+  This can, for example, be useful if you're working with a NoSQL database that returns relationships as lists of
+  IDs. Consider the following example which paginates over the user's account array, but resolves each one
+  of them independently.
+
+
+  ```
+  object :account do
+    field :id, non_null(:id)
+    field :name, :string
+  end
+
+  connection node_type :account do
+    edge do
+      field :node, :account do
+        resolve fn %{node: id}, _args, _info ->
+          Account.find(id)
+        end
+      end
+    end
+  end
+
+  object :user do
+    field :name, string
+    connection field :accounts, node_type: :account do
+      resolve fn %{accounts: accounts}, _args, _info ->
+        Absinthe.Relay.Connection.from_list(ids, args)
+      end
+    end
+  end
+
+  ```
+
+  which would resolve the connections into a list of the user's associated accounts,
+  and then for each node find that particular account (preferrably batched).
 
   ## Creating Connections
 

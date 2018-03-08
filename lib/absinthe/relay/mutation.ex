@@ -24,6 +24,7 @@ defmodule Absinthe.Relay.Mutation do
       %{input: input} ->
         %{res |
           arguments: input,
+          private: Map.merge(res.private, %{__parse_ids_root: :input}),
           middleware: res.middleware ++ [__MODULE__]
          }
       _ ->
