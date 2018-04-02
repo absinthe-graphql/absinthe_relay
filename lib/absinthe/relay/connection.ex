@@ -201,6 +201,63 @@ defmodule Absinthe.Relay.Connection do
   Use `from_slice` when you have items for a particular request, and merely need
   a connection produced from these items.
 
+  ### Supplying Edge Information
+  
+  In some cases you may wish to supply extra information about the edge
+  so that it can be used in the schema. For example:
+
+  ```
+  connection node_type: :user do
+    edge do
+      field :role, :string
+    end
+  end
+  ```
+
+  To do this, pass `from_list` a list of maps that each have
+  a node key set.
+
+  For example:
+
+  ```
+  [
+    %{role: "member", node: %{name: "Jim"}},
+    %{role: "owner", node: %{name: "Sari"}},
+    %{role: "guest", node: %{name: "Lee"}},
+  ]
+  |> Connection.from_list(args)
+  ```
+
+  A simpler version can be used which takes a list of 2-element tuples.
+  The first element makes available a single field on the edge called `predicate`
+  and the second is the node itself.
+
+  ```
+  [
+    {"member", %{name: "Jim"}},
+    {"owner", %{name: "Sari"}},
+    {"guest", %{name: "Lee"}},
+  ]
+  |> Connection.from_list(args)
+  ```
+  
+  This is useful when using ecto to include relationship information
+  on the edge itself via `from_query`:
+
+  ```
+  # In a PostResolver module
+  alias Absinthe.Relay
+
+  def list(args, %{context: %{current_user: user}}) do
+    TeamAssignment
+    |> from
+    |> where([a], a.user_id == ^user.id)
+    |> join(:left, [a], t in assoc(a, :team))
+    |> select([a,t], {a.role, t})
+    |> Relay.Connection.from_query(&Repo.all/1, args)
+  end
+  ```
+
   ## Schema Macros
 
   For more details on connection-related macros, see
@@ -469,22 +526,35 @@ defmodule Absinthe.Relay.Connection do
   defp build_cursors([item | items], offset) do
     offset = offset || 0
     first = offset_to_cursor(offset)
-    first_edge = %{
-      node: item,
-      cursor: first
-    }
-    {edges, last} = do_build_cursors(items, offset + 1, [first_edge], first)
+    edge = build_or_refine_edge(item, cursor: first)
+    {edges, last} = do_build_cursors(items, offset + 1, [edge], first)
     {edges, first, last}
   end
 
   defp do_build_cursors([], _, edges, last), do: {Enum.reverse(edges), last}
   defp do_build_cursors([item | rest], i, edges, _last) do
     cursor = offset_to_cursor(i)
-    edge = %{
+    edge = build_or_refine_edge(item, cursor: cursor)
+    do_build_cursors(rest, i + 1, [edge | edges], cursor)
+  end
+
+  defp build_or_refine_edge(%{node: _} = item, cursor: cursor) do
+    Map.merge(item, %{cursor: cursor})
+  end
+
+  defp build_or_refine_edge({predicate, item}, cursor: cursor) do
+    %{
+      node: item,
+      cursor: cursor,
+      predicate: predicate
+    }
+  end
+
+  defp build_or_refine_edge(item, cursor: cursor) do
+    %{
       node: item,
       cursor: cursor
     }
-    do_build_cursors(rest, i + 1, [edge | edges], cursor)
   end
 
   @doc """

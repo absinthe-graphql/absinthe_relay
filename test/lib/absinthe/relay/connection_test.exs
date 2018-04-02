@@ -4,8 +4,112 @@ defmodule Absinthe.Relay.ConnectionTest do
   alias Absinthe.Relay.Connection
 
   @jack_global_id Base.encode64("Person:jack")
+  @isotopes_global_id Base.encode64("Team:1")
   @offset_cursor_1 Base.encode64("arrayconnection:1")
   @offset_cursor_2 Base.encode64("arrayconnection:5")
+
+  defmodule CustomConnectionWithEdgeInfoSchema do
+    use Absinthe.Schema
+    use Absinthe.Relay.Schema, :modern
+
+    @teams %{
+      "1" => %{
+        id: "1",
+        name: "Isotopes",
+        users: [{:owner, "1"}, {:member, "2"}],
+        repos: [{%{access: "read"}, "1"}, {%{access: "write"}, "2"}],
+      },
+      "2" => %{
+        id: "2",
+        name: "B-Sharps",
+        users: [{:owner, "3"}, {:member, "2"}, {:member, "4"}],
+        repos: [{%{access: "admin"}, "3"}],
+      }
+    }
+
+    @users %{
+      "1" => %{id: "1", email: "homer@sector7g.burnsnuclear.com"},
+      "2" => %{id: "2", email: "lisa.simpson@se.edu"},
+      "3" => %{id: "3", email: "bart.simpson@se.edu"},
+      "4" => %{id: "4", email: "housewhiz77@hotmail.com"},
+    }
+
+    @repos %{
+      "1" => %{id: "1", name: "bowlarama"}, 
+      "2" => %{id: "2", name: "krustys"}, 
+      "3" => %{id: "3", name: "leftorium"},
+    }
+
+    node object :user do
+      field :email, :string
+    end
+
+    node object :repo do
+      field :name, :string
+    end
+
+    connection node_type: :user do
+      edge do
+        field :predicate, :string
+      end
+    end
+
+    connection node_type: :repo do
+      edge do
+        field :access, :string
+      end
+    end
+
+    node object :team do
+      field :name, :string
+
+      connection field :users, node_type: :user do
+        resolve fn
+          resolve_args, %{source: team} ->
+            Absinthe.Relay.Connection.from_list(
+              Enum.map(team.users, fn {role, id} ->
+                {role, Map.get(@users, id)}
+              end),
+              resolve_args
+            )
+        end
+      end
+
+      connection field :repos, node_type: :repo do
+        resolve fn
+          resolve_args, %{source: team} ->
+            Absinthe.Relay.Connection.from_list(
+              Enum.map(team.repos, fn {attrs, id} ->
+                Map.merge(attrs, %{node: Map.get(@repos, id)})
+              end),
+              resolve_args
+            )
+        end
+      end
+    end
+
+    query do
+
+      node field do
+        resolve fn
+          %{type: :team, id: id}, _ ->
+            {:ok, Map.get(@teams, id)}
+        end
+      end
+
+    end
+
+    node interface do
+      resolve_type fn
+        %{name: _}, _ ->
+          :team
+        _, _ ->
+          nil
+      end
+    end
+
+
+  end
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema
@@ -199,6 +303,71 @@ defmodule Absinthe.Relay.ConnectionTest do
                             }}} == result
     end
   end
+
+  describe "Defining custom edge fields" do
+    test " allows querying a single field as 'predicate'" do
+      result = """
+        query TeamAndUsers($teamId: ID!) {
+          node(id: $teamId) {
+            ... on Team {
+              users(first: 1) {
+                edges {
+                  predicate
+                  node {
+                    email
+                  }
+                }
+              }
+            }
+          }
+        }
+      """ |> Absinthe.run(CustomConnectionWithEdgeInfoSchema, variables: %{"teamId" => @isotopes_global_id})
+      assert {:ok, %{
+        data: %{
+          "node" => %{
+            "users" => %{
+              "edges" => [
+                %{"predicate" => "owner", "node" => %{"email" => "homer@sector7g.burnsnuclear.com"}}
+              ]
+            },
+          }
+        }
+      }} == result
+    end
+
+    test " allows querying arbitrary edge fields" do
+      result = """
+        query TeamAndUsers($teamId: ID!) {
+          node(id: $teamId) {
+            ... on Team {
+              repos(first: 2) {
+                edges {
+                  access
+                  node {
+                    name
+                  }
+                }
+              }
+            }
+          }
+        }
+      """ |> Absinthe.run(CustomConnectionWithEdgeInfoSchema, variables: %{"teamId" => @isotopes_global_id})
+      assert {:ok, %{
+        data: %{
+          "node" => %{
+            "repos" => %{
+              "edges" => [
+                %{"access" => "read", "node" => %{"name" => "bowlarama"}},
+                %{"access" => "write", "node" => %{"name" => "krustys"}}
+              ]
+            },
+          }
+        }
+      }} == result
+    end
+
+  end
+
 
   describe ".from_slice/2" do
     test "when the offset is nil test will not do arithmetic on nil" do
