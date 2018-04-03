@@ -245,10 +245,10 @@ defmodule Absinthe.Relay.Connection do
   on the edge itself via `from_query`:
 
   ```
-  # In a PostResolver module
+  # In a UserResolver module
   alias Absinthe.Relay
 
-  def list(args, %{context: %{current_user: user}}) do
+  def list_teams(args, %{context: %{current_user: user}}) do
     TeamAssignment
     |> from
     |> where([a], a.user_id == ^user.id)

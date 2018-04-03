@@ -337,7 +337,7 @@ defmodule Absinthe.Relay.ConnectionTest do
 
     test " allows querying arbitrary edge fields" do
       result = """
-        query TeamAndUsers($teamId: ID!) {
+        query TeamAndRepos($teamId: ID!) {
           node(id: $teamId) {
             ... on Team {
               repos(first: 2) {
