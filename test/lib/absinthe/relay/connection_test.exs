@@ -6,6 +6,9 @@ defmodule Absinthe.Relay.ConnectionTest do
   @jack_global_id Base.encode64("Person:jack")
   @offset_cursor_1 Base.encode64("arrayconnection:1")
   @offset_cursor_2 Base.encode64("arrayconnection:5")
+  @invalid_cursor_1 Base.encode64("not_arrayconnection:5")
+  @invalid_cursor_2 Base.encode64("arrayconnection:five")
+  @invalid_cursor_3 Base.encode64("not a cursor at all")
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema
@@ -224,7 +227,11 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
 
     test "with an invalid cursor" do
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: "bad_cursor"}, [])
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_1}, [])
+      == {:error, "Invalid cursor"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_2}, [])
+      == {:error, "Invalid cursor"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_3}, [])
       == {:error, "Invalid cursor"}
     end
   end

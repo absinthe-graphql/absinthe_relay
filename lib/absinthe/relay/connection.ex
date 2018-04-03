@@ -507,7 +507,7 @@ defmodule Absinthe.Relay.Connection do
          {parsed, _} <- Integer.parse(raw) do
       {:ok, parsed}
     else
-      :error -> {:error, "Invalid cursor"}
+      _ -> {:error, "Invalid cursor"}
     end
   end
 
