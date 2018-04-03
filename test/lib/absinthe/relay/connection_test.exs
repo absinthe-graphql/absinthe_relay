@@ -222,5 +222,10 @@ defmodule Absinthe.Relay.ConnectionTest do
       assert Connection.offset_and_limit_for_query(%{last: 10, before: nil}, [count: 30]) == {:ok, 20, 10}
       assert Connection.offset_and_limit_for_query(%{last: 5, after: nil}, [count: 30]) == {:ok, 25, 5}
     end
+
+    test "with an invalid cursor" do
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: "bad_cursor"}, [])
+      == {:error, "Invalid cursor"}
+    end
   end
 end
