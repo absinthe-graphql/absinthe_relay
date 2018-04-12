@@ -41,9 +41,6 @@ defmodule Absinthe.Relay.Schema.Notation do
   end
 
   @spec notations(flavor) :: Macro.t
-
-
-
   defp notations(flavor) do
     mutation_notation = Absinthe.Relay.Mutation.Notation |> flavored(flavor)
     quote do

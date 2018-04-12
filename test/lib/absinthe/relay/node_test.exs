@@ -113,24 +113,36 @@ defmodule Absinthe.Relay.NodeTest do
       assert !is_nil(Node.to_global_id(:foo, 1, Schema))
     end
 
-    test "returns an atom for an non-existing type" do
+    test "returns nil, given an atom for an non-existing type" do
       assert is_nil(Node.to_global_id(:not_foo, 1, Schema))
     end
 
     test "works given a binary and internal ID" do
-      assert Node.to_global_id("Foo", 1)
+      assert Node.to_global_id("Foo", 1, Schema)
     end
 
     test "gives the same global ID for different type, equivalent references" do
-      assert Node.to_global_id("FancyFoo", 1) == Node.to_global_id(:other_foo, 1, Schema)
+      assert Node.to_global_id("FancyFoo", 1, Schema) == Node.to_global_id(:other_foo, 1, Schema)
     end
 
     test "gives the different global ID for different type, equivalent references" do
-      assert Node.to_global_id("FancyFoo", 1) != Node.to_global_id(:foo, 1, Schema)
+      assert Node.to_global_id("FancyFoo", 1, Schema) != Node.to_global_id(:foo, 1, Schema)
     end
 
     test "fails given a bad ID" do
-      assert is_nil(Node.to_global_id("Foo", nil))
+      assert is_nil(Node.to_global_id("Foo", nil, Schema))
+    end
+
+  end
+
+  describe "global_id_translator" do
+
+    test "default is base64 when schema passed is nil" do
+      assert Node.global_id_translator(nil) == Absinthe.Relay.Node.IDTranslator.Base64
+    end
+
+    test "default is base64 when not schema is not configured" do
+      assert Node.global_id_translator(Schema) == Absinthe.Relay.Node.IDTranslator.Base64
     end
 
   end
@@ -144,7 +156,7 @@ defmodule Absinthe.Relay.NodeTest do
       assert {:ok, %{data: %{"singleFoo" => %{"name" => "Bar 1", "id" => @foo1_id}}}} == result
     end
 
-    test "handles one incorrect id with a single expected type" do
+    test "handles one incorrect id with a single expected type" do 
       result =
         ~s<{ singleFoo(id: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
