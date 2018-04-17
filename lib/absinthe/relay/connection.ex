@@ -244,6 +244,13 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
 
+  Be aware that if you pass `:node` in the arguments
+  provided in the second element of the edge tuple you will override
+  the node provided in the first element.
+
+  Similarly, if you provide a `:cursor` argument then this will override
+  the internally generated cursor. This may or may not be desirable.
+
   ## Schema Macros
 
   For more details on connection-related macros, see
