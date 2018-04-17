@@ -50,7 +50,7 @@ defmodule Absinthe.Relay.ConnectionTest do
 
     connection node_type: :user do
       edge do
-        field :predicate, :string
+        field :role, :string
       end
     end
 
@@ -68,7 +68,7 @@ defmodule Absinthe.Relay.ConnectionTest do
           resolve_args, %{source: team} ->
             Absinthe.Relay.Connection.from_list(
               Enum.map(team.users, fn {role, id} ->
-                {role, Map.get(@users, id)}
+                {Map.get(@users, id), role: role}
               end),
               resolve_args
             )
@@ -80,7 +80,7 @@ defmodule Absinthe.Relay.ConnectionTest do
           resolve_args, %{source: team} ->
             Absinthe.Relay.Connection.from_list(
               Enum.map(team.repos, fn {attrs, id} ->
-                Map.merge(attrs, %{node: Map.get(@repos, id)})
+                {Map.get(@repos, id), attrs}
               end),
               resolve_args
             )
@@ -312,7 +312,7 @@ defmodule Absinthe.Relay.ConnectionTest do
             ... on Team {
               users(first: 1) {
                 edges {
-                  predicate
+                  role
                   node {
                     email
                   }
@@ -327,7 +327,7 @@ defmodule Absinthe.Relay.ConnectionTest do
           "node" => %{
             "users" => %{
               "edges" => [
-                %{"predicate" => "owner", "node" => %{"email" => "homer@sector7g.burnsnuclear.com"}}
+                %{"role" => "owner", "node" => %{"email" => "homer@sector7g.burnsnuclear.com"}}
               ]
             },
           }

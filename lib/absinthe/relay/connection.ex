@@ -214,29 +214,15 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
 
-  To do this, pass `from_list` a list of maps that each have
-  a node key set.
-
-  For example:
-
-  ```
-  [
-    %{role: "member", node: %{name: "Jim"}},
-    %{role: "owner", node: %{name: "Sari"}},
-    %{role: "guest", node: %{name: "Lee"}},
-  ]
-  |> Connection.from_list(args)
-  ```
-
-  A simpler version can be used which takes a list of 2-element tuples.
-  The first element makes available a single field on the edge called `predicate`
-  and the second is the node itself.
+  To do this, pass `from_list` a list of 2-element tuples
+  where the first element is the node and the second element
+  either a map or a keyword list of the edge attributes.
 
   ```
   [
-    {"member", %{name: "Jim"}},
-    {"owner", %{name: "Sari"}},
-    {"guest", %{name: "Lee"}},
+    {%{name: "Jim"}, role: "owner"},
+    {%{name: "Sari"}, role: "guest"},
+    {%{name: "Lee"}, %{role: "guest"}}, # This is OK, too
   ]
   |> Connection.from_list(args)
   ```
@@ -253,7 +239,7 @@ defmodule Absinthe.Relay.Connection do
     |> from
     |> where([a], a.user_id == ^user.id)
     |> join(:left, [a], t in assoc(a, :team))
-    |> select([a,t], {a.role, t})
+    |> select([a,t], {t, map(a, [:role])})
     |> Relay.Connection.from_query(&Repo.all/1, args)
   end
   ```
@@ -526,7 +512,7 @@ defmodule Absinthe.Relay.Connection do
   defp build_cursors([item | items], offset) do
     offset = offset || 0
     first = offset_to_cursor(offset)
-    edge = build_or_refine_edge(item, cursor: first)
+    edge = build_edge(item, first)
     {edges, last} = do_build_cursors(items, offset + 1, [edge], first)
     {edges, first, last}
   end
@@ -534,23 +520,15 @@ defmodule Absinthe.Relay.Connection do
   defp do_build_cursors([], _, edges, last), do: {Enum.reverse(edges), last}
   defp do_build_cursors([item | rest], i, edges, _last) do
     cursor = offset_to_cursor(i)
-    edge = build_or_refine_edge(item, cursor: cursor)
+    edge = build_edge(item, cursor)
     do_build_cursors(rest, i + 1, [edge | edges], cursor)
   end
 
-  defp build_or_refine_edge(%{node: _} = item, cursor: cursor) do
-    Map.merge(item, %{cursor: cursor})
+  defp build_edge({item, args}, cursor) do
+    Enum.into(args, build_edge(item, cursor))
   end
 
-  defp build_or_refine_edge({predicate, item}, cursor: cursor) do
-    %{
-      node: item,
-      cursor: cursor,
-      predicate: predicate
-    }
-  end
-
-  defp build_or_refine_edge(item, cursor: cursor) do
+  defp build_edge(item, cursor) do
     %{
       node: item,
       cursor: cursor
