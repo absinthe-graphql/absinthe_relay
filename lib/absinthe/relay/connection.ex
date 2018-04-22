@@ -273,6 +273,7 @@ defmodule Absinthe.Relay.Connection do
   def from_list(data, args, opts \\ []) do
     with {:ok, direction, limit} <- limit(args, opts[:max]) do
       count = length(data)
+
       {offset, limit} = case direction do
         :forward ->
           {offset(args) || 0, limit}
@@ -284,10 +285,9 @@ defmodule Absinthe.Relay.Connection do
       end
 
       opts =
-        ## Arg checks are unintuitive, but Relay connection spec defines false value if certain args not set
         opts
-        |> Keyword.put_new(:has_next_page, args[:first] != nil && count > (offset + limit))
-        |> Keyword.put_new(:has_previous_page, args[:last] != nil && offset > 0)
+        |> Keyword.put(:has_previous_page, offset > 0)
+        |> Keyword.put(:has_next_page, count > (offset + limit))
 
       data
       |> Enum.slice(offset, limit)
@@ -296,8 +296,8 @@ defmodule Absinthe.Relay.Connection do
   end
 
   @type from_slice_opts :: [
-    has_next_page: boolean,
     has_previous_page: boolean,
+    has_next_page: boolean,
   ]
 
   @type pagination_direction :: :forward | :backward
@@ -386,10 +386,10 @@ defmodule Absinthe.Relay.Connection do
           |> Ecto.Query.offset(^offset)
           |> repo_fun.()
 
-        opts = [
-          has_next_page: args[:first] != nil && length(records) > limit,
-          has_previous_page: args[:last] != nil && offset > 0,
-        ] ++ opts
+        opts =
+          opts
+          |> Keyword.put(:has_previous_page, offset > 0)
+          |> Keyword.put(:has_next_page, length(records) > limit)
 
         from_slice(Enum.take(records, limit), offset, opts)
       end

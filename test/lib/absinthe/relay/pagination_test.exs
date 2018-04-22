@@ -104,7 +104,7 @@ defmodule Absinthe.Relay.PaginationTest do
       "page_info" => %{
         "start_cursor" => ^cursor2,
         "end_cursor" => cursor4,
-        "has_previous_page" => false,
+        "has_previous_page" => true,
         "has_next_page" => true,
       },
       "edges" => [
@@ -130,7 +130,7 @@ defmodule Absinthe.Relay.PaginationTest do
       "page_info" => %{
         "start_cursor" => cursor5,
         "end_cursor" => cursor9,
-        "has_previous_page" => false,
+        "has_previous_page" => true,
         "has_next_page" => false,
       },
       "edges" => [
@@ -163,7 +163,7 @@ defmodule Absinthe.Relay.PaginationTest do
       "page_info" => %{
         "start_cursor" => nil,
         "end_cursor" => nil,
-        "has_previous_page" => false,
+        "has_previous_page" => true,
         "has_next_page" => false,
       },
       "edges" => [],
@@ -241,7 +241,7 @@ defmodule Absinthe.Relay.PaginationTest do
         "start_cursor" => cursor5,
         "end_cursor" => ^cursor7,
         "has_previous_page" => true,
-        "has_next_page" => false,
+        "has_next_page" => true,
       },
       "edges" => [
         %{
@@ -267,7 +267,7 @@ defmodule Absinthe.Relay.PaginationTest do
         "start_cursor" => cursor0,
         "end_cursor" => cursor4,
         "has_previous_page" => false,
-        "has_next_page" => false,
+        "has_next_page" => true,
       },
       "edges" => [
         %{
@@ -300,7 +300,7 @@ defmodule Absinthe.Relay.PaginationTest do
         "start_cursor" => nil,
         "end_cursor" => nil,
         "has_previous_page" => false,
-        "has_next_page" => false,
+        "has_next_page" => true,
       },
       "edges" => [],
     }} = result
