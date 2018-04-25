@@ -11,7 +11,7 @@ defmodule AbsintheRelay.Mixfile do
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      package: package(),
-     docs: [source_ref: "v#{@version}", main: "Absinthe.Relay"],
+     docs: docs(),
      deps: deps()]
   end
 
@@ -21,6 +21,14 @@ defmodule AbsintheRelay.Mixfile do
      maintainers: ["Bruce Williams", "Ben Wilson"],
      licenses: ["MIT"],
      links: %{github: "https://github.com/absinthe-graphql/absinthe_relay"}]
+  end
+
+  defp docs do
+    [
+      source_ref: "v#{@version}",
+      main: "Absinthe.Relay",
+      source_url: "https://github.com/absinthe-graphql/absinthe_relay"
+    ]
   end
 
   def application do
