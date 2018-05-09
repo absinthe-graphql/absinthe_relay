@@ -6,6 +6,9 @@ defmodule Absinthe.Relay.ConnectionTest do
   @jack_global_id Base.encode64("Person:jack")
   @offset_cursor_1 Base.encode64("arrayconnection:1")
   @offset_cursor_2 Base.encode64("arrayconnection:5")
+  @invalid_cursor_1 Base.encode64("not_arrayconnection:5")
+  @invalid_cursor_2 Base.encode64("arrayconnection:five")
+  @invalid_cursor_3 Base.encode64("not a cursor at all")
 
   defmodule CustomConnectionAndEdgeFieldsSchema do
     use Absinthe.Schema
@@ -221,6 +224,14 @@ defmodule Absinthe.Relay.ConnectionTest do
 
       assert Connection.offset_and_limit_for_query(%{last: 10, before: nil}, [count: 30]) == {:ok, 20, 10}
       assert Connection.offset_and_limit_for_query(%{last: 5, after: nil}, [count: 30]) == {:ok, 25, 5}
+    end
+
+    test "with an invalid cursor" do
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_1}, []) == {:error, "Invalid cursor provided as `before` argument"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_2}, []) == {:error, "Invalid cursor provided as `before` argument"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_3}, []) == {:error, "Invalid cursor provided as `before` argument"}
+
+      assert Connection.offset_and_limit_for_query(%{last: 5, after: @invalid_cursor_1}, [count: 30]) == {:error, "Invalid cursor provided as `after` argument"}
     end
   end
 end

@@ -271,13 +271,14 @@ defmodule Absinthe.Relay.Connection do
   """
   @spec from_list(data :: list, args :: Option.t) :: {:ok, t} | {:error, any}
   def from_list(data, args, opts \\ []) do
-    with {:ok, direction, limit} <- limit(args, opts[:max]) do
+    with {:ok, direction, limit} <- limit(args, opts[:max]),
+         {:ok, offset} <- offset(args) do
       count = length(data)
       {offset, limit} = case direction do
         :forward ->
-          {offset(args) || 0, limit}
+          {offset || 0, limit}
         :backward ->
-          end_offset = offset(args) || count
+          end_offset = offset || count
           start_offset = max(end_offset - limit, 0)
           limit = if start_offset == 0, do: end_offset, else: limit
           {start_offset, limit}
@@ -407,19 +408,19 @@ defmodule Absinthe.Relay.Connection do
   @doc false
   @spec offset_and_limit_for_query(Options.t, from_query_opts) :: {:ok, offset, limit} | {:error, any}
   def offset_and_limit_for_query(args, opts) do
-    case limit(args, opts[:max]) do
-      {:ok, :forward, limit} ->
-        {:ok, offset(args) || 0, limit}
+    with {:ok, direction, limit} <- limit(args, opts[:max]),
+         {:ok, offset} <- offset(args) do
+      case direction do
+        :forward ->
+          {:ok, offset || 0, limit}
 
-      {:ok, :backward, limit} ->
-        case {offset(args), opts[:count]} do
-          {nil, nil} -> {:error, "You must supply a count (total number of records) option if using `last` without `before`"}
-          {nil, value} -> {:ok, max(value - limit, 0), limit}
-          {value, _} -> {:ok, max(value - limit, 0), limit}
-        end
-
-      {:error, reason} ->
-        {:error, reason}
+        :backward ->
+          case {offset, opts[:count]} do
+            {nil, nil} -> {:error, "You must supply a count (total number of records) option if using `last` without `before`"}
+            {nil, value} -> {:ok, max(value - limit, 0), limit}
+            {value, _} -> {:ok, max(value - limit, 0), limit}
+          end
+      end
     end
   end
 
@@ -456,14 +457,24 @@ defmodule Absinthe.Relay.Connection do
 
   If no offset is specified in the pagination arguments, this will return `nil`.
   """
-  @spec offset(args :: Options.t) :: offset | nil
+  @spec offset(args :: Options.t) :: {:ok, offset | nil} | {:error, any}
   def offset(%{after: cursor}) when not is_nil(cursor) do
-    cursor_to_offset(cursor) + 1
+    with {:ok, offset} <- cursor_to_offset(cursor) do
+      {:ok, offset + 1}
+    else
+      {:error, _} ->
+        {:error, "Invalid cursor provided as `after` argument"}
+    end
   end
   def offset(%{before: cursor}) when not is_nil(cursor) do
-    max(cursor_to_offset(cursor), 0)
+    with {:ok, offset} <- cursor_to_offset(cursor) do
+      {:ok, max(offset, 0)}
+    else
+      {:error, _} ->
+        {:error, "Invalid cursor provided as `before` argument"}
+    end
   end
-  def offset(_), do: nil
+  def offset(_), do: {:ok, nil}
 
   defp build_cursors([], _offset), do: {[], nil, nil}
   defp build_cursors([item | items], offset) do
@@ -504,7 +515,9 @@ defmodule Absinthe.Relay.Connection do
   def cursor_to_offset(cursor) do
     with {:ok, @cursor_prefix <> raw} <- Base.decode64(cursor),
          {parsed, _} <- Integer.parse(raw) do
-      parsed
+      {:ok, parsed}
+    else
+      _ -> {:error, "Invalid cursor"}
     end
   end
 
