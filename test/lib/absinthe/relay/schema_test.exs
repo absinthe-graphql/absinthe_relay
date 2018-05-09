@@ -13,18 +13,20 @@ defmodule Absinthe.Relay.SchemaTest do
     use Absinthe.Schema
     use Absinthe.Relay.Schema, :classic
 
-    @people %{"jack" => %{id: "jack", name: "Jack", age: 35},
-              "jill" => %{id: "jill", name: "Jill", age: 31}}
-    @businesses %{"papers" => %{id: "papers", name: "Papers, Inc!", employee_count: 100},
-                  "toilets" => %{id: "toilets", name: "Toilets International", employee_count: 1}}
+    @people %{
+      "jack" => %{id: "jack", name: "Jack", age: 35},
+      "jill" => %{id: "jill", name: "Jill", age: 31}
+    }
+    @businesses %{
+      "papers" => %{id: "papers", name: "Papers, Inc!", employee_count: 100},
+      "toilets" => %{id: "toilets", name: "Toilets International", employee_count: 1}
+    }
     @cats %{"binx" => %{tag: "binx", name: "Mr. Binx", whisker_count: 12}}
 
     query do
-
       field :version, :string do
-        resolve fn
-          _, _ ->
-            {:ok, "0.1.2"}
+        resolve fn _, _ ->
+          {:ok, "0.1.2"}
         end
       end
 
@@ -32,13 +34,14 @@ defmodule Absinthe.Relay.SchemaTest do
         resolve fn
           %{type: :person, id: id}, _ ->
             {:ok, Map.get(@people, id)}
+
           %{type: :business, id: id}, _ ->
             {:ok, Map.get(@businesses, id)}
+
           %{type: :cat, id: id}, _ ->
             {:ok, Map.get(@cats, id)}
         end
       end
-
     end
 
     @desc "My Interface"
@@ -46,45 +49,56 @@ defmodule Absinthe.Relay.SchemaTest do
       resolve_type fn
         %{age: _}, _ ->
           :person
+
         %{employee_count: _}, _ ->
           :business
+
         %{whisker_count: _}, _ ->
           :cat
+
         _, _ ->
           nil
       end
     end
 
-    node object :person do
+    node object(:person) do
       field :name, :string
       field :age, :string
     end
 
-    node object :business do
+    node object(:business) do
       field :name, :string
       field :employee_count, :integer
     end
 
-    node object :cat, name: "Kitten", id_fetcher: &tag_id_fetcher/2 do
+    node object(:cat, name: "Kitten", id_fetcher: &tag_id_fetcher/2) do
       field :name, :string
       field :whisker_count, :integer
     end
 
     defp tag_id_fetcher(%{tag: value}, _), do: value
     defp tag_id_fetcher(_, _), do: nil
-
   end
 
   describe "using node interface" do
     test "creates the :node type" do
-      assert %Type.Interface{name: "Node", description: "My Interface", fields: %{id: %Type.Field{name: "id", type: %Type.NonNull{of_type: :id}}}} = Schema.__absinthe_type__(:node)
+      assert %Type.Interface{
+               name: "Node",
+               description: "My Interface",
+               fields: %{id: %Type.Field{name: "id", type: %Type.NonNull{of_type: :id}}}
+             } = Schema.__absinthe_type__(:node)
     end
   end
 
   describe "using node field" do
     test "creates the :node field" do
-      assert %{fields: %{node: %{name: "node", type: :node, middleware: middleware}}} = Schema.__absinthe_type__(:query)
-      assert [{{Absinthe.Relay.Node, :resolve_with_global_id}, []}, {{Absinthe.Resolution, :call}, _}] = middleware
+      assert %{fields: %{node: %{name: "node", type: :node, middleware: middleware}}} =
+               Schema.__absinthe_type__(:query)
+
+      assert [
+               {{Absinthe.Relay.Node, :resolve_with_global_id}, []},
+               {{Absinthe.Resolution, :call}, _}
+             ] = middleware
     end
   end
 
@@ -104,7 +118,8 @@ defmodule Absinthe.Relay.SchemaTest do
     }
     """
     test "resolves using the global ID" do
-      assert {:ok, %{data: %{"node" => %{"id" => @jack_global_id, "name" => "Jack"}}}} = Absinthe.run(@query, Schema)
+      assert {:ok, %{data: %{"node" => %{"id" => @jack_global_id, "name" => "Jack"}}}} =
+               Absinthe.run(@query, Schema)
     end
   end
 
@@ -118,7 +133,8 @@ defmodule Absinthe.Relay.SchemaTest do
     }
     """
     test "resolves using the global ID" do
-      assert {:ok, %{data: %{"node" => %{"id" => @papers_global_id, "name" => "Papers, Inc!"}}}} = Absinthe.run(@query, Schema)
+      assert {:ok, %{data: %{"node" => %{"id" => @papers_global_id, "name" => "Papers, Inc!"}}}} =
+               Absinthe.run(@query, Schema)
     end
   end
 
@@ -131,8 +147,8 @@ defmodule Absinthe.Relay.SchemaTest do
     }
     """
     test "resolves using the global ID" do
-      assert {:ok, %{data: %{"node" => %{"id" => @binx_global_id}}}} = Absinthe.run(@query, Schema)
+      assert {:ok, %{data: %{"node" => %{"id" => @binx_global_id}}}} =
+               Absinthe.run(@query, Schema)
     end
   end
-
 end

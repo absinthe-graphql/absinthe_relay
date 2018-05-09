@@ -61,8 +61,11 @@ defmodule Absinthe.Relay.Node.IDTranslator do
 
   Returns `{:error, binary}` on failure.
   """
-  @callback to_global_id(type_name :: binary, source_id :: binary | integer, schema :: Absinthe.Schema.t) ::
-    {:ok, global_id :: Absinthe.Relay.Node.global_id} | {:error, binary}
+  @callback to_global_id(
+              type_name :: binary,
+              source_id :: binary | integer,
+              schema :: Absinthe.Schema.t()
+            ) :: {:ok, global_id :: Absinthe.Relay.Node.global_id()} | {:error, binary}
 
   @doc """
   Converts a globally unique ID to a node's type name and ID.
@@ -71,7 +74,8 @@ defmodule Absinthe.Relay.Node.IDTranslator do
 
   Returns `{:error, binary}` on failure.
   """
-  @callback from_global_id(global_id :: Absinthe.Relay.Node.global_id, schema :: Absinthe.Schema.t | nil) ::
-    {:ok, type_name :: binary, source_id :: binary} | {:error, binary}
-
+  @callback from_global_id(
+              global_id :: Absinthe.Relay.Node.global_id(),
+              schema :: Absinthe.Schema.t() | nil
+            ) :: {:ok, type_name :: binary, source_id :: binary} | {:error, binary}
 end

@@ -25,7 +25,7 @@ defmodule Absinthe.Relay.ConnectionTest do
       "3" => %{id: "3", name: "Sherlock"}
     }
 
-    node object :pet do
+    node object(:pet) do
       field :name, :string
       field :age, :string
       field :custom_resolver, :boolean
@@ -33,156 +33,159 @@ defmodule Absinthe.Relay.ConnectionTest do
 
     connection node_type: :pet do
       field :twice_edges_count, :integer do
-        resolve fn
-          _, %{source: conn} ->
-            {:ok, length(conn.edges) * 2}
+        resolve fn _, %{source: conn} ->
+          {:ok, length(conn.edges) * 2}
         end
       end
+
       edge do
         field :node_name_backwards, :string do
-          resolve fn
-            _, %{source: edge} ->
-              {:ok, edge.node.name |> String.reverse}
+          resolve fn _, %{source: edge} ->
+            {:ok, edge.node.name |> String.reverse()}
           end
         end
 
         field :node, :pet do
           resolve fn _, %{source: source} ->
-            {:ok, Map.put(source.node, :custom_resolver, true)} end
+            {:ok, Map.put(source.node, :custom_resolver, true)}
+          end
         end
       end
     end
 
     connection :favorite_pets, node_type: :pet do
       field :fav_twice_edges_count, :integer do
-        resolve fn
-          _, %{source: conn} ->
-            {:ok, length(conn.edges) * 2}
+        resolve fn _, %{source: conn} ->
+          {:ok, length(conn.edges) * 2}
         end
       end
+
       edge do
         field :fav_node_name_backwards, :string do
-          resolve fn
-            _, %{source: edge} ->
-              {:ok, edge.node.name |> String.reverse}
+          resolve fn _, %{source: edge} ->
+            {:ok, edge.node.name |> String.reverse()}
           end
         end
       end
     end
 
-    node object :person do
+    node object(:person) do
       field :name, :string
       field :age, :string
 
       @desc "The pets for a person"
       connection field :pets, node_type: :pet do
-        resolve fn
-          resolve_args, %{source: person} ->
-            Absinthe.Relay.Connection.from_list(
-              Enum.map(person.pets, &Map.get(@pets, &1)),
-              resolve_args
-            )
+        resolve fn resolve_args, %{source: person} ->
+          Absinthe.Relay.Connection.from_list(
+            Enum.map(person.pets, &Map.get(@pets, &1)),
+            resolve_args
+          )
         end
       end
 
       @desc "The favorite pets for a person"
       connection field :favorite_pets, connection: :favorite_pets do
-        resolve fn
-          resolve_args, %{source: person} ->
-            Absinthe.Relay.Connection.from_list(
-              Enum.map(person.favorite_pets, &Map.get(@pets, &1)),
-              resolve_args
-            )
+        resolve fn resolve_args, %{source: person} ->
+          Absinthe.Relay.Connection.from_list(
+            Enum.map(person.favorite_pets, &Map.get(@pets, &1)),
+            resolve_args
+          )
         end
       end
-
     end
 
     query do
-
       node field do
-        resolve fn
-          %{type: :person, id: id}, _ ->
-            {:ok, Map.get(@people, id)}
+        resolve fn %{type: :person, id: id}, _ ->
+          {:ok, Map.get(@people, id)}
         end
       end
-
     end
 
     node interface do
       resolve_type fn
         %{age: _}, _ ->
           :person
+
         _, _ ->
           nil
       end
     end
-
   end
 
   describe "Defining custom connection and edge fields" do
     test " allows querying those additional fields" do
-      result = """
-        query FirstPetName($personId: ID!) {
-          node(id: $personId) {
-            ... on Person {
-              pets(first: 1) {
-                twiceEdgesCount
-                edges {
-                  nodeNameBackwards
-                  node {
-                    name
-                    custom_resolver
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                pets(first: 1) {
+                  twiceEdgesCount
+                  edges {
+                    nodeNameBackwards
+                    node {
+                      name
+                      custom_resolver
+                    }
                   }
                 }
-              }
-              favoritePets(first: 1) {
-                favTwiceEdgesCount
-                edges {
-                  favNodeNameBackwards
-                  node {
-                    name
+                favoritePets(first: 1) {
+                  favTwiceEdgesCount
+                  edges {
+                    favNodeNameBackwards
+                    node {
+                      name
+                    }
                   }
                 }
               }
             }
           }
-        }
-      """ |> Absinthe.run(CustomConnectionAndEdgeFieldsSchema, variables: %{"personId" => @jack_global_id})
-      assert {:ok, %{data: %{"node" => %{
-                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"name" => "Svenja", "custom_resolver" => true}}]},
-                              "favoritePets" => %{"favTwiceEdgesCount" => 2, "edges" => [%{"favNodeNameBackwards" => "kcoJ", "node" => %{"name" => "Jock"}}]}}
-                            }}} == result
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                data: %{
+                  "node" => %{
+                    "pets" => %{
+                      "twiceEdgesCount" => 2,
+                      "edges" => [
+                        %{
+                          "nodeNameBackwards" => "ajnevS",
+                          "node" => %{"name" => "Svenja", "custom_resolver" => true}
+                        }
+                      ]
+                    },
+                    "favoritePets" => %{
+                      "favTwiceEdgesCount" => 2,
+                      "edges" => [
+                        %{"favNodeNameBackwards" => "kcoJ", "node" => %{"name" => "Jock"}}
+                      ]
+                    }
+                  }
+                }
+              }} == result
     end
   end
 
   describe "Defining custom connection and edge fields, with redundant spread fragments" do
     test " allows querying those additional fields" do
-      result = """
-        query FirstPetName($personId: ID!) {
-          node(id: $personId) {
-            ... on Person {
-              pets(first: 1) {
-                twiceEdgesCount
-                edges {
-                  nodeNameBackwards
-                  node {
-                    id
-                    ... on Node {
-                      ... on Pet {
-                        name
-                      }
-                    }
-                  }
-                }
-              }
-              favoritePets(first: 1) {
-                favTwiceEdgesCount
-                edges {
-                  favNodeNameBackwards
-                  node {
-                    id
-                    ... on Pet {
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                pets(first: 1) {
+                  twiceEdgesCount
+                  edges {
+                    nodeNameBackwards
+                    node {
+                      id
                       ... on Node {
                         ... on Pet {
                           name
@@ -191,15 +194,56 @@ defmodule Absinthe.Relay.ConnectionTest do
                     }
                   }
                 }
+                favoritePets(first: 1) {
+                  favTwiceEdgesCount
+                  edges {
+                    favNodeNameBackwards
+                    node {
+                      id
+                      ... on Pet {
+                        ... on Node {
+                          ... on Pet {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
-        }
-      """ |> Absinthe.run(CustomConnectionAndEdgeFieldsSchema, variables: %{"personId" => @jack_global_id})
-      assert {:ok, %{data: %{"node" => %{
-                              "pets" => %{"twiceEdgesCount" => 2, "edges" => [%{"nodeNameBackwards" => "ajnevS", "node" => %{"id" => "UGV0OjE=", "name" => "Svenja"}}]},
-                              "favoritePets" => %{"favTwiceEdgesCount" => 2, "edges" => [%{"favNodeNameBackwards" => "kcoJ", "node" => %{"id" => "UGV0OjI=", "name" => "Jock"}}]}}
-                            }}} == result
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                data: %{
+                  "node" => %{
+                    "pets" => %{
+                      "twiceEdgesCount" => 2,
+                      "edges" => [
+                        %{
+                          "nodeNameBackwards" => "ajnevS",
+                          "node" => %{"id" => "UGV0OjE=", "name" => "Svenja"}
+                        }
+                      ]
+                    },
+                    "favoritePets" => %{
+                      "favTwiceEdgesCount" => 2,
+                      "edges" => [
+                        %{
+                          "favNodeNameBackwards" => "kcoJ",
+                          "node" => %{"id" => "UGV0OjI=", "name" => "Jock"}
+                        }
+                      ]
+                    }
+                  }
+                }
+              }} == result
     end
   end
 
@@ -211,27 +255,44 @@ defmodule Absinthe.Relay.ConnectionTest do
 
   describe ".offset_and_limit_for_query/2" do
     test "with a cursor" do
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @offset_cursor_1}, []) == {:ok, 1, 10}
-      assert Connection.offset_and_limit_for_query(%{first: 5, before: @offset_cursor_2}, []) == {:ok, 5, 5}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @offset_cursor_1}, []) ==
+               {:ok, 1, 10}
 
-      assert Connection.offset_and_limit_for_query(%{last: 10, before: @offset_cursor_1}, []) == {:ok, 0, 10}
-      assert Connection.offset_and_limit_for_query(%{last: 5, before: @offset_cursor_2}, []) == {:ok, 0, 5}
+      assert Connection.offset_and_limit_for_query(%{first: 5, before: @offset_cursor_2}, []) ==
+               {:ok, 5, 5}
+
+      assert Connection.offset_and_limit_for_query(%{last: 10, before: @offset_cursor_1}, []) ==
+               {:ok, 0, 10}
+
+      assert Connection.offset_and_limit_for_query(%{last: 5, before: @offset_cursor_2}, []) ==
+               {:ok, 0, 5}
     end
 
     test "without a cursor" do
       assert Connection.offset_and_limit_for_query(%{first: 10, before: nil}, []) == {:ok, 0, 10}
       assert Connection.offset_and_limit_for_query(%{first: 5, after: nil}, []) == {:ok, 0, 5}
 
-      assert Connection.offset_and_limit_for_query(%{last: 10, before: nil}, [count: 30]) == {:ok, 20, 10}
-      assert Connection.offset_and_limit_for_query(%{last: 5, after: nil}, [count: 30]) == {:ok, 25, 5}
+      assert Connection.offset_and_limit_for_query(%{last: 10, before: nil}, count: 30) ==
+               {:ok, 20, 10}
+
+      assert Connection.offset_and_limit_for_query(%{last: 5, after: nil}, count: 30) ==
+               {:ok, 25, 5}
     end
 
     test "with an invalid cursor" do
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_1}, []) == {:error, "Invalid cursor provided as `before` argument"}
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_2}, []) == {:error, "Invalid cursor provided as `before` argument"}
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_3}, []) == {:error, "Invalid cursor provided as `before` argument"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_1}, []) ==
+               {:error, "Invalid cursor provided as `before` argument"}
 
-      assert Connection.offset_and_limit_for_query(%{last: 5, after: @invalid_cursor_1}, [count: 30]) == {:error, "Invalid cursor provided as `after` argument"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_2}, []) ==
+               {:error, "Invalid cursor provided as `before` argument"}
+
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_3}, []) ==
+               {:error, "Invalid cursor provided as `before` argument"}
+
+      assert Connection.offset_and_limit_for_query(
+               %{last: 5, after: @invalid_cursor_1},
+               count: 30
+             ) == {:error, "Invalid cursor provided as `after` argument"}
     end
   end
 end

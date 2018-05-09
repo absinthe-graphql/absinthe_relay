@@ -17,9 +17,11 @@ defmodule Absinthe.Relay.Node.IDTranslator.Base64 do
         case String.split(decoded, ":", parts: 2) do
           [type_name, source_id] when byte_size(type_name) > 0 and byte_size(source_id) > 0 ->
             {:ok, type_name, source_id}
+
           _ ->
-            {:error, "Could not extract value from decoded ID `#{inspect decoded}`"}
+            {:error, "Could not extract value from decoded ID `#{inspect(decoded)}`"}
         end
+
       :error ->
         {:error, "Could not decode ID value `#{global_id}'"}
     end

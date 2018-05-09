@@ -120,12 +120,13 @@ defmodule Absinthe.Relay.Node do
   @doc false
   def resolve_with_global_id(%{state: :unresolved} = res, _) do
     with %{id: global_id} <- res.arguments,
-    {:ok, result} <- Absinthe.Relay.Node.from_global_id(global_id, res.schema) do
+         {:ok, result} <- Absinthe.Relay.Node.from_global_id(global_id, res.schema) do
       %{res | arguments: result}
     else
       _ -> res
     end
   end
+
   def resolve_with_global_id(res, _) do
     res
   end
@@ -173,15 +174,18 @@ defmodule Absinthe.Relay.Node do
   {:error, "Type `Item' is not a valid node type"}
   ```
   """
-  @spec from_global_id(nil, Absinthe.Schema.t) :: {:ok, nil}
-  @spec from_global_id(global_id, Absinthe.Schema.t) :: {:ok, %{type: atom, id: binary}} | {:error, binary}
+  @spec from_global_id(nil, Absinthe.Schema.t()) :: {:ok, nil}
+  @spec from_global_id(global_id, Absinthe.Schema.t()) ::
+          {:ok, %{type: atom, id: binary}} | {:error, binary}
   def from_global_id(nil, _schema) do
     {:ok, nil}
   end
+
   def from_global_id(global_id, schema) do
     case translate_global_id(schema, :from_global_id, [global_id]) do
       {:ok, type_name, id} ->
         do_from_global_id({type_name, id}, schema)
+
       {:error, err} ->
         {:error, err}
     end
@@ -191,6 +195,7 @@ defmodule Absinthe.Relay.Node do
     case schema.__absinthe_type__(type_name) do
       nil ->
         {:error, "Unknown type `#{type_name}'"}
+
       %{__reference__: %{identifier: ident}, interfaces: interfaces} ->
         if Enum.member?(List.wrap(interfaces), :node) do
           {:ok, %{type: ident, id: id}}
@@ -218,24 +223,35 @@ defmodule Absinthe.Relay.Node do
   ```
   """
   # TODO: Return tuples in v1.5
-  @spec to_global_id(atom | binary, integer | binary | nil, Absinthe.Schema.t | nil) :: global_id | nil
+  @spec to_global_id(atom | binary, integer | binary | nil, Absinthe.Schema.t() | nil) ::
+          global_id | nil
   def to_global_id(node_type, source_id, schema \\ nil)
+
   def to_global_id(_node_type, nil, _schema) do
     nil
   end
+
   def to_global_id(node_type, source_id, schema) when is_binary(node_type) do
     case translate_global_id(schema, :to_global_id, [node_type, source_id]) do
       {:ok, global_id} ->
         global_id
+
       {:error, err} ->
-        Logger.warn("Failed to translate (#{inspect node_type}, #{inspect source_id}) to global ID with error: #{err}")
+        Logger.warn(
+          "Failed to translate (#{inspect(node_type)}, #{inspect(source_id)}) to global ID with error: #{
+            err
+          }"
+        )
+
         nil
     end
   end
+
   def to_global_id(node_type, source_id, schema) when is_atom(node_type) and not is_nil(schema) do
     case Absinthe.Schema.lookup_type(schema, node_type) do
       nil ->
         nil
+
       type ->
         to_global_id(type.name, source_id, schema)
     end
@@ -254,11 +270,13 @@ defmodule Absinthe.Relay.Node do
   def global_id_translator(nil) do
     Absinthe.Relay.Node.IDTranslator.Base64
   end
+
   def global_id_translator(schema) do
     from_schema =
       case Keyword.get(schema.__info__(:functions), :__absinthe_relay_global_id_translator__) do
         0 ->
           apply(schema, :__absinthe_relay_global_id_translator__, [])
+
         nil ->
           raise ArgumentError, message: @non_relay_schema_error
       end
@@ -279,22 +297,27 @@ defmodule Absinthe.Relay.Node do
   def global_id_resolver(identifier, nil) do
     global_id_resolver(identifier, &default_id_fetcher/2)
   end
+
   def global_id_resolver(identifier, id_fetcher) when is_atom(identifier) do
     fn _obj, info ->
       type = Absinthe.Schema.lookup_type(info.schema, identifier)
+
       case id_fetcher.(info.source, info) do
         nil ->
           report_fetch_id_error(type.name, info.source)
+
         internal_id ->
           {:ok, to_global_id(type.name, internal_id, info.schema)}
       end
     end
   end
+
   def global_id_resolver(type_name, id_fetcher) when is_binary(type_name) do
     fn _, info ->
       case id_fetcher.(info.source, info) do
         nil ->
           report_fetch_id_error(type_name, info.source)
+
         internal_id ->
           {:ok, to_global_id(type_name, internal_id, info.schema)}
       end
@@ -302,10 +325,10 @@ defmodule Absinthe.Relay.Node do
   end
 
   # Reports a failure to fetch an ID
-  @spec report_fetch_id_error(type_name :: String.t, source :: any) :: {:error, String.t}
+  @spec report_fetch_id_error(type_name :: String.t(), source :: any) :: {:error, String.t()}
   defp report_fetch_id_error(type_name, source) do
     Logger.warn(@missing_internal_id_error <> " (type #{type_name})")
-    Logger.debug(inspect source)
+    Logger.debug(inspect(source))
     {:error, @missing_internal_id_error}
   end
 
@@ -329,9 +352,8 @@ defmodule Absinthe.Relay.Node do
   nil
   ```
   """
-  @spec default_id_fetcher(any, Absinthe.Resolution.t) :: nil | binary
+  @spec default_id_fetcher(any, Absinthe.Resolution.t()) :: nil | binary
   def default_id_fetcher(%{id: id}, _info) when is_nil(id), do: nil
   def default_id_fetcher(%{id: id}, _info), do: id |> to_string
   def default_id_fetcher(_, _), do: nil
-
 end
