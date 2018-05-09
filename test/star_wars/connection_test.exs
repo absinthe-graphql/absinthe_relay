@@ -108,7 +108,7 @@ defmodule StarWars.ConnectionTest do
             ],
             "pageInfo" => %{
               "hasPreviousPage" => false,
-              "hasNextPage" => false,
+              "hasNextPage" => true,
             }
           },
         }
