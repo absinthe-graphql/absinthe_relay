@@ -1,5 +1,4 @@
 defmodule Absinthe.Relay.Node.Notation do
-
   @moduledoc """
   Macros used to define Node-related schema entities
 
@@ -13,13 +12,15 @@ defmodule Absinthe.Relay.Node.Notation do
 
   See the `Absinthe.Relay.Node` module documentation for examples.
   """
-  defmacro node({:interface, _, _}, [do: block]) do
+  defmacro node({:interface, _, _}, do: block) do
     do_interface(__CALLER__, block)
   end
-  defmacro node({:field, _, _}, [do: block]) do
+
+  defmacro node({:field, _, _}, do: block) do
     do_field(__CALLER__, block)
   end
-  defmacro node({:object, _, [identifier | rest]}, [do: block]) do
+
+  defmacro node({:object, _, [identifier | rest]}, do: block) do
     do_object(__CALLER__, identifier, List.flatten(rest), block)
   end
 
@@ -32,6 +33,7 @@ defmodule Absinthe.Relay.Node.Notation do
     env
     |> Notation.recordable!(:interface)
     |> record_interface!(:node, [], block)
+
     Notation.desc_attribute_recorder(:node)
   end
 
@@ -97,13 +99,13 @@ defmodule Absinthe.Relay.Node.Notation do
   @doc false
   # Record a node object type
   def record_object!(env, identifier, attrs, block) do
-    name = attrs[:name] || identifier |> Atom.to_string |> Absinthe.Utils.camelize
-    Notation.record_object!(
-      env,
-      identifier,
-      Keyword.delete(attrs, :id_fetcher),
-      [object_body(name, attrs[:id_fetcher]), block]
-    )
+    name = attrs[:name] || identifier |> Atom.to_string() |> Absinthe.Utils.camelize()
+
+    Notation.record_object!(env, identifier, Keyword.delete(attrs, :id_fetcher), [
+      object_body(name, attrs[:id_fetcher]),
+      block
+    ])
+
     Notation.desc_attribute_recorder(identifier)
   end
 
@@ -117,8 +119,8 @@ defmodule Absinthe.Relay.Node.Notation do
       field :id, non_null(:id) do
         resolve Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(id_fetcher))
       end
+
       interface :node
     end
   end
-
 end

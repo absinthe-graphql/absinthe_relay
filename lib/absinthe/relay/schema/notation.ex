@@ -17,11 +17,12 @@ defmodule Absinthe.Relay.Schema.Notation do
   @flavor_namespaces [
     modern: Modern,
     classic: Classic
- ]
+  ]
 
   defmacro __using__(flavor) when flavor in @valid_flavors do
     notations(flavor)
   end
+
   defmacro __using__([]) do
     [
       # TODO: Remove warning in v1.5
@@ -34,15 +35,17 @@ defmodule Absinthe.Relay.Schema.Notation do
         Absinthe.Relay.Schema.Notation. See the Absinthe.Relay @moduledoc \
         for more information. \
         """
+
         IO.warn(warning)
       end,
       notations(@default_flavor)
     ]
   end
 
-  @spec notations(flavor) :: Macro.t
+  @spec notations(flavor) :: Macro.t()
   defp notations(flavor) do
     mutation_notation = Absinthe.Relay.Mutation.Notation |> flavored(flavor)
+
     quote do
       import Absinthe.Relay.Node.Notation, only: :macros
       import Absinthe.Relay.Node.Helpers
@@ -55,5 +58,4 @@ defmodule Absinthe.Relay.Schema.Notation do
   defp flavored(module, flavor) do
     Module.safe_concat(module, Keyword.fetch!(@flavor_namespaces, flavor))
   end
-
 end

@@ -9,24 +9,23 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     end
 
     mutation do
-      payload field :simple_mutation do
+      payload field(:simple_mutation) do
         input do
           field :input_data, :integer
         end
+
         output do
           field :result, :integer
         end
-        resolve fn
-          %{input_data: input_data}, _ ->
-            {:ok, %{result: input_data * 2}}
+
+        resolve fn %{input_data: input_data}, _ ->
+          {:ok, %{result: input_data * 2}}
         end
       end
     end
-
   end
 
   describe "mutation_with_client_mutation_id" do
-
     @query """
     mutation M {
       simpleMutation {
@@ -35,7 +34,15 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     }
     """
     test "requires an `input' argument" do
-      assert {:ok, %{errors: [%{message: ~s(In argument "input": Expected type "SimpleMutationInput!", found null.)}]}} = Absinthe.run(@query, Schema)
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    message:
+                      ~s(In argument "input": Expected type "SimpleMutationInput!", found null.)
+                  }
+                ]
+              }} = Absinthe.run(@query, Schema)
     end
 
     @query """
@@ -59,9 +66,7 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     end
   end
 
-
   describe "introspection" do
-
     @query """
     {
       __type(name: "SimpleMutationInput") {
@@ -81,7 +86,7 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
       }
     }
     """
-    @expected  %{
+    @expected %{
       data: %{
         "__type" => %{
           "name" => "SimpleMutationInput",
@@ -106,7 +111,6 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
                 "ofType" => nil
               }
             }
-
           ]
         }
       }
@@ -167,7 +171,6 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     test "contains correct payload" do
       assert {:ok, @expected} == Absinthe.run(@query, Schema)
     end
-
   end
 
   @query """
@@ -213,12 +216,12 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
                       "name" => "SimpleMutationInput",
                       "kind" => "INPUT_OBJECT"
                     }
-                  },
+                  }
                 }
               ],
               "type" => %{
                 "name" => "SimpleMutationPayload",
-                "kind" => "OBJECT",
+                "kind" => "OBJECT"
               }
             }
           ]
@@ -232,28 +235,26 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
   end
 
   describe "an empty definition" do
-
     defmodule EmptyInputAndResultSchema do
       use Absinthe.Schema
       use Absinthe.Relay.Schema, :classic
 
       query do
-
       end
 
       mutation do
-        payload field :without_block, resolve: fn _, _ -> {:ok, %{}} end
-        payload field :with_block_and_attrs, resolve: (fn _, _ -> {:ok, %{}} end) do
+        payload(field :without_block, resolve: fn _, _ -> {:ok, %{}} end)
+
+        payload field :with_block_and_attrs, resolve: fn _, _ -> {:ok, %{}} end do
         end
-        payload field :with_block do
-          resolve fn
-            _, _ ->
-              # Logic is there
-              {:ok, %{}}
+
+        payload field(:with_block) do
+          resolve fn _, _ ->
+            # Logic is there
+            {:ok, %{}}
           end
         end
       end
-
     end
 
     @cm_id "abc"
@@ -266,7 +267,8 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     }
     """
     test "supports returning the client mutation id intact when defined without a block" do
-      assert {:ok, %{data: %{"withoutBlock" => %{"clientMutationId" => @cm_id}}}} == Absinthe.run(@query, EmptyInputAndResultSchema)
+      assert {:ok, %{data: %{"withoutBlock" => %{"clientMutationId" => @cm_id}}}} ==
+               Absinthe.run(@query, EmptyInputAndResultSchema)
     end
 
     @query """
@@ -277,7 +279,8 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     }
     """
     test "supports returning the client mutation id intact when defined with a block" do
-      assert {:ok, %{data: %{"withBlock" => %{"clientMutationId" => @cm_id}}}} == Absinthe.run(@query, EmptyInputAndResultSchema)
+      assert {:ok, %{data: %{"withBlock" => %{"clientMutationId" => @cm_id}}}} ==
+               Absinthe.run(@query, EmptyInputAndResultSchema)
     end
 
     @query """
@@ -288,12 +291,8 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     }
     """
     test "supports returning the client mutation id intact when defined with a block and attrs" do
-      assert {:ok, %{data: %{"withBlockAndAttrs" => %{"clientMutationId" => @cm_id}}}} == Absinthe.run(@query, EmptyInputAndResultSchema)
+      assert {:ok, %{data: %{"withBlockAndAttrs" => %{"clientMutationId" => @cm_id}}}} ==
+               Absinthe.run(@query, EmptyInputAndResultSchema)
     end
-
-
   end
-
-
-
 end

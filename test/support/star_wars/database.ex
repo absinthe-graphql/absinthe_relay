@@ -1,5 +1,4 @@
 defmodule StarWars.Database do
-
   @xwing %{
     id: "1",
     name: "X-Wing"
@@ -7,12 +6,12 @@ defmodule StarWars.Database do
 
   @ywing %{
     id: "2",
-    name: "Y-Wing",
+    name: "Y-Wing"
   }
 
   @awing %{
     id: "3",
-    name: "A-Wing",
+    name: "A-Wing"
   }
 
   # Yeah, technically it's Corellian. But it flew in the service of the rebels,
@@ -40,7 +39,7 @@ defmodule StarWars.Database do
   @executor %{
     id: "8",
     name: "Executor"
-}
+  }
 
   @rebels %{
     id: "1",
@@ -77,18 +76,19 @@ defmodule StarWars.Database do
     case data() |> get_in([node_type, id]) do
       nil ->
         {:error, "No #{node_type} with ID #{id}"}
+
       result ->
         {:ok, result}
     end
   end
 
   def get_factions(names) do
-    factions = data().factions |> Map.values
+    factions = data().factions |> Map.values()
+
     names
-    |> Enum.map(fn
-      name ->
-        factions
-        |> Enum.find_value(&(&1 == name))
+    |> Enum.map(fn name ->
+      factions
+      |> Enum.find_value(&(&1 == name))
     end)
   end
 
@@ -99,5 +99,4 @@ defmodule StarWars.Database do
   def get_empire do
     {:ok, @empire}
   end
-
 end
