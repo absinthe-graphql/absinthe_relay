@@ -14,8 +14,9 @@ defmodule Absinthe.Relay.Connection do
   Define connection types that provide a standard mechanism for slicing and
   paginating result sets.
 
-  For information about the connection model, see the Relay Cursor Connections Specification
-  at https://facebook.github.io/relay/graphql/connections.htm.
+  For information about the connection model, see the Relay Cursor
+  Connections Specification at
+  https://facebook.github.io/relay/graphql/connections.htm.
 
   ## Connection
 
@@ -33,7 +34,8 @@ defmodule Absinthe.Relay.Connection do
   connection node_type: :pet
   ```
 
-  This will automatically define two new types: `:pet_connection` and `:pet_edge`.
+  This will automatically define two new types: `:pet_connection` and
+  `:pet_edge`.
 
   We define a field that uses these types to paginate associated records
   by using `connection field`. Here, for instance, we support paginating a
@@ -61,7 +63,8 @@ defmodule Absinthe.Relay.Connection do
   `Absinthe.Relay.Connection.from_list/2`, which takes a list and the pagination
   arguments passed to the resolver.
 
-  It is possible to provide additional pagination arguments to a relay connection:
+  It is possible to provide additional pagination arguments to a relay
+  connection:
 
   ```
   connection field :pets, node_type: :pet do
@@ -74,15 +77,9 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
 
-  Note: `Absinthe.Relay.Connection.from_list/2`, like `connectionFromArray` in
-  the JS implementation, expects that the full list of records be materialized
-  and provided -- it just discards what it doesn't need. Planned for future
-  development is an implementation more like
-  `connectionFromArraySlice`, intended for use in cases where you know
-  the cardinality of the connection, consider it too large to
-  materialize the entire array, and instead wish pass in a slice of
-  the total result large enough to cover the range specified in the
-  pagination arguments.
+  Note: `Absinthe.Relay.Connection.from_list/2` expects that the full list of
+  records be materialized and provided. If you're using Ecto, you probably want
+  to use `Absinthe.Relay.Connection.from_query/2` instead.
 
   Here's how you might request the names of the first `$petCount` pets a person
   owns:
@@ -109,8 +106,9 @@ defmodule Absinthe.Relay.Connection do
   automatically) that contain a field, `node`, that is the same `:node_type` you
   passed earlier (`:pet`).
 
-  `pageInfo` is a field that contains information about the current view; the `startCursor`,
-  `endCursor`, `hasPreviousPage`, and `hasNextPage` fields.
+  `pageInfo` is a field that contains information about the current
+  view; the `startCursor`, `endCursor`, `hasPreviousPage`, and
+  `hasNextPage` fields.
 
   ### Pagination Direction
 
@@ -153,11 +151,12 @@ defmodule Absinthe.Relay.Connection do
 
   ### Customizing the node itself
 
-  It's also possible to customize the way the `node` field of the connection's edge is resolved.
-  This can, for example, be useful if you're working with a NoSQL database that returns relationships as lists of
-  IDs. Consider the following example which paginates over the user's account array, but resolves each one
-  of them independently.
-
+  It's also possible to customize the way the `node` field of the
+  connection's edge is resolved.  This can, for example, be useful if
+  you're working with a NoSQL database that returns relationships as
+  lists of IDs. Consider the following example which paginates over
+  the user's account array, but resolves each one of them
+  independently.
 
   ```
   object :account do
@@ -186,12 +185,13 @@ defmodule Absinthe.Relay.Connection do
 
   ```
 
-  which would resolve the connections into a list of the user's associated accounts,
-  and then for each node find that particular account (preferrably batched).
+  This would resolve the connections into a list of the user's
+  associated accounts, and then for each node find that particular
+  account (preferrably batched).
 
   ## Creating Connections
 
-  This module provides two functions that mirror similar Javascript functions,
+  This module provides two functions that mirror similar JavaScript functions,
   `from_list/2,3` and `from_slice/2,3`. We also provide `from_query/2,3` if you
   have Ecto as a dependency for convenience.
 
@@ -253,10 +253,10 @@ defmodule Absinthe.Relay.Connection do
   A simple function that accepts a list and connection arguments, and returns
   a connection object for use in GraphQL.
 
-  The data given to it should constitute all data that further pagination requests
-  may page over. As such, it may be very inefficient if you're pulling data
-  from a database which could be used to more directly retrieve just the desired
-  data.
+  The data given to it should constitute all data that further
+  pagination requests may page over. As such, it may be very
+  inefficient if you're pulling data from a database which could be
+  used to more directly retrieve just the desired data.
 
   See also `from_query` and `from_slice`.
 
@@ -349,12 +349,15 @@ defmodule Absinthe.Relay.Connection do
   @doc """
   Build a connection from an Ecto Query
 
-  This will automatically set a limit and offset value on the ecto query,
-  and then run the query with whatever function is passed as the second argument.
+  This will automatically set a limit and offset value on the Ecto
+  query, and then run the query with whatever function is passed as
+  the second argument.
 
   Notes:
-  - Your query MUST have an `order_by` value. Offset does not make sense without one.
-  - `last: N` must always be acompanied by either a `before:` argument to the query,
+  - Your query MUST have an `order_by` value. Offset does not make
+    sense without one.
+  - `last: N` must always be acompanied by either a `before:` argument
+    to the query,
   or an explicit `count: ` option to the `from_query` call.
   Otherwise it is impossible to derive the required offset.
 
@@ -430,8 +433,8 @@ defmodule Absinthe.Relay.Connection do
   Often backend developers want to provide a maximum value above which no more
   records can be retrieved, no matter how many are asked for by the front end.
 
-  This function provides that capability. For use with `from_list` or `from_query`
-  use the `:max` option on those functions.
+  This function provides that capability. For use with `from_list` or
+  `from_query` use the `:max` option on those functions.
   """
   @spec limit(args :: Options.t, max :: pos_integer | nil) :: {:ok, pagination_direction, limit} | {:error, any}
   def limit(args, nil), do: limit(args)
