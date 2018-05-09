@@ -459,10 +459,20 @@ defmodule Absinthe.Relay.Connection do
   """
   @spec offset(args :: Options.t) :: {:ok, offset | nil} | {:error, any}
   def offset(%{after: cursor}) when not is_nil(cursor) do
-    with {:ok, offset} <- cursor_to_offset(cursor), do: {:ok, offset + 1}
+    with {:ok, offset} <- cursor_to_offset(cursor) do
+      {:ok, offset + 1}
+    else
+      {:error, _} ->
+        {:error, "Invalid cursor provided as `after` argument"}
+    end
   end
   def offset(%{before: cursor}) when not is_nil(cursor) do
-    with {:ok, offset} <- cursor_to_offset(cursor), do: {:ok, max(offset, 0)}
+    with {:ok, offset} <- cursor_to_offset(cursor) do
+      {:ok, max(offset, 0)}
+    else
+      {:error, _} ->
+        {:error, "Invalid cursor provided as `before` argument"}
+    end
   end
   def offset(_), do: {:ok, nil}
 

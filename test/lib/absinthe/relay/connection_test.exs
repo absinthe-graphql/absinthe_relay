@@ -227,12 +227,11 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
 
     test "with an invalid cursor" do
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_1}, [])
-      == {:error, "Invalid cursor"}
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_2}, [])
-      == {:error, "Invalid cursor"}
-      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_3}, [])
-      == {:error, "Invalid cursor"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_1}, []) == {:error, "Invalid cursor provided as `before` argument"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_2}, []) == {:error, "Invalid cursor provided as `before` argument"}
+      assert Connection.offset_and_limit_for_query(%{first: 10, before: @invalid_cursor_3}, []) == {:error, "Invalid cursor provided as `before` argument"}
+
+      assert Connection.offset_and_limit_for_query(%{last: 5, after: @invalid_cursor_1}, [count: 30]) == {:error, "Invalid cursor provided as `after` argument"}
     end
   end
 end
