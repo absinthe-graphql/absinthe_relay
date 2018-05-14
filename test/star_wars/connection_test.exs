@@ -180,13 +180,13 @@ defmodule StarWars.ConnectionTest do
           "ships" => %{
             "edges" => [
               %{
-                "cursor" => "YXJyYXljb25uZWN0aW9uOjA=",
+                "cursor" => "cmVjb3JkOjE=",
                 "node" => %{
                   "name" => "X-Wing"
                 }
               },
               %{
-                "cursor" => "YXJyYXljb25uZWN0aW9uOjE=",
+                "cursor" => "cmVjb3JkOjI=",
                 "node" => %{
                   "name" => "Y-Wing"
                 }
@@ -204,7 +204,7 @@ defmodule StarWars.ConnectionTest do
         query EndOfRebelShipsQuery {
           rebels {
             name,
-            ships(first: 3, after: "YXJyYXljb25uZWN0aW9uOjE=") {
+            ships(first: 3, after: "cmVjb3JkOjI=") {
               edges {
                 cursor,
                 node {
@@ -221,24 +221,9 @@ defmodule StarWars.ConnectionTest do
           "name" => "Alliance to Restore the Republic",
           "ships" => %{
             "edges" => [
-              %{
-                "cursor" => "YXJyYXljb25uZWN0aW9uOjI=",
-                "node" => %{
-                  "name" => "A-Wing"
-                }
-              },
-              %{
-                "cursor" => "YXJyYXljb25uZWN0aW9uOjM=",
-                "node" => %{
-                  "name" => "Millenium Falcon"
-                }
-              },
-              %{
-                "cursor" => "YXJyYXljb25uZWN0aW9uOjQ=",
-                "node" => %{
-                  "name" => "Home One"
-                }
-              }
+              %{"node" => %{"name" => "A-Wing"}, "cursor" => "cmVjb3JkOjM="},
+              %{"node" => %{"name" => "Millenium Falcon"}, "cursor" => "cmVjb3JkOjQ="},
+              %{"node" => %{"name" => "Home One"}, "cursor" => "cmVjb3JkOjU="}
             ]
           }
         }
@@ -252,7 +237,7 @@ defmodule StarWars.ConnectionTest do
         query RebelsQuery {
           rebels {
             name,
-            ships(first: 3, after: "YXJyYXljb25uZWN0aW9uOjQ=") {
+            ships(first: 3, after: "cmVjb3JkOjg=") {
               edges {
                 cursor,
                 node {

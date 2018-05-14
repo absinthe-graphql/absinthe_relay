@@ -275,38 +275,38 @@ defmodule Absinthe.Relay.PaginationTest do
     assert {:ok, %{data: result}} =
              Absinthe.run(query, Schema, variables: %{"last" => 100, "before" => cursor5})
 
-    assert %{
-             "foos" => %{
-               "page_info" => %{
-                 "start_cursor" => cursor0,
-                 "end_cursor" => cursor4,
-                 "has_previous_page" => false,
-                 "has_next_page" => true
-               },
-               "edges" => [
-                 %{
-                   "cursor" => cursor0,
-                   "node" => %{"index" => 0}
-                 },
-                 %{
-                   "cursor" => _cursor1,
-                   "node" => %{"index" => 1}
-                 },
-                 %{
-                   "cursor" => _cursor2,
-                   "node" => %{"index" => 2}
-                 },
-                 %{
-                   "cursor" => _cursor3,
-                   "node" => %{"index" => 3}
-                 },
-                 %{
-                   "cursor" => cursor4,
-                   "node" => %{"index" => 4}
-                 }
-               ]
-             }
-           } = result
+    %{
+      "foos" => %{
+        "page_info" => %{
+          "start_cursor" => cursor0,
+          "end_cursor" => cursor4,
+          "has_previous_page" => false,
+          "has_next_page" => true
+        },
+        "edges" => [
+          %{
+            "cursor" => cursor0,
+            "node" => %{"index" => 0}
+          },
+          %{
+            "cursor" => _cursor1,
+            "node" => %{"index" => 1}
+          },
+          %{
+            "cursor" => _cursor2,
+            "node" => %{"index" => 2}
+          },
+          %{
+            "cursor" => _cursor3,
+            "node" => %{"index" => 3}
+          },
+          %{
+            "cursor" => cursor4,
+            "node" => %{"index" => 4}
+          }
+        ]
+      }
+    } = result
 
     assert {:ok, %{data: result}} =
              Absinthe.run(query, Schema, variables: %{"last" => 100, "before" => cursor0})
