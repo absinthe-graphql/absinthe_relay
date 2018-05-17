@@ -1,8 +1,6 @@
 defmodule Absinthe.Relay.Node.ParseIDsTest do
   use Absinthe.Relay.Case, async: true
 
-  alias Absinthe.Relay.Node
-
   defmodule Foo do
     defstruct [:id, :name]
   end
@@ -15,9 +13,32 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     defstruct [:id, :name]
   end
 
+  defmodule CustomIDTranslator do
+    @behaviour Absinthe.Relay.Node.IDTranslator
+
+    @impl true
+    def to_global_id(type_name, source_id, _schema) do
+      {:ok, "#{type_name}:#{source_id}"}
+    end
+
+    @impl true
+    def from_global_id(global_id, _schema) do
+      case String.split(global_id, ":", parts: 2) do
+        [type_name, source_id] ->
+          {:ok, type_name, source_id}
+
+        _ ->
+          {:error, "Could not extract value from ID `#{inspect(global_id)}`"}
+      end
+    end
+  end
+
   defmodule SchemaClassic do
     use Absinthe.Schema
-    use Absinthe.Relay.Schema, :classic
+
+    use Absinthe.Relay.Schema,
+      flavor: :classic,
+      global_id_translator: CustomIDTranslator
 
     alias Absinthe.Relay.Node.ParseIDsTest.Foo
     alias Absinthe.Relay.Node.ParseIDsTest.Parent
@@ -30,32 +51,35 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     node interface do
       resolve_type fn
-        %Foo{}, _  ->
+        %Foo{}, _ ->
           :foo
-        %Parent{}, _  ->
+
+        %Parent{}, _ ->
           :parent
-        %Child{}, _  ->
+
+        %Child{}, _ ->
           :child
+
         _, _ ->
           nil
       end
     end
 
-    node object :foo do
+    node object(:foo) do
       field :name, :string
     end
 
-    node object :other_foo, name: "FancyFoo" do
+    node object(:other_foo, name: "FancyFoo") do
       field :name, :string
     end
 
-    node object :parent do
+    node object(:parent) do
       field :name, :string
       field :children, list_of(:child)
       field :child, :child
     end
 
-    node object :child do
+    node object(:child) do
       field :name, :string
     end
 
@@ -70,7 +94,6 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
 
     query do
-
       field :foo, :foo do
         arg :foo_id, :id
         arg :foobar_id, :id
@@ -84,13 +107,10 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         middleware Absinthe.Relay.Node.ParseIDs, foo_ids: :foo
         resolve &resolve_foos/2
       end
-
     end
 
     mutation do
-
-      payload field :update_parent do
-
+      payload field(:update_parent) do
         input do
           field :parent, :parent_input
         end
@@ -100,11 +120,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         end
 
         resolve &resolve_parent/2
-
       end
 
-      payload field :update_parent_local_middleware do
-
+      payload field(:update_parent_local_middleware) do
         input do
           field :parent, :parent_input
         end
@@ -113,24 +131,25 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
           field :parent, :parent
         end
 
-        middleware Absinthe.Relay.Node.ParseIDs, parent: [
-          id: :parent,
-          children: [id: :child],
-          child: [id: :child]
-        ]
+        middleware Absinthe.Relay.Node.ParseIDs,
+          parent: [
+            id: :parent,
+            children: [id: :child],
+            child: [id: :child]
+          ]
 
         resolve &resolve_parent/2
-
       end
-
     end
 
     defp resolve_foo(%{foo_id: id}, _) do
       {:ok, Map.get(@foos, id)}
     end
+
     defp resolve_foo(%{foobar_id: nil}, _) do
       {:ok, nil}
     end
+
     defp resolve_foo(%{foobar_id: %{id: id, type: :foo}}, _) do
       {:ok, Map.get(@foos, id)}
     end
@@ -152,23 +171,27 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     defp to_parent_output(%{id: nil}) do
       nil
     end
+
     defp to_parent_output(values) when is_list(values) do
       for value <- values do
         value
         |> to_parent_output
       end
     end
+
     defp to_parent_output(%{} = args) do
       for {key, value} <- args, into: %{} do
         {key, value |> to_parent_output}
       end
     end
+
     defp to_parent_output(value) do
       value
     end
 
     @update_parent_ids {
-      Absinthe.Relay.Node.ParseIDs, [
+      Absinthe.Relay.Node.ParseIDs,
+      [
         # Needs `input` because this is being inserted
         # before the mutation middleware.
         input: [
@@ -183,10 +206,10 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     def middleware(middleware, %{identifier: :update_parent}, _) do
       [@update_parent_ids | middleware]
     end
+
     def middleware(middleware, _, _) do
       middleware
     end
-
   end
 
   defmodule SchemaModern do
@@ -197,8 +220,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     node interface do
       resolve_type fn
-        %Parent{}, _  ->
+        %Parent{}, _ ->
           :parent
+
         _, _ ->
           nil
       end
@@ -208,11 +232,11 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       field :id, non_null(:id)
     end
 
-    node object :child do
+    node object(:child) do
       field :name, :string
     end
 
-    node object :parent do
+    node object(:parent) do
       field :name, :string
       field :child, :child
     end
@@ -221,9 +245,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
 
     mutation do
-
-      payload field :update_parent_local_middleware do
-
+      payload field(:update_parent_local_middleware) do
         input do
           field :parent, :parent_input
         end
@@ -232,27 +254,29 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
           field :parent, :parent
         end
 
-        middleware Absinthe.Relay.Node.ParseIDs, parent: [
-          id: :parent,
-        ]
+        middleware Absinthe.Relay.Node.ParseIDs,
+          parent: [
+            id: :parent
+          ]
 
         resolve &resolve_parent/2
-
       end
-
     end
 
     defp resolve_parent(args, _) do
       {:ok, args}
     end
-
   end
 
-  @foo1_id Base.encode64("Foo:1")
-  @foo2_id Base.encode64("Foo:2")
+  @foo1_id "Foo:1"
+  @foo2_id "Foo:2"
+  @parent1_id "Parent:1"
+  @child1_id "Child:1"
+  @child2_id "Child:2"
+  @otherfoo1_id "FancyFoo:1"
+  @modern_parent1_id Base.encode64(@parent1_id)
 
   describe "parses one id" do
-
     test "succeeds with a non-null value" do
       result =
         """
@@ -264,6 +288,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaClassic)
+
       assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
     end
 
@@ -278,13 +303,12 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaClassic)
+
       assert {:ok, %{data: %{"foo" => nil}}} == result
     end
-
   end
 
   describe "parses a list of ids" do
-
     test "succeeds with a non-null value" do
       result =
         """
@@ -293,16 +317,16 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaClassic)
+
       assert {:ok,
-        %{
-          data: %{
-            "foos" => [
-              %{"name" => "Foo 1", "id" => @foo1_id},
-              %{"name" => "Foo 2", "id" => @foo2_id}
-            ]
-          }
-        }
-      } == result
+              %{
+                data: %{
+                  "foos" => [
+                    %{"name" => "Foo 1", "id" => @foo1_id},
+                    %{"name" => "Foo 2", "id" => @foo2_id}
+                  ]
+                }
+              }} == result
     end
 
     test "succeeds with a null value" do
@@ -313,6 +337,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaClassic)
+
       assert {:ok,
               %{
                 data: %{
@@ -321,10 +346,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
                     %{"name" => "Foo 2", "id" => @foo2_id}
                   ]
                 }
-              }
-      } == result
+              }} == result
     end
-
   end
 
   describe "parsing an id into one of multiple node types" do
@@ -336,8 +359,10 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaClassic)
+
       assert {:ok, %{data: %{"foo" => %{"name" => "Foo 1", "id" => @foo1_id}}}} == result
     end
+
     test "parses null" do
       result =
         """
@@ -346,24 +371,22 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaClassic)
+
       assert {:ok, %{data: %{"foo" => nil}}} == result
     end
   end
 
   describe "parsing nested ids" do
     test "works with non-null values" do
-      encoded_parent_id = Base.encode64("Parent:1")
-      encoded_child1_id = Base.encode64("Child:1")
-      encoded_child2_id = Base.encode64("Child:1")
       result =
         """
         mutation Foobar {
           updateParent(input: {
             clientMutationId: "abc",
             parent: {
-              id: "#{encoded_parent_id}",
-              children: [{ id: "#{encoded_child1_id}"}, {id: "#{encoded_child2_id}"}],
-              child: { id: "#{encoded_child2_id}"}
+              id: "#{@parent1_id}",
+              children: [{ id: "#{@child1_id}"}, {id: "#{@child2_id}"}],
+              child: { id: "#{@child2_id}"}
             }
           }) {
             parent {
@@ -378,26 +401,27 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       expected_parent_data = %{
         "parent" => %{
-          "id" => encoded_parent_id, # The output re-converts everything to global_ids.
-          "children" => [%{"id" => encoded_child1_id}, %{"id" => encoded_child2_id}],
+          # The output re-converts everything to global_ids.
+          "id" => @parent1_id,
+          "children" => [%{"id" => @child1_id}, %{"id" => @child2_id}],
           "child" => %{
-            "id" => encoded_child2_id
+            "id" => @child2_id
           }
         }
       }
+
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
+
     test "works with null leaf values" do
-      encoded_parent_id = Base.encode64("Parent:1")
-      encoded_child1_id = Base.encode64("Child:1")
       result =
         """
         mutation Foobar {
           updateParent(input: {
             clientMutationId: "abc",
             parent: {
-              id: "#{encoded_parent_id}",
-              children: [{ id: "#{encoded_child1_id}" }, { id: null }],
+              id: "#{@parent1_id}",
+              children: [{ id: "#{@child1_id}" }, { id: null }],
               child: { id: null }
             }
           }) {
@@ -413,26 +437,26 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       expected_parent_data = %{
         "parent" => %{
-          "id" => encoded_parent_id, # The output re-converts everything to global_ids.
-          "children" => [%{"id" => encoded_child1_id}, nil],
+          # The output re-converts everything to global_ids.
+          "id" => @parent1_id,
+          "children" => [%{"id" => @child1_id}, nil],
           "child" => nil
         }
       }
+
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
-
   end
 
   test "parses incorrect nested ids" do
-    encoded_parent_id = Base.encode64("Parent:1")
-    incorrect_id = Node.to_global_id(:other_foo, 1, SchemaClassic)
-    mutation =
-      """
+    incorrect_id = @otherfoo1_id
+
+    mutation = """
       mutation Foobar {
         updateParent(input: {
           clientMutationId: "abc",
           parent: {
-            id: "#{encoded_parent_id}",
+            id: "#{@parent1_id}",
             child: {id: "#{incorrect_id}"}
           }
         }) {
@@ -443,53 +467,60 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       }
     }
     """
+
     assert {:ok, result} = Absinthe.run(mutation, SchemaClassic)
+
     assert %{
-      data: %{"updateParent" => nil},
-      errors: [%{
-        locations: [%{column: 0, line: 2}],
-        message: ~s<In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
-      }]
-    } = result
+             data: %{"updateParent" => nil},
+             errors: [
+               %{
+                 locations: [%{column: 0, line: 2}],
+                 message:
+                   ~s<In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
+               }
+             ]
+           } = result
   end
 
   test "handles one incorrect id correctly" do
+    incorrect_id = @otherfoo1_id
+
     result =
       """
       {
-        foo(fooId: "#{Node.to_global_id(:other_foo, 1, SchemaClassic)}") {
-
+        foo(fooId: "#{incorrect_id}") {
           id
           name
         }
       }
       """
       |> Absinthe.run(SchemaClassic)
+
     assert {
-      :ok, %{
-        data: %{},
-        errors: [
-          %{message: ~s<In argument "fooId": Expected node type in ["Foo"], found "FancyFoo".>}
-        ]
-      }
-    } = result
+             :ok,
+             %{
+               data: %{},
+               errors: [
+                 %{
+                   message:
+                     ~s<In argument "fooId": Expected node type in ["Foo"], found "FancyFoo".>
+                 }
+               ]
+             }
+           } = result
   end
 
   describe "parses nested ids with local middleware" do
-
     test "for classic schema" do
-      encoded_parent_id = Base.encode64("Parent:1")
-      encoded_child1_id = Base.encode64("Child:1")
-      encoded_child2_id = Base.encode64("Child:1")
       result =
         """
         mutation FoobarLocal {
           updateParentLocalMiddleware(input: {
             clientMutationId: "abc",
             parent: {
-              id: "#{encoded_parent_id}",
-              children: [{ id: "#{encoded_child1_id}"}, {id: "#{encoded_child2_id}"}, {id: null}],
-              child: { id: "#{encoded_child2_id}"}
+              id: "#{@parent1_id}",
+              children: [{ id: "#{@child1_id}"}, {id: "#{@child2_id}"}, {id: null}],
+              child: { id: "#{@child2_id}"}
             }
           }) {
             parent {
@@ -504,24 +535,25 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       expected_parent_data = %{
         "parent" => %{
-          "id" => encoded_parent_id, # The output re-converts everything to global_ids.
-          "children" => [%{"id" => encoded_child1_id}, %{"id" => encoded_child2_id}, nil],
+          # The output re-converts everything to global_ids.
+          "id" => @parent1_id,
+          "children" => [%{"id" => @child1_id}, %{"id" => @child2_id}, nil],
           "child" => %{
-            "id" => encoded_child2_id
+            "id" => @child2_id
           }
         }
       }
+
       assert {:ok, %{data: %{"updateParentLocalMiddleware" => expected_parent_data}}} == result
     end
 
     test "for modern schema" do
-      encoded_parent_id = Base.encode64("Parent:2")
       result =
         """
         mutation FoobarLocal {
           updateParentLocalMiddleware(input: {
             parent: {
-              id: "#{encoded_parent_id}",
+              id: "#{@modern_parent1_id}",
             }
           }) {
             parent {
@@ -534,11 +566,11 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       expected_parent_data = %{
         "parent" => %{
-          "id" => encoded_parent_id,
+          "id" => @modern_parent1_id
         }
       }
+
       assert {:ok, %{data: %{"updateParentLocalMiddleware" => expected_parent_data}}} == result
     end
   end
-
 end

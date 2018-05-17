@@ -27,6 +27,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "name" => "Alliance to Restore the Republic",
@@ -45,12 +46,13 @@ defmodule StarWars.ConnectionTest do
             ],
             "pageInfo" => %{
               "hasPreviousPage" => true,
-              "hasNextPage" => false,
+              "hasNextPage" => false
             }
           },
           "ships2" => %{"pageInfo" => %{"hasNextPage" => false, "hasPreviousPage" => false}}
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
@@ -66,6 +68,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       assert {:ok, %{data: data}} = Absinthe.run(query, StarWars.Schema)
       cursor = data["rebels"]["ships"]["pageInfo"]["startCursor"]
 
@@ -86,6 +89,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "ships" => %{
@@ -108,17 +112,17 @@ defmodule StarWars.ConnectionTest do
             ],
             "pageInfo" => %{
               "hasPreviousPage" => false,
-              "hasNextPage" => false,
+              "hasNextPage" => true
             }
-          },
+          }
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
   end
 
   describe "Star Wars connections" do
-
     test "fetches the first ship of the rebels" do
       query = """
         query RebelsShipsQuery {
@@ -134,6 +138,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "name" => "Alliance to Restore the Republic",
@@ -148,6 +153,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
@@ -167,6 +173,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "name" => "Alliance to Restore the Republic",
@@ -188,6 +195,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
@@ -207,6 +215,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "name" => "Alliance to Restore the Republic",
@@ -234,6 +243,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
@@ -253,6 +263,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "name" => "Alliance to Restore the Republic",
@@ -261,6 +272,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
 
@@ -292,6 +304,7 @@ defmodule StarWars.ConnectionTest do
           }
         }
       """
+
       expected = %{
         "rebels" => %{
           "name" => "Alliance to Restore the Republic",
@@ -336,9 +349,8 @@ defmodule StarWars.ConnectionTest do
           }
         }
       }
+
       assert {:ok, %{data: expected}} == Absinthe.run(query, StarWars.Schema)
     end
-
   end
-
 end

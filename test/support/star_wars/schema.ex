@@ -69,7 +69,6 @@
 # }
 
 defmodule StarWars.Schema do
-
   alias StarWars.Database
 
   use Absinthe.Schema
@@ -78,18 +77,15 @@ defmodule StarWars.Schema do
   alias Absinthe.Relay.Connection
 
   query do
-
     field :rebels, :faction do
-      resolve fn
-        _, _ ->
-          Database.get_rebels()
+      resolve fn _, _ ->
+        Database.get_rebels()
       end
     end
 
     field :empire, :faction do
-      resolve fn
-        _, _ ->
-          Database.get_empire()
+      resolve fn _, _ ->
+        Database.get_empire()
       end
     end
 
@@ -97,44 +93,40 @@ defmodule StarWars.Schema do
       resolve fn
         %{type: node_type, id: id}, _ ->
           Database.get(node_type, id)
+
         _, _ ->
           {:ok, nil}
       end
     end
-
   end
 
   @desc "A ship in the Star Wars saga"
-  node object :ship do
-
+  node object(:ship) do
     @desc "The name of the ship."
     field :name, :string
-
   end
 
   node interface do
     resolve_type fn
       %{ships: _}, _ ->
         :faction
+
       _, _ ->
         :ship
     end
   end
 
   @desc "A faction in the Star Wars saga"
-  node object :faction do
-
+  node object(:faction) do
     @desc "The name of the faction"
     field :name, :string
 
     @desc "The ships used by the faction."
     connection field :ships, node_type: :ship do
-      resolve fn
-        resolve_args, %{source: faction} ->
+      resolve fn resolve_args, %{source: faction} ->
         Connection.from_list(
-          Enum.map(faction.ships, fn
-            id ->
-              with {:ok, value} <- Database.get(:ship, id) do
+          Enum.map(faction.ships, fn id ->
+            with {:ok, value} <- Database.get(:ship, id) do
               value
             end
           end),
@@ -142,10 +134,8 @@ defmodule StarWars.Schema do
         )
       end
     end
-
   end
 
   # Default
-  connection node_type: :ship
-
+  connection(node_type: :ship)
 end

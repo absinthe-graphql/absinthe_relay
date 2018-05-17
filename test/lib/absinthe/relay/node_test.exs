@@ -14,23 +14,21 @@ defmodule Absinthe.Relay.NodeTest do
     }
 
     node interface do
-      resolve_type fn
-        _, _  ->
-          # We just resolve :foos for now
-          :foo
+      resolve_type fn _, _ ->
+        # We just resolve :foos for now
+        :foo
       end
     end
 
-    node object :foo do
+    node object(:foo) do
       field :name, :string
     end
 
-    node object :other_foo, name: "FancyFoo" do
+    node object(:other_foo, name: "FancyFoo") do
       field :name, :string
     end
 
     query do
-
       field :single_foo, :foo do
         arg :id, non_null(:id)
         resolve parsing_node_ids(&resolve_foo/2, id: :foo)
@@ -52,12 +50,12 @@ defmodule Absinthe.Relay.NodeTest do
         arg :id2, non_null(:id)
         resolve parsing_node_ids(&resolve_foos/2, id1: [:foo, :bar], id2: [:foo, :bar])
       end
-
     end
 
     defp resolve_foo(%{id: %{type: :foo, id: id}}, _) do
       {:ok, Map.get(@foos, id)}
     end
+
     defp resolve_foo(%{id: id}, _) do
       {:ok, Map.get(@foos, id)}
     end
@@ -71,6 +69,7 @@ defmodule Absinthe.Relay.NodeTest do
         ]
       }
     end
+
     defp resolve_foos(%{id1: id1, id2: id2}, _) do
       {
         :ok,
@@ -80,14 +79,12 @@ defmodule Absinthe.Relay.NodeTest do
         ]
       }
     end
-
   end
 
   @foo1_id Base.encode64("Foo:1")
   @foo2_id Base.encode64("Foo:2")
 
   describe "global_id_resolver" do
-
     test "returns a function that returns an error when a global id can't be resolved" do
       fun = fn ->
         resolver = Absinthe.Relay.Node.global_id_resolver(:other_foo, nil)
@@ -104,43 +101,50 @@ defmodule Absinthe.Relay.NodeTest do
       assert debug =~ base
       assert debug =~ "%{"
     end
-
   end
 
   describe "to_global_id" do
-
     test "works given an atom for an existing type" do
       assert !is_nil(Node.to_global_id(:foo, 1, Schema))
     end
 
-    test "returns an atom for an non-existing type" do
+    test "returns nil, given an atom for an non-existing type" do
       assert is_nil(Node.to_global_id(:not_foo, 1, Schema))
     end
 
     test "works given a binary and internal ID" do
-      assert Node.to_global_id("Foo", 1)
+      assert Node.to_global_id("Foo", 1, Schema)
     end
 
     test "gives the same global ID for different type, equivalent references" do
-      assert Node.to_global_id("FancyFoo", 1) == Node.to_global_id(:other_foo, 1, Schema)
+      assert Node.to_global_id("FancyFoo", 1, Schema) == Node.to_global_id(:other_foo, 1, Schema)
     end
 
     test "gives the different global ID for different type, equivalent references" do
-      assert Node.to_global_id("FancyFoo", 1) != Node.to_global_id(:foo, 1, Schema)
+      assert Node.to_global_id("FancyFoo", 1, Schema) != Node.to_global_id(:foo, 1, Schema)
     end
 
     test "fails given a bad ID" do
-      assert is_nil(Node.to_global_id("Foo", nil))
+      assert is_nil(Node.to_global_id("Foo", nil, Schema))
+    end
+  end
+
+  describe "global_id_translator" do
+    test "default is base64 when schema passed is nil" do
+      assert Node.global_id_translator(nil) == Absinthe.Relay.Node.IDTranslator.Base64
     end
 
+    test "default is base64 when not schema is not configured" do
+      assert Node.global_id_translator(Schema) == Absinthe.Relay.Node.IDTranslator.Base64
+    end
   end
 
   describe "parsing_node_id" do
-
     test "parses one id correctly" do
       result =
         ~s<{ singleFoo(id: "#{@foo1_id}") { id name } }>
         |> Absinthe.run(Schema)
+
       assert {:ok, %{data: %{"singleFoo" => %{"name" => "Bar 1", "id" => @foo1_id}}}} == result
     end
 
@@ -148,68 +152,126 @@ defmodule Absinthe.Relay.NodeTest do
       result =
         ~s<{ singleFoo(id: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{}, errors: [
-        %{message: ~s<In argument "id": Expected node type in ["Foo"], found "FancyFoo".>}
-      ]}} = result
+
+      assert {:ok,
+              %{
+                data: %{},
+                errors: [
+                  %{
+                    message:
+                      ~s<In argument "id": Expected node type in ["Foo"], found "FancyFoo".>
+                  }
+                ]
+              }} = result
     end
 
     test "handles one incorrect id with a multiple expected types" do
       result =
         ~s<{ singleFooWithMultipleNodeTypes(id: "#{Node.to_global_id(:other_foo, 1, Schema)}") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{}, errors: [
-        %{message: ~s<In argument "id": Expected node type in ["Foo"], found "FancyFoo".>}
-      ]}} = result
+
+      assert {:ok,
+              %{
+                data: %{},
+                errors: [
+                  %{
+                    message:
+                      ~s<In argument "id": Expected node type in ["Foo"], found "FancyFoo".>
+                  }
+                ]
+              }} = result
     end
 
     test "handles one correct id with a multiple expected types" do
       result =
         ~s<{ singleFooWithMultipleNodeTypes(id: "#{@foo1_id}") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{"singleFooWithMultipleNodeTypes" => %{"name" => "Bar 1", "id" => @foo1_id}}}} == result
+
+      assert {:ok,
+              %{
+                data: %{
+                  "singleFooWithMultipleNodeTypes" => %{"name" => "Bar 1", "id" => @foo1_id}
+                }
+              }} == result
     end
 
     test "parses multiple ids correctly" do
       result =
         ~s<{ dualFoo(id1: "#{@foo1_id}", id2: "#{@foo2_id}") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{"dualFoo" => [
-        %{"name" => "Bar 1", "id" => @foo1_id},
-        %{"name" => "Bar 2", "id" => @foo2_id}
-      ]}}} == result
+
+      assert {:ok,
+              %{
+                data: %{
+                  "dualFoo" => [
+                    %{"name" => "Bar 1", "id" => @foo1_id},
+                    %{"name" => "Bar 2", "id" => @foo2_id}
+                  ]
+                }
+              }} == result
     end
 
     test "handles multiple incorrect ids" do
       result =
-        ~s<{ dualFoo(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }>
+        ~s<{ dualFoo(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{
+          Node.to_global_id(:other_foo, 2, Schema)
+        }") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{}, errors: [
-        %{message: ~s(In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)},
-        %{message: ~s(In argument "id2": Expected node type in ["Foo"], found "FancyFoo".)}
-      ]}} = result
+
+      assert {:ok,
+              %{
+                data: %{},
+                errors: [
+                  %{
+                    message:
+                      ~s(In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)
+                  },
+                  %{
+                    message:
+                      ~s(In argument "id2": Expected node type in ["Foo"], found "FancyFoo".)
+                  }
+                ]
+              }} = result
     end
 
     test "handles multiple incorrect ids with multiple node types" do
       result =
-        ~s<{ dualFooWithMultipleNodeTypes(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }>
+        ~s<{ dualFooWithMultipleNodeTypes(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{
+          Node.to_global_id(:other_foo, 2, Schema)
+        }") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{}, errors: [
-        %{message: ~s(In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)},
-        %{message: ~s(In argument "id2": Expected node type in ["Foo"], found "FancyFoo".)}
-      ]}} = result
-    end
 
+      assert {:ok,
+              %{
+                data: %{},
+                errors: [
+                  %{
+                    message:
+                      ~s(In argument "id1": Expected node type in ["Foo"], found "FancyFoo".)
+                  },
+                  %{
+                    message:
+                      ~s(In argument "id2": Expected node type in ["Foo"], found "FancyFoo".)
+                  }
+                ]
+              }} = result
+    end
 
     test "parses multiple ids correctly with multiple node types" do
       result =
         ~s<{ dualFooWithMultipleNodeTypes(id1: "#{@foo1_id}", id2: "#{@foo2_id}") { id name } }>
         |> Absinthe.run(Schema)
-      assert {:ok, %{data: %{"dualFooWithMultipleNodeTypes" => [
-        %{"name" => "Bar 1", "id" => @foo1_id},
-        %{"name" => "Bar 2", "id" => @foo2_id}
-      ]}}} == result
-    end
 
+      assert {:ok,
+              %{
+                data: %{
+                  "dualFooWithMultipleNodeTypes" => [
+                    %{"name" => "Bar 1", "id" => @foo1_id},
+                    %{"name" => "Bar 2", "id" => @foo2_id}
+                  ]
+                }
+              }} == result
+    end
   end
 
   defmodule ErrorMiddlewareSchema do
@@ -239,29 +301,27 @@ defmodule Absinthe.Relay.NodeTest do
       end
     end
 
-    node object :root do
-
+    node object(:root) do
     end
 
     query do
       node field do
-        resolve fn
-          %{type: :root}, _info -> {:ok, %Root{}}
-        end
+        resolve fn %{type: :root}, _info -> {:ok, %Root{}} end
       end
     end
   end
 
   describe "node resolution" do
     test "fails gracefully when middleware puts an error into the resolution" do
-      result = """
-        query node($id: ID!) {
-          node(id: $id) {
-            id
+      result =
+        """
+          query node($id: ID!) {
+            node(id: $id) {
+              id
+            }
           }
-        }
-      """
-      |> Absinthe.run(ErrorMiddlewareSchema, variables: %{"id" => Base.encode64("Root:root")})
+        """
+        |> Absinthe.run(ErrorMiddlewareSchema, variables: %{"id" => Base.encode64("Root:root")})
 
       assert {:ok, %{data: %{"node" => nil}, errors: [%{message: "Error"}]}} = result
     end

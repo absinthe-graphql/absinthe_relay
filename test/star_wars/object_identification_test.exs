@@ -2,7 +2,6 @@ defmodule StarWars.ObjectIdentificationTest do
   use Absinthe.Relay.Case, async: true
 
   describe "Star Wars object identification" do
-
     test "fetches the ID and name of the rebels" do
       """
       query RebelsQuery {
@@ -12,7 +11,9 @@ defmodule StarWars.ObjectIdentificationTest do
         }
       }
       """
-      |> assert_data(%{"rebels" => %{"id" => "RmFjdGlvbjox", "name" => "Alliance to Restore the Republic"}})
+      |> assert_data(%{
+        "rebels" => %{"id" => "RmFjdGlvbjox", "name" => "Alliance to Restore the Republic"}
+      })
     end
 
     test "fetches the ID and name of the empire" do
@@ -72,11 +73,9 @@ defmodule StarWars.ObjectIdentificationTest do
       """
       |> assert_data(%{"node" => %{"id" => "U2hpcDox", "name" => "X-Wing"}})
     end
-
   end
 
   defp assert_data(query, data) do
     assert {:ok, %{data: data}} == Absinthe.run(query, StarWars.Schema)
   end
-
 end

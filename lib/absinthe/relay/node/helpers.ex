@@ -42,10 +42,10 @@ defmodule Absinthe.Relay.Node.Helpers do
       |> case do
         {:ok, parsed_args} ->
           resolver.(parsed_args, info)
+
         error ->
           error
       end
     end
   end
-
 end
