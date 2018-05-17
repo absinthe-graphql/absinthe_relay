@@ -1,5 +1,6 @@
 defmodule Absinthe.Relay.ConnectionTest do
   use Absinthe.Relay.Case, async: true
+  import ExUnit.CaptureLog
 
   alias Absinthe.Relay.Connection
 
@@ -365,9 +366,25 @@ defmodule Absinthe.Relay.ConnectionTest do
         }
       }} == result
     end
-
   end
 
+  describe "when provided with a node as an edge arg" do
+    setup do
+      [record: {%{name: "Dan"}, %{role: "contributor", node: :bad}}]
+    end
+
+    test "it will ignore the additional node", %{record: record} do
+      {:ok, %{edges: [%{node: node} | _]}} = Connection.from_list([record], %{first: 1})
+
+      assert node == %{name: "Dan"}
+    end
+
+    test "it log a warning", %{record: record} do
+      assert capture_log(fn ->
+        Connection.from_list([record], %{first: 1})
+      end) =~ "Ignoring additional node provided on edge"
+    end
+  end
 
   describe ".from_slice/2" do
     test "when the offset is nil test will not do arithmetic on nil" do

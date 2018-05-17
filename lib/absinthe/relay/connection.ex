@@ -258,6 +258,7 @@ defmodule Absinthe.Relay.Connection do
   """
 
   alias Absinthe.Relay.Connection.Options
+  require Logger
 
   @cursor_prefix "arrayconnection:"
 
@@ -532,7 +533,15 @@ defmodule Absinthe.Relay.Connection do
   end
 
   defp build_edge({item, args}, cursor) do
-    Enum.into(args, build_edge(item, cursor))
+    args
+    |> Enum.flat_map(fn
+      {:node, _} ->
+        Logger.warn("Ignoring additional node provided on edge")
+        []
+      {key, val} ->
+        [{key, val}]
+    end)
+    |> Enum.into(build_edge(item, cursor))
   end
 
   defp build_edge(item, cursor) do
