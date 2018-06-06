@@ -3,7 +3,7 @@
 # 1.4.3
 
 - Docs: Better links in generated documentation, updated links to specifications. (Thanks, @Gazler, @jackmarchant!)
-- Feature: Update `Absinthe.Relay.Connection` handling of pagination information to match the latest spec. See [PR #114](https://github.cohttps://github.com/absinthe-graphql/absinthe_relay/pull/114m/absinthe-graphql/absinthe_relay/pull/114) for more information. (Thanks, @ndreynolds!)
+- Feature: Update `Absinthe.Relay.Connection` handling of pagination information to match the latest spec. See [PR #114](https://github.com/absinthe-graphql/absinthe_relay/pull/114) for more information. (Thanks, @ndreynolds!)
 - Bugfix: Better handling of errors relating to bad cursors given as arguments to `Absinthe.Relay.Connection`. See [PR #110](https://github.com/absinthe-graphql/absinthe_relay/pull/110) for more information. (Thanks, @bernardd!)
 - Feature: Support overriding the global ID translators used for `Absinthe.Relay.Node`. See [PR #93](https://github.com/absinthe-graphql/absinthe_relay/pull/93) for more details. (Thanks, @avitex!)
 
