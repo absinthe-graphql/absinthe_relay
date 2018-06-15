@@ -499,7 +499,7 @@ defmodule Absinthe.Relay.Connection do
           end
       end
     end
-  endp
+  end
 
   @doc """
   Same as `limit/1` with user provided upper bound.
