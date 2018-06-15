@@ -39,8 +39,8 @@ defmodule Absinthe.Relay.ConnectionTest do
     }
 
     @repos %{
-      "1" => %{id: "1", name: "bowlarama"}, 
-      "2" => %{id: "2", name: "krustys"}, 
+      "1" => %{id: "1", name: "bowlarama"},
+      "2" => %{id: "2", name: "krustys"},
       "3" => %{id: "3", name: "leftorium"},
     }
 
