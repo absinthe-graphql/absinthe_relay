@@ -207,7 +207,7 @@ defmodule Absinthe.Relay.Connection do
   a connection produced from these items.
 
   ### Supplying Edge Information
-  
+
   In some cases you may wish to supply extra information about the edge
   so that it can be used in the schema. For example:
 
@@ -231,7 +231,7 @@ defmodule Absinthe.Relay.Connection do
   ]
   |> Connection.from_list(args)
   ```
-  
+
   This is useful when using ecto to include relationship information
   on the edge itself via `from_query`:
 
@@ -249,11 +249,10 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
 
-  Be aware that if you pass `:node` in the arguments
-  provided in the second element of the edge tuple you will override
-  the node provided in the first element.
+  Be aware that if you pass `:node` in the arguments provided as the second
+  element of the edge tuple, that value will be ignored and a warning logged.
 
-  Similarly, if you provide a `:cursor` argument then this will override
+  If you provide a `:cursor` argument, then your value will override
   the internally generated cursor. This may or may not be desirable.
 
   ## Schema Macros
@@ -500,7 +499,7 @@ defmodule Absinthe.Relay.Connection do
           end
       end
     end
-  end
+  endp
 
   @doc """
   Same as `limit/1` with user provided upper bound.
