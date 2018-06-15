@@ -421,12 +421,12 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
 
     test "it will ignore the additional node", %{record: record} do
-      {:ok, %{edges: [%{node: node} | _]}} = Connection.from_list([record], %{first: 1})
-
-      assert node == %{name: "Dan"}
+      capture_log(fn ->
+        {:ok, %{edges: [%{node: node} | _]}} = Connection.from_list([record], %{first: 1})
+        assert node == %{name: "Dan"}
+      end)
     end
-
-    test "it log a warning", %{record: record} do
+    test "it will log a warning", %{record: record} do
       assert capture_log(fn ->
         Connection.from_list([record], %{first: 1})
       end) =~ "Ignoring additional node provided on edge"
