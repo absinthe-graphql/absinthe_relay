@@ -433,6 +433,25 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
   end
 
+  describe "when provided with a cursor as an edge arg" do
+    setup do
+      [record: {%{name: "Dan"}, %{role: "contributor", cursor: :bad}}]
+    end
+
+    test "it will ignore the additional cursor", %{record: record} do
+      capture_log(fn ->
+        {:ok, %{edges: [%{cursor: cursor} | _]}} = Connection.from_list([record], %{first: 1})
+        assert cursor == "YXJyYXljb25uZWN0aW9uOjA="
+      end)
+    end
+    test "it will log a warning", %{record: record} do
+      assert capture_log(fn ->
+        Connection.from_list([record], %{first: 1})
+      end) =~ "Ignoring additional cursor provided on edge"
+    end
+  end
+
+
   describe ".from_slice/2" do
     test "when the offset is nil test will not do arithmetic on nil" do
       Connection.from_slice([%{foo: :bar}], nil)

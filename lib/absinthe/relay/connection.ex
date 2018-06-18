@@ -578,8 +578,8 @@ defmodule Absinthe.Relay.Connection do
   defp build_edge({item, args}, cursor) do
     args
     |> Enum.flat_map(fn
-      {:node, _} ->
-        Logger.warn("Ignoring additional node provided on edge")
+      {key, _} when key in [:cursor, :node] ->
+        Logger.warn("Ignoring additional #{key} provided on edge (overriding is not allowed)")
         []
       {key, val} ->
         [{key, val}]
