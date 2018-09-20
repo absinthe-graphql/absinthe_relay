@@ -12,16 +12,23 @@ defmodule Absinthe.Relay.Node.Notation do
 
   See the `Absinthe.Relay.Node` module documentation for examples.
   """
-  defmacro node({:interface, _, _}, do: block) do
-    do_interface(__CALLER__, block)
+  defmacro node({:interface, meta, attrs}, do: block) do
+    attrs = attrs || []
+    attrs = [:node | attrs]
+    {:interface, meta, attrs ++ [[do: block]]}
   end
 
-  defmacro node({:field, _, _}, do: block) do
-    do_field(__CALLER__, block)
+  defmacro node({:field, meta, attrs}, do: block) do
+    {:field, meta, [:node, :node, [do: block]]}
   end
 
-  defmacro node({:object, _, [identifier | rest]}, do: block) do
-    do_object(__CALLER__, identifier, List.flatten(rest), block)
+  defmacro node({:object, meta, [identifier, attrs]}, do: block) when is_list(attrs) do
+    {_id_fetcher, attrs} = Keyword.pop(attrs, :id_fetcher)
+    {:object, meta, [identifier, attrs] ++ [[do: block]]}
+  end
+
+  defmacro node({:object, meta, [identifier]}, do: block) do
+    {:object, meta, [identifier] ++ [[do: block]]}
   end
 
   #
@@ -51,7 +58,7 @@ defmodule Absinthe.Relay.Node.Notation do
   # An id field is automatically configured
   defp interface_body do
     quote do
-      field :id, non_null(:id), description: "The id of the object."
+      field(:id, non_null(:id), description: "The id of the object.")
     end
   end
 
@@ -81,9 +88,9 @@ defmodule Absinthe.Relay.Node.Notation do
   defp field_body do
     quote do
       @desc "The id of an object."
-      arg :id, non_null(:id)
+      arg(:id, non_null(:id))
 
-      middleware {Absinthe.Relay.Node, :resolve_with_global_id}
+      middleware({Absinthe.Relay.Node, :resolve_with_global_id})
     end
   end
 
@@ -117,10 +124,10 @@ defmodule Absinthe.Relay.Node.Notation do
     quote do
       @desc "The ID of an object"
       field :id, non_null(:id) do
-        resolve Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(id_fetcher))
+        resolve(Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(id_fetcher)))
       end
 
-      interface :node
+      interface(:node)
     end
   end
 end

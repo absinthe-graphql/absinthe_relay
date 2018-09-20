@@ -96,23 +96,30 @@ defmodule Absinthe.Relay.Connection.Notation do
   the `edge` macro within the block to make sure the edge type is generated.
   See the `edge` macro below for more information.
   """
-  defmacro connection({:field, _, [identifier, attrs]}, do: block) when is_list(attrs) do
-    field_attrs = Keyword.drop(attrs, [:node_type, :connection])
-    do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
+  defmacro connection({:field, meta, [identifier, attrs]}, do: block) when is_list(attrs) do
+    # field_attrs = Keyword.drop(attrs, [:node_type, :connection])
+    # do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
+    {node_type, attrs} = Keyword.pop(attrs, :node_type)
+    {conn_type, attrs} = Keyword.pop(attrs, :connection)
+    attrs = Keyword.put(attrs, :type, node_type || conn_type)
+    {:field, meta, [identifier, attrs, [do: block]]}
   end
 
   defmacro connection(attrs, do: block) do
-    do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], block)
+    # do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], block)
+    []
   end
 
   defmacro connection(attrs) do
-    do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], nil)
+    # do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], nil)
+    []
   end
 
   defmacro connection(identifier, attrs, do: block) do
-    naming = naming_from_attrs!(attrs |> Keyword.put(:connection, identifier))
-    object_attrs = attrs |> Keyword.drop([:node_type, :connection])
-    do_connection_definition(__CALLER__, naming, object_attrs, block)
+    # naming = naming_from_attrs!(attrs |> Keyword.put(:connection, identifier))
+    # object_attrs = attrs |> Keyword.drop([:node_type, :connection])
+    # do_connection_definition(__CALLER__, naming, object_attrs, block)
+    []
   end
 
   @doc """
@@ -216,8 +223,8 @@ defmodule Absinthe.Relay.Connection.Notation do
     [private_category_base, private_key_base] = @private_base_identifier_path
 
     quote do
-      field :page_info, type: non_null(:page_info)
-      field :edges, type: list_of(unquote(edge_type))
+      field(:page_info, type: non_null(:page_info))
+      field(:edges, type: list_of(unquote(edge_type)))
 
       private(
         unquote(private_category_node),
@@ -242,7 +249,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         :node,
         quote do
           @desc "The item at the end of the edge"
-          field :node, unquote(node_type)
+          field(:node, unquote(node_type))
         end
       )
 
@@ -252,7 +259,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         :cursor,
         quote do
           @desc "A cursor for use in pagination"
-          field :cursor, non_null(:string)
+          field(:cursor, non_null(:string))
         end
       )
 
@@ -285,8 +292,8 @@ defmodule Absinthe.Relay.Connection.Notation do
   # with forward pagination.
   defp paginate_args(:forward) do
     quote do
-      arg :after, :string
-      arg :first, :integer
+      arg(:after, :string)
+      arg(:first, :integer)
     end
   end
 
@@ -296,8 +303,8 @@ defmodule Absinthe.Relay.Connection.Notation do
   # with backward pagination.
   defp paginate_args(:backward) do
     quote do
-      arg :before, :string
-      arg :last, :integer
+      arg(:before, :string)
+      arg(:last, :integer)
     end
   end
 

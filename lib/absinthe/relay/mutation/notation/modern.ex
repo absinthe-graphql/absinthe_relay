@@ -93,19 +93,22 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   @doc """
   Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
   """
-  defmacro payload({:field, _, [field_ident]}, do: block) do
-    __CALLER__
-    |> do_payload(field_ident, [], block)
+  defmacro payload({:field, meta, [field_ident]}, do: block) do
+    # __CALLER__
+    # |> do_payload(field_ident, [], block)
+    {:field, meta, [field_ident, [], [do: block]]}
   end
 
-  defmacro payload({:field, _, [field_ident | rest]}, do: block) do
-    __CALLER__
-    |> do_payload(field_ident, List.flatten(rest), block)
+  defmacro payload({:field, meta, [field_ident | rest] = args}, do: block) do
+    # __CALLER__
+    # |> do_payload(field_ident, List.flatten(rest), block)
+    {:field, meta, args ++ [[do: block]]}
   end
 
-  defmacro payload({:field, _, [field_ident | rest]}) do
-    __CALLER__
-    |> do_payload(field_ident, List.flatten(rest), nil)
+  defmacro payload({:field, meta, [field_ident | rest] = args}) do
+    # __CALLER__
+    # |> do_payload(field_ident, List.flatten(rest), nil)
+    {:field, meta, args}
   end
 
   defp do_payload(env, field_ident, attrs, block) do
@@ -125,7 +128,7 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
         {func_ast, attrs} ->
           ast =
             quote do
-              resolve unquote(func_ast)
+              resolve(unquote(func_ast))
             end
 
           {ast, attrs}
@@ -166,9 +169,9 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
     input_type_identifier = ident(field_ident, :input)
 
     quote do
-      arg :input, non_null(unquote(input_type_identifier))
+      arg(:input, non_null(unquote(input_type_identifier)))
 
-      middleware Absinthe.Relay.Mutation
+      middleware(Absinthe.Relay.Mutation)
 
       private(Absinthe.Relay, :mutation_field_identifier, unquote(field_ident))
     end
@@ -198,16 +201,17 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   Defines the input type for your payload field. See the module documentation for an example.
   """
   defmacro input(do: block) do
-    env = __CALLER__
+    # env = __CALLER__
 
-    Notation.recordable!(
-      env,
-      :mutation_input_type,
-      private_lookup: @private_field_identifier_path
-    )
+    # Notation.recordable!(
+    #   env,
+    #   :mutation_input_type,
+    #   private_lookup: @private_field_identifier_path
+    # )
 
-    base_identifier = Notation.get_in_private(env.module, @private_field_identifier_path)
-    record_input_object!(env, base_identifier, block)
+    # base_identifier = Notation.get_in_private(env.module, @private_field_identifier_path)
+    # record_input_object!(env, base_identifier, block)
+    []
   end
 
   @doc false
@@ -228,16 +232,17 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   Defines the output (payload) type for your payload field. See the module documentation for an example.
   """
   defmacro output(do: block) do
-    env = __CALLER__
+    # env = __CALLER__
 
-    Notation.recordable!(
-      env,
-      :mutation_output_type,
-      private_lookup: @private_field_identifier_path
-    )
+    # Notation.recordable!(
+    #   env,
+    #   :mutation_output_type,
+    #   private_lookup: @private_field_identifier_path
+    # )
 
-    base_identifier = Notation.get_in_private(env.module, @private_field_identifier_path)
-    record_object!(env, base_identifier, block)
+    # base_identifier = Notation.get_in_private(env.module, @private_field_identifier_path)
+    # record_object!(env, base_identifier, block)
+    []
   end
 
   @doc false
