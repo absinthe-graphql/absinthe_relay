@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.4.4
+
+- Feature: Enhancements to Connection macros to support extensibility of edge types. See [PR #109](https://github.com/absinthe-graphql/absinthe_relay/pull/109) (Thanks, @coderdan!)
+
 # 1.4.3
 
 - Docs: Better links in generated documentation, updated links to specifications. (Thanks, @Gazler, @jackmarchant!)
