@@ -28,8 +28,12 @@ defmodule Absinthe.Relay.Schema.Phase do
     attrs = private[:absinthe_relay] || []
 
     types =
-      Enum.reduce(attrs, types, fn {kind, style}, types ->
-        style.default_types(kind, node) ++ types
+      Enum.reduce(attrs, types, fn
+        {kind, {:fill, style}}, types ->
+          style.additional_types(kind, node) ++ types
+
+        _, types ->
+          types
       end)
 
     {node, types}
@@ -41,8 +45,8 @@ defmodule Absinthe.Relay.Schema.Phase do
 
   defp fill_nodes(%{__private__: private} = node) do
     Enum.reduce(private[:absinthe_relay] || [], node, fn
-      {type, style}, node ->
-        style.fillout(type, node)
+      {type, {:fill, style}}, node -> style.fillout(type, node)
+      _, node -> node
     end)
   end
 

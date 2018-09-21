@@ -6,6 +6,7 @@ defmodule Absinthe.Relay.Node.Notation do
   """
 
   alias Absinthe.Schema.Notation
+  alias Absinthe.Blueprint.Schema
 
   @doc """
   Define a node interface, field, or object type for a schema.
@@ -15,44 +16,63 @@ defmodule Absinthe.Relay.Node.Notation do
   defmacro node({:interface, meta, attrs}, do: block) do
     attrs = attrs || []
     attrs = [:node | attrs]
-    {:interface, meta, attrs ++ [[do: block]]}
+    block = [interface_body(), block]
+    ast = {:interface, meta, attrs ++ [[do: block]]}
+    ast |> Macro.to_string() |> Code.format_string!() |> IO.puts()
+    ast
   end
 
   defmacro node({:field, meta, attrs}, do: block) do
-    {:field, meta, [:node, :node, [do: block]]}
+    {:field, meta, [:node, :node, [do: [field_body(), block]]]}
   end
 
   defmacro node({:object, meta, [identifier, attrs]}, do: block) when is_list(attrs) do
-    {_id_fetcher, attrs} = Keyword.pop(attrs, :id_fetcher)
-    {:object, meta, [identifier, attrs] ++ [[do: block]]}
+    do_object(meta, identifier, attrs, block)
   end
 
   defmacro node({:object, meta, [identifier]}, do: block) do
-    {:object, meta, [identifier] ++ [[do: block]]}
+    do_object(meta, identifier, [], block)
   end
 
-  #
-  # INTERFACE
-  #
+  defp do_object(meta, identifier, attrs, block) do
+    {id_fetcher, attrs} = Keyword.pop(attrs, :id_fetcher)
 
-  # Add the node interface
-  defp do_interface(env, block) do
-    env
-    |> Notation.recordable!(:interface)
-    |> record_interface!(:node, [], block)
+    block = [
+      quote do
+        private(:absinthe_relay, :node, {:fill, unquote(__MODULE__)})
+        private(:absinthe_relay, :id_fetcher, unquote(id_fetcher))
+      end,
+      object_body(identifier |> Atom.to_string() |> Macro.camelize(), id_fetcher),
+      block
+    ]
 
-    Notation.desc_attribute_recorder(:node)
+    {:object, meta, [identifier, attrs] ++ [[do: block]]}
   end
 
-  @doc false
-  # Record the node interface
-  def record_interface!(env, identifier, attrs, block) do
-    Notation.record_interface!(
-      env,
-      identifier,
-      Keyword.put_new(attrs, :description, "An object with an ID"),
-      [interface_body(), block]
-    )
+  def additional_types(_, _), do: []
+
+  # def fillout(:node, %Schema.ObjectTypeDefinition{} = obj) do
+  #   id_field = id_field_template() |> Map.put(:middleware, [])
+
+  #   %{obj | interfaces: [:node | obj.interfaces], fields: [id_field | obj.fields]}
+  # end
+
+  def fillout(_, %Schema.ObjectTypeDefinition{identifier: :faction} = obj) do
+    obj
+  end
+
+  def fillout(_, node) do
+    node
+  end
+
+  defp id_field_template() do
+    %Schema.FieldDefinition{
+      identifier: :id,
+      name: "id",
+      module: __MODULE__,
+      type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
   end
 
   # An id field is automatically configured
@@ -60,28 +80,6 @@ defmodule Absinthe.Relay.Node.Notation do
     quote do
       field(:id, non_null(:id), description: "The id of the object.")
     end
-  end
-
-  #
-  # FIELD
-  #
-
-  # Add the node field
-  defp do_field(env, block) do
-    env
-    |> Notation.recordable!(:field)
-    |> record_field!(:node, [type: :node], block)
-  end
-
-  @doc false
-  # Record the node field
-  def record_field!(env, identifier, attrs, block) do
-    Notation.record_field!(
-      env,
-      identifier,
-      Keyword.put_new(attrs, :description, "Fetches an object given its ID"),
-      [field_body(), block]
-    )
   end
 
   # An id arg is automatically added
