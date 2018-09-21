@@ -6,15 +6,15 @@ defmodule Absinthe.Relay.Schema.Phase do
   alias Absinthe.Relay.Schema.Notation
 
   def run(blueprint, _) do
-    {blueprint, _acc} = Blueprint.postwalk(blueprint, [], &handle_node/2)
+    {blueprint, _acc} = Blueprint.postwalk(blueprint, [], &collect_types/2)
     {:ok, blueprint}
   end
 
-  defp handle_node(%Schema.SchemaDefinition{} = schema, acc) do
+  defp collect_types(%Schema.SchemaDefinition{} = schema, new_types) do
     new_types =
-      for {kind, identifier, style} <- acc,
-          !Enum.any?(schema.type_definitions, fn t -> t.identifier == identifier end),
-          do: style.default_type(kind, identifier)
+      Enum.reject(new_types, fn new_type ->
+        Enum.any?(schema.type_definitions, fn t -> t.identifier == new_type.identifier end)
+      end)
 
     schema =
       schema
@@ -24,12 +24,18 @@ defmodule Absinthe.Relay.Schema.Phase do
     {schema, []}
   end
 
-  defp handle_node(%{__private__: private} = node, acc) do
+  defp collect_types(%{__private__: private} = node, types) do
     attrs = private[:absinthe_relay] || []
-    {node, collect_types(attrs, node) ++ acc}
+
+    types =
+      Enum.reduce(attrs, types, fn {kind, style}, types ->
+        style.default_types(kind, node) ++ types
+      end)
+
+    {node, types}
   end
 
-  defp handle_node(node, acc) do
+  defp collect_types(node, acc) do
     {node, acc}
   end
 
@@ -42,15 +48,5 @@ defmodule Absinthe.Relay.Schema.Phase do
 
   defp fill_nodes(node) do
     node
-  end
-
-  defp collect_types(attrs, node) do
-    Enum.map(attrs, fn
-      {:payload, style} ->
-        {:payload, Notation.ident(node.identifier, :payload), style}
-
-      {:input, style} ->
-        {:input, Notation.ident(node.identifier, :input), style}
-    end)
   end
 end

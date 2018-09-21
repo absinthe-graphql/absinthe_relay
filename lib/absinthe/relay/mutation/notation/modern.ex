@@ -104,6 +104,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   end
 
   defp block_private() do
+    # This indicates to the Relay schema phase that this field should automatically
+    # generate the payload type for this field if it is not explicitly created
     quote do
       private(:absinthe_relay, :payload, unquote(__MODULE__))
     end
@@ -118,6 +120,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   """
   defmacro input(identifier, do: block) do
     [
+      # Only if the `input` macro is actually used should we mark the field
+      # as using an input type, autogenerating the `input` argument on the field.
       quote do
         private(:absinthe_relay, :input, unquote(__MODULE__))
       end
@@ -136,16 +140,21 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
     Notation.output(__MODULE__, identifier, block)
   end
 
-  def default_type(:payload, identifier) do
-    %Schema.ObjectTypeDefinition{
-      name: identifier |> Atom.to_string() |> Macro.camelize(),
-      identifier: identifier,
-      module: __MODULE__,
-      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
-    }
+  def default_types(:payload, %Schema.FieldDefinition{identifier: field_ident}) do
+    [
+      %Schema.ObjectTypeDefinition{
+        name: Notation.ident(field_ident, :payload) |> Atom.to_string() |> Macro.camelize(),
+        identifier: Notation.ident(field_ident, :payload),
+        module: __MODULE__,
+        __private__: [absinthe_relay: [payload: __MODULE__]],
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      }
+    ]
   end
 
-  def fillout(:input, field) do
+  def default_types(_, _), do: []
+
+  def fillout(:input, %Schema.FieldDefinition{} = field) do
     add_input_arg(field)
   end
 

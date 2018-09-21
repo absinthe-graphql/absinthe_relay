@@ -97,10 +97,11 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
 
   defp default_private() do
     [
+      # This indicates to the Relay schema phase that this field should automatically
+      # generate both input and payload types if they are not defined within the field
+      # itself. The `input` notation also autogenerates the `input` argument to the field
       quote do
         private(:absinthe_relay, :input, unquote(__MODULE__))
-      end,
-      quote do
         private(:absinthe_relay, :payload, unquote(__MODULE__))
       end
     ]
@@ -128,25 +129,31 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
     Notation.output(__MODULE__, identifier, block)
   end
 
-  def default_type(:input, identifier) do
-    %Blueprint.Schema.InputObjectTypeDefinition{
-      name: identifier |> Atom.to_string() |> Macro.camelize(),
-      identifier: identifier,
-      module: __MODULE__,
-      __private__: [absinthe_relay: [input: __MODULE__]],
-      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
-    }
+  def default_types(:input, %Schema.FieldDefinition{identifier: field_ident}) do
+    [
+      %Schema.InputObjectTypeDefinition{
+        name: Notation.ident(field_ident, :input) |> Atom.to_string() |> Macro.camelize(),
+        identifier: Notation.ident(field_ident, :input),
+        module: __MODULE__,
+        __private__: [absinthe_relay: [input: __MODULE__]],
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      }
+    ]
   end
 
-  def default_type(:payload, identifier) do
-    %Blueprint.Schema.ObjectTypeDefinition{
-      name: identifier |> Atom.to_string() |> Macro.camelize(),
-      identifier: identifier,
-      module: __MODULE__,
-      __private__: [absinthe_relay: [payload: __MODULE__]],
-      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
-    }
+  def default_types(:payload, %Schema.FieldDefinition{identifier: field_ident}) do
+    [
+      %Schema.ObjectTypeDefinition{
+        name: Notation.ident(field_ident, :payload) |> Atom.to_string() |> Macro.camelize(),
+        identifier: Notation.ident(field_ident, :payload),
+        module: __MODULE__,
+        __private__: [absinthe_relay: [payload: __MODULE__]],
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      }
+    ]
   end
+
+  def default_types(_, _), do: []
 
   def fillout(:input, %Schema.FieldDefinition{} = field) do
     Absinthe.Relay.Mutation.Notation.Modern.add_input_arg(field)
