@@ -80,6 +80,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   use Absinthe.Schema.Notation
   alias Absinthe.Relay.Schema.Notation
   alias Absinthe.Blueprint
+  alias Absinthe.Blueprint.Schema
+  alias Absinthe.Relay.Schema.Notation
 
   @doc """
   Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
@@ -104,13 +106,6 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
     ]
   end
 
-  # Common for both the input and payload objects
-  defp client_mutation_id_field_ast do
-    quote do
-      field(:client_mutation_id, type: non_null(:string))
-    end
-  end
-
   #
   # INPUT
   #
@@ -119,20 +114,7 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   Defines the input type for your payload field. See the module documentation for an example.
   """
   defmacro input(identifier, do: block) do
-    [
-      # We need to go up 2 levels so we can create the input object
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote do
-        input_object unquote(identifier) do
-          unquote(client_mutation_id_field_ast())
-          unquote(block)
-        end
-      end,
-      # Back down to finish the field
-      quote(do: Absinthe.Schema.Notation.pop()),
-      quote(do: Absinthe.Schema.Notation.pop())
-    ]
+    Notation.input(__MODULE__, identifier, block)
   end
 
   #
@@ -143,27 +125,16 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   Defines the output (payload) type for your payload field. See the module documentation for an example.
   """
   defmacro output(identifier, do: block) do
-    [
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote do
-        object unquote(identifier) do
-          unquote(client_mutation_id_field_ast())
-          unquote(block)
-        end
-      end,
-      quote(do: Absinthe.Schema.Notation.pop()),
-      quote(do: Absinthe.Schema.Notation.pop())
-    ]
+    Notation.output(__MODULE__, identifier, block)
   end
 
   def default_type(:input, identifier) do
-    %Blueprint.Schema.ObjectTypeDefinition{
+    %Blueprint.Schema.InputObjectTypeDefinition{
       name: identifier |> Atom.to_string() |> Macro.camelize(),
       identifier: identifier,
       module: __MODULE__,
-      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__),
-      fields: [client_mutation_id_field()]
+      __private__: [absinthe_relay: [input: __MODULE__]],
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
     }
   end
 
@@ -172,16 +143,35 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
       name: identifier |> Atom.to_string() |> Macro.camelize(),
       identifier: identifier,
       module: __MODULE__,
-      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__),
-      fields: [client_mutation_id_field()]
+      __private__: [absinthe_relay: [payload: __MODULE__]],
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
     }
+  end
+
+  def fillout(:input, %Schema.FieldDefinition{} = field) do
+    Absinthe.Relay.Mutation.Notation.Modern.add_input_arg(field)
+  end
+
+  def fillout(:input, %Schema.InputObjectTypeDefinition{} = input) do
+    # We could add this to the default_types above, but we also need to fill
+    # out this field if the user specified the types. It's easier to leave it out
+    # of the defaults, and then unconditionally apply it after the fact.
+    %{input | fields: [client_mutation_id_field() | input.fields]}
+  end
+
+  def fillout(:payload, %Schema.ObjectTypeDefinition{} = payload) do
+    %{payload | fields: [client_mutation_id_field() | payload.fields]}
+  end
+
+  def fillout(_, node) do
+    node
   end
 
   defp client_mutation_id_field() do
     %Blueprint.Schema.FieldDefinition{
       name: "client_mutation_id",
       identifier: :client_mutation_id,
-      type: %Blueprint.TypeReference.NonNull{of_type: :id},
+      type: %Blueprint.TypeReference.NonNull{of_type: :string},
       module: __MODULE__,
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
     }

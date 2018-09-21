@@ -89,6 +89,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   """
   alias Absinthe.Relay.Schema.Notation
   alias Absinthe.Blueprint.Schema
+  alias Absinthe.Blueprint
+  alias Absinthe.Blueprint.Schema
 
   @doc """
   Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
@@ -118,18 +120,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
     [
       quote do
         private(:absinthe_relay, :input, unquote(__MODULE__))
-      end,
-      # We need to go up 2 levels so we can create the input object
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote do
-        input_object unquote(identifier) do
-          unquote(block)
-        end
-      end,
-      # Back down to finish the field
-      quote(do: Absinthe.Schema.Notation.pop()),
-      quote(do: Absinthe.Schema.Notation.pop())
+      end
+      | Notation.input(__MODULE__, identifier, block)
     ]
   end
 
@@ -141,17 +133,7 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   Defines the output (payload) type for your payload field. See the module documentation for an example.
   """
   defmacro output(identifier, do: block) do
-    [
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote do
-        object unquote(identifier) do
-          unquote(block)
-        end
-      end,
-      quote(do: Absinthe.Schema.Notation.pop()),
-      quote(do: Absinthe.Schema.Notation.pop())
-    ]
+    Notation.output(__MODULE__, identifier, block)
   end
 
   def default_type(:payload, identifier) do
@@ -160,6 +142,30 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
       identifier: identifier,
       module: __MODULE__,
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
+  end
+
+  def fillout(:input, field) do
+    add_input_arg(field)
+  end
+
+  def fillout(_, node) do
+    node
+  end
+
+  def add_input_arg(field) do
+    arg = %Schema.InputValueDefinition{
+      identifier: :input,
+      name: "input",
+      type: %Blueprint.TypeReference.NonNull{of_type: Notation.ident(field.identifier, :input)},
+      module: __MODULE__,
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
+
+    %{
+      field
+      | arguments: [arg | field.arguments],
+        middleware: [Absinthe.Relay.Mutation | field.middleware]
     }
   end
 end
