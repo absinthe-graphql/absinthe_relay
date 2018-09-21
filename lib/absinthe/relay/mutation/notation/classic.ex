@@ -78,41 +78,34 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   `input_object`, etc) schema notation macros as usual.
   """
   use Absinthe.Schema.Notation
-  alias Absinthe.Schema.Notation
+  alias Absinthe.Relay.Schema.Notation
+  alias Absinthe.Blueprint
 
   @doc """
   Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
   """
 
   defmacro payload({:field, meta, args}, do: block) do
-    do_payload(meta, args, block)
+    Notation.payload(meta, args, [default_private(), block])
   end
 
   defmacro payload({:field, meta, args}) do
-    do_payload(meta, args, [])
+    Notation.payload(meta, args, default_private())
   end
 
-  defp do_payload(meta, [field_ident | rest], block) do
-    block = rewrite_input_output(field_ident, block)
-
-    {:field, meta, [field_ident, ident(field_ident, :payload) | rest] ++ [[do: block]]}
-  end
-
-  defp rewrite_input_output(field_ident, block) do
-    Macro.prewalk(block, fn
-      {:input, meta, args} ->
-        {:input, meta, [ident(field_ident, :input) | args]}
-
-      {:output, meta, args} ->
-        {:output, meta, [ident(field_ident, :payload) | args]}
-
-      node ->
-        node
-    end)
+  defp default_private() do
+    [
+      quote do
+        private(:absinthe_relay, :input, unquote(__MODULE__))
+      end,
+      quote do
+        private(:absinthe_relay, :payload, unquote(__MODULE__))
+      end
+    ]
   end
 
   # Common for both the input and payload objects
-  defp client_mutation_id_field do
+  defp client_mutation_id_field_ast do
     quote do
       field(:client_mutation_id, type: non_null(:string))
     end
@@ -127,15 +120,12 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   """
   defmacro input(identifier, do: block) do
     [
-      quote do
-        meta :absinthe_relay, input: unquote(__MODULE__)
-      end,
       # We need to go up 2 levels so we can create the input object
       quote(do: Absinthe.Schema.Notation.stash()),
       quote(do: Absinthe.Schema.Notation.stash()),
       quote do
         input_object unquote(identifier) do
-          unquote(client_mutation_id_field())
+          unquote(client_mutation_id_field_ast())
           unquote(block)
         end
       end,
@@ -158,7 +148,7 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
       quote(do: Absinthe.Schema.Notation.stash()),
       quote do
         object unquote(identifier) do
-          unquote(client_mutation_id_field())
+          unquote(client_mutation_id_field_ast())
           unquote(block)
         end
       end,
@@ -167,8 +157,33 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
     ]
   end
 
-  # Construct a namespaced identifier
-  def ident(base_identifier, category) do
-    :"#{base_identifier}_#{category}"
+  def default_type(:input, identifier) do
+    %Blueprint.Schema.ObjectTypeDefinition{
+      name: identifier |> Atom.to_string() |> Macro.camelize(),
+      identifier: identifier,
+      module: __MODULE__,
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__),
+      fields: [client_mutation_id_field()]
+    }
+  end
+
+  def default_type(:payload, identifier) do
+    %Blueprint.Schema.ObjectTypeDefinition{
+      name: identifier |> Atom.to_string() |> Macro.camelize(),
+      identifier: identifier,
+      module: __MODULE__,
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__),
+      fields: [client_mutation_id_field()]
+    }
+  end
+
+  defp client_mutation_id_field() do
+    %Blueprint.Schema.FieldDefinition{
+      name: "client_mutation_id",
+      identifier: :client_mutation_id,
+      type: %Blueprint.TypeReference.NonNull{of_type: :id},
+      module: __MODULE__,
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
   end
 end

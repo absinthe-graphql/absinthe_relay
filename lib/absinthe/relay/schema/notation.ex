@@ -58,4 +58,28 @@ defmodule Absinthe.Relay.Schema.Notation do
   defp flavored(module, flavor) do
     Module.safe_concat(module, Keyword.fetch!(@flavor_namespaces, flavor))
   end
+
+  def payload(meta, [field_ident | rest], block) do
+    block = rewrite_input_output(field_ident, block)
+
+    {:field, meta, [field_ident, ident(field_ident, :payload) | rest] ++ [[do: block]]}
+  end
+
+  defp rewrite_input_output(field_ident, block) do
+    Macro.prewalk(block, fn
+      {:input, meta, args} ->
+        {:input, meta, [ident(field_ident, :input) | args]}
+
+      {:output, meta, args} ->
+        {:output, meta, [ident(field_ident, :payload) | args]}
+
+      node ->
+        node
+    end)
+  end
+
+  @doc false
+  def ident(base_identifier, category) do
+    :"#{base_identifier}_#{category}"
+  end
 end
