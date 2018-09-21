@@ -124,8 +124,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
       # as using an input type, autogenerating the `input` argument on the field.
       quote do
         private(:absinthe_relay, :input, unquote(__MODULE__))
-      end
-      | Notation.input(__MODULE__, identifier, block)
+      end,
+      Notation.input(__MODULE__, identifier, block)
     ]
   end
 

@@ -61,38 +61,39 @@ defmodule Absinthe.Relay.Schema.Notation do
 
   @doc false
   def input(style, identifier, block) do
-    [
+    quote do
       # We need to go up 2 levels so we can create the input object
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote do
-        input_object unquote(identifier) do
-          private(:absinthe_relay, :input, unquote(style))
-          unquote(block)
-        end
-      end,
+      Absinthe.Schema.Notation.stash()
+      Absinthe.Schema.Notation.stash()
+
+      input_object unquote(identifier) do
+        private(:absinthe_relay, :input, unquote(style))
+        unquote(block)
+      end
+
       # Back down to finish the field
-      quote(do: Absinthe.Schema.Notation.pop()),
-      quote(do: Absinthe.Schema.Notation.pop())
-    ]
+      Absinthe.Schema.Notation.pop()
+      Absinthe.Schema.Notation.pop()
+    end
   end
 
   @doc false
   def output(style, identifier, block) do
-    [
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote(do: Absinthe.Schema.Notation.stash()),
-      quote do
-        object unquote(identifier) do
-          private(:absinthe_relay, :payload, unquote(style))
-          unquote(block)
-        end
-      end,
-      quote(do: Absinthe.Schema.Notation.pop()),
-      quote(do: Absinthe.Schema.Notation.pop())
-    ]
+    quote do
+      Absinthe.Schema.Notation.stash()
+      Absinthe.Schema.Notation.stash()
+
+      object unquote(identifier) do
+        private(:absinthe_relay, :payload, unquote(style))
+        unquote(block)
+      end
+
+      Absinthe.Schema.Notation.pop()
+      Absinthe.Schema.Notation.pop()
+    end
   end
 
+  @doc false
   def payload(meta, [field_ident | rest], block) do
     block = rewrite_input_output(field_ident, block)
 
