@@ -94,28 +94,6 @@ defmodule Absinthe.Relay.Node.Notation do
     end
   end
 
-  #
-  # OBJECT
-  #
-
-  # Define a node object type
-  defp do_object(env, identifier, attrs, block) do
-    record_object!(env, identifier, attrs, block)
-  end
-
-  @doc false
-  # Record a node object type
-  def record_object!(env, identifier, attrs, block) do
-    name = attrs[:name] || identifier |> Atom.to_string() |> Absinthe.Utils.camelize()
-
-    Notation.record_object!(env, identifier, Keyword.delete(attrs, :id_fetcher), [
-      object_body(name, attrs[:id_fetcher]),
-      block
-    ])
-
-    Notation.desc_attribute_recorder(identifier)
-  end
-
   # Automatically add:
   # - An id field that resolves to the generated global ID
   #   for an object of this type

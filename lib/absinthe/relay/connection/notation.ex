@@ -101,8 +101,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     # do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
     {node_type, attrs} = Keyword.pop(attrs, :node_type)
     {conn_type, attrs} = Keyword.pop(attrs, :connection)
-    attrs = Keyword.put(attrs, :type, node_type || conn_type)
-    {:field, meta, [identifier, attrs, [do: block]]}
+    {:field, meta, [identifier, node_type || conn_type, attrs, [do: block]]}
   end
 
   defmacro connection(attrs, do: block) do

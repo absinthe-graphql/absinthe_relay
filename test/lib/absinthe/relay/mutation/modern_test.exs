@@ -607,5 +607,9 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
         assert !Map.get(field.args, :input)
       end
     end
+
+    test "output is present" do
+      assert Absinthe.Schema.lookup_type(SchemaWithoutInputOrOutput, :without_block_payload)
+    end
   end
 end

@@ -84,82 +84,32 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
   """
 
-  defmacro payload({:field, meta, [field_ident | rest] = args}, do: block) do
-    # __CALLER__
-    # |> do_payload(field_ident, List.flatten(rest), block)
-    rest = Keyword.put(rest, :type, :string)
-
-    {:field, meta, [field_ident | rest] ++ [[do: block]]}
+  defmacro payload({:field, meta, args}, do: block) do
+    do_payload(meta, args, block)
   end
 
-  defmacro payload({:field, meta, [field_ident | rest] = args}) do
-    # __CALLER__
-    # |> do_payload(field_ident, List.flatten(rest), nil)
-    field_ident |> IO.inspect()
-    {:field, meta, args}
+  defmacro payload({:field, meta, args}) do
+    do_payload(meta, args, [])
   end
 
-  defp do_payload(env, field_ident, attrs, block) do
-    env
-    |> Notation.recordable!(:field)
-    |> record_field!(field_ident, attrs, block)
+  defp do_payload(meta, [field_ident | rest], block) do
+    block = rewrite_input_output(field_ident, block)
+
+    {:field, meta, [field_ident, ident(field_ident, :payload) | rest] ++ [[do: block]]}
   end
 
-  @doc false
-  # Record the mutation field
-  def record_field!(env, field_ident, attrs, block) do
-    {maybe_resolve_function, attrs} =
-      case Keyword.pop(attrs, :resolve) do
-        {nil, attrs} ->
-          {[], attrs}
+  defp rewrite_input_output(field_ident, block) do
+    Macro.prewalk(block, fn
+      {:input, meta, args} ->
+        {:input, meta, [ident(field_ident, :input) | args]}
 
-        {func_ast, attrs} ->
-          ast =
-            quote do
-              resolve(unquote(func_ast))
-            end
+      {:output, meta, args} ->
+        {:output, meta, [ident(field_ident, :payload) | args]}
 
-          {ast, attrs}
-      end
-
-    Notation.record_field!(
-      env,
-      field_ident,
-      Keyword.put(attrs, :type, ident(field_ident, :payload)),
-      [
-        field_body(field_ident),
-        maybe_resolve_function,
-        block,
-        finalize()
-      ]
-    )
+      node ->
+        node
+    end)
   end
-
-  defp field_body(field_ident) do
-    input_type_identifier = ident(field_ident, :input)
-
-    quote do
-      arg(:input, non_null(unquote(input_type_identifier)))
-
-      middleware(Absinthe.Relay.Mutation)
-
-      private(Absinthe.Relay, :mutation_field_identifier, unquote(field_ident))
-    end
-  end
-
-  defp finalize do
-    quote do
-      input do
-        # Default!
-      end
-
-      output do
-        # Default!
-      end
-    end
-  end
-
-  @private_field_identifier_path [Absinthe.Relay, :mutation_field_identifier]
 
   # Common for both the input and payload objects
   defp client_mutation_id_field do
@@ -175,28 +125,24 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   @doc """
   Defines the input type for your payload field. See the module documentation for an example.
   """
-  defmacro input(do: block) do
-    # env = __CALLER__
-
-    # Notation.recordable!(
-    #   env,
-    #   :mutation_input_type,
-    #   private_lookup: @private_field_identifier_path
-    # )
-
-    # base_identifier = Notation.get_in_private(env.module, @private_field_identifier_path)
-    # record_input_object!(env, base_identifier, block)
-    []
-  end
-
-  @doc false
-  # Record the mutation input object
-  def record_input_object!(env, base_identifier, block) do
-    identifier = ident(base_identifier, :input)
-
-    unless already_recorded?(env.module, :input_object, identifier) do
-      Notation.record_input_object!(env, identifier, [], [client_mutation_id_field(), block])
-    end
+  defmacro input(identifier, do: block) do
+    [
+      quote do
+        meta :absinthe_relay, input: unquote(__MODULE__)
+      end,
+      # We need to go up 2 levels so we can create the input object
+      quote(do: Absinthe.Schema.Notation.stash()),
+      quote(do: Absinthe.Schema.Notation.stash()),
+      quote do
+        input_object unquote(identifier) do
+          unquote(client_mutation_id_field())
+          unquote(block)
+        end
+      end,
+      # Back down to finish the field
+      quote(do: Absinthe.Schema.Notation.pop()),
+      quote(do: Absinthe.Schema.Notation.pop())
+    ]
   end
 
   #
@@ -206,40 +152,23 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   @doc """
   Defines the output (payload) type for your payload field. See the module documentation for an example.
   """
-  defmacro output(do: block) do
-    # env = __CALLER__
-
-    # Notation.recordable!(
-    #   env,
-    #   :mutation_output_type,
-    #   private_lookup: @private_field_identifier_path
-    # )
-
-    # base_identifier = Notation.get_in_private(env.module, @private_field_identifier_path)
-    # record_object!(env, base_identifier, block)
-    []
-  end
-
-  @doc false
-  # Record the mutation input object
-  def record_object!(env, base_identifier, block) do
-    identifier = ident(base_identifier, :payload)
-
-    unless already_recorded?(env.module, :object, identifier) do
-      Notation.record_object!(env, identifier, [], [client_mutation_id_field(), block])
-    end
-  end
-
-  #
-  # UTILITIES
-  #
-
-  defp already_recorded?(mod, kind, identifier) do
-    Notation.Scope.recorded?(mod, kind, identifier)
+  defmacro output(identifier, do: block) do
+    [
+      quote(do: Absinthe.Schema.Notation.stash()),
+      quote(do: Absinthe.Schema.Notation.stash()),
+      quote do
+        object unquote(identifier) do
+          unquote(client_mutation_id_field())
+          unquote(block)
+        end
+      end,
+      quote(do: Absinthe.Schema.Notation.pop()),
+      quote(do: Absinthe.Schema.Notation.pop())
+    ]
   end
 
   # Construct a namespaced identifier
-  defp ident(base_identifier, category) do
+  def ident(base_identifier, category) do
     :"#{base_identifier}_#{category}"
   end
 end

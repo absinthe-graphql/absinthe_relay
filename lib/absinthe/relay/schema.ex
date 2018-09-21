@@ -17,6 +17,7 @@ defmodule Absinthe.Relay.Schema do
 
   defp do_using(flavor, opts) do
     quote do
+      @pipeline_modifier unquote(__MODULE__)
       use Absinthe.Relay.Schema.Notation, unquote(flavor)
       import_types Absinthe.Relay.Connection.Types
 
@@ -24,5 +25,10 @@ defmodule Absinthe.Relay.Schema do
         Keyword.get(unquote(opts), :global_id_translator)
       end
     end
+  end
+
+  def pipeline(pipeline) do
+    pipeline
+    |> Absinthe.Pipeline.insert_after(Absinthe.Phase.Schema.TypeImports, __MODULE__.Phase)
   end
 end
