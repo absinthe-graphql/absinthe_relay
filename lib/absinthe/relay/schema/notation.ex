@@ -67,7 +67,7 @@ defmodule Absinthe.Relay.Schema.Notation do
       Absinthe.Schema.Notation.stash()
 
       input_object unquote(identifier) do
-        private(:absinthe_relay, :input, unquote(style))
+        private(:absinthe_relay, :input, {:fill, unquote(style)})
         unquote(block)
       end
 
@@ -84,7 +84,7 @@ defmodule Absinthe.Relay.Schema.Notation do
       Absinthe.Schema.Notation.stash()
 
       object unquote(identifier) do
-        private(:absinthe_relay, :payload, unquote(style))
+        private(:absinthe_relay, :payload, {:fill, unquote(style)})
         unquote(block)
       end
 
