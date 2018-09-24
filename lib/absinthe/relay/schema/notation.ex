@@ -102,11 +102,11 @@ defmodule Absinthe.Relay.Schema.Notation do
 
   defp rewrite_input_output(field_ident, block) do
     Macro.prewalk(block, fn
-      {:input, meta, args} ->
-        {:input, meta, [ident(field_ident, :input) | args]}
+      {:input, meta, [[do: block]]} ->
+        {:input, meta, [ident(field_ident, :input), [do: block]]}
 
-      {:output, meta, args} ->
-        {:output, meta, [ident(field_ident, :payload) | args]}
+      {:output, meta, [[do: block]]} ->
+        {:output, meta, [ident(field_ident, :payload), [do: block]]}
 
       node ->
         node

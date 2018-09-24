@@ -83,8 +83,8 @@ defmodule Absinthe.Relay.Node do
 
   This will create an object type, `:person`, as you might expect. An `:id`
   field is created for you automatically, and this field generates a global ID;
-  an opaque string that's built using a global ID translator (by default a 
-  Base64 implementation). All of this is handled for you automatically by 
+  an opaque string that's built using a global ID translator (by default a
+  Base64 implementation). All of this is handled for you automatically by
   prefixing your object type definition with `"node "`.
 
   The raw, internal value is retrieved using `default_id_fetcher/2` which just
@@ -196,7 +196,7 @@ defmodule Absinthe.Relay.Node do
       nil ->
         {:error, "Unknown type `#{type_name}'"}
 
-      %{__reference__: %{identifier: ident}, interfaces: interfaces} ->
+      %{identifier: ident, interfaces: interfaces} ->
         if Enum.member?(List.wrap(interfaces), :node) do
           {:ok, %{type: ident, id: id}}
         else

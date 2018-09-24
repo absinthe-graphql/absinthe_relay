@@ -3,8 +3,6 @@ defmodule StarWars.ObjectIdentificationTest do
 
   describe "Star Wars object identification" do
     test "fetches the ID and name of the rebels" do
-      StarWars.Schema.__absinthe_type__(:faction) |> IO.inspect()
-
       """
       query RebelsQuery {
         rebels {

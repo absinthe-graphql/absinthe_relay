@@ -17,13 +17,11 @@ defmodule Absinthe.Relay.Node.Notation do
     attrs = attrs || []
     attrs = [:node | attrs]
     block = [interface_body(), block]
-    ast = {:interface, meta, attrs ++ [[do: block]]}
-    ast |> Macro.to_string() |> Code.format_string!() |> IO.puts()
-    ast
+    {:interface, meta, attrs ++ [[do: block]]}
   end
 
   defmacro node({:field, meta, attrs}, do: block) do
-    {:field, meta, [:node, :node, [do: [field_body(), block]]]}
+    {:field, meta, [:node, :node, (attrs || []) ++ [do: [field_body(), block]]]}
   end
 
   defmacro node({:object, meta, [identifier, attrs]}, do: block) when is_list(attrs) do

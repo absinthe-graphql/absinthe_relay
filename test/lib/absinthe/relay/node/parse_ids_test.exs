@@ -1,6 +1,8 @@
 defmodule Absinthe.Relay.Node.ParseIDsTest do
   use Absinthe.Relay.Case, async: true
 
+  @moduletag :pending
+
   defmodule Foo do
     defstruct [:id, :name]
   end
