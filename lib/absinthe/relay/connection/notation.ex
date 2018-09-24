@@ -6,6 +6,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   """
 
   alias Absinthe.Schema.Notation
+  alias Absinthe.Blueprint.Schema
 
   defmodule Naming do
     @moduledoc false
@@ -119,10 +120,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   defp do_connection_field(identifier, attrs, block) do
     naming = naming_from_attrs!(attrs)
 
-    pagination_args =
-      attrs
-      |> Keyword.get(:paginate, :both)
-      |> paginate_args
+    paginate = Keyword.get(attrs, :paginate, :both)
 
     field_attrs =
       attrs
@@ -131,7 +129,7 @@ defmodule Absinthe.Relay.Connection.Notation do
 
     quote do
       field unquote(identifier), unquote(field_attrs) do
-        unquote(pagination_args)
+        private(:absinthe_relay, {:paginate, unquote(paginate)}, {:fill, unquote(__MODULE__)})
         unquote(block)
       end
     end
@@ -150,6 +148,7 @@ defmodule Absinthe.Relay.Connection.Notation do
 
     quote do
       object unquote(identifier), unquote(attrs) do
+        private(:absinthe_relay, {:connection, unquote(conn_attrs)}, {:fill, unquote(__MODULE__)})
         field(:page_info, type: non_null(:page_info))
         field(:edges, type: list_of(unquote(naming.edge_type_identifier)))
         unquote(block)
@@ -213,36 +212,56 @@ defmodule Absinthe.Relay.Connection.Notation do
     end
   end
 
-  # Forward pagination arguments.
-  #
-  # Arguments appropriate to include on a field whose type is a connection
-  # with forward pagination.
+  def additional_types({:connection, attrs}, _) do
+    naming = naming_from_attrs!(attrs)
+    identifier = naming.edge_type_identifier
+
+    %Schema.ObjectTypeDefinition{
+      name: identifier |> Atom.to_string() |> Macro.camelize(),
+      identifier: identifier,
+      module: __MODULE__,
+      __private__: [absinthe_relay: [payload: {:fill, __MODULE__}]],
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
+  end
+
+  def additional_types(_, _), do: []
+
+  def fillout({:paginate, type}, node) do
+    Map.update!(node, :arguments, fn arguments ->
+      existing = MapSet.new(arguments, & &1.identifier)
+
+      type
+      |> paginate_args()
+      |> Enum.map(fn {id, type} -> build_arg(id, type) end)
+      |> Enum.filter(&(&1.identifier not in existing))
+      |> Enum.concat(arguments)
+    end)
+  end
+
+  def fillout(_, node) do
+    node
+  end
+
   defp paginate_args(:forward) do
-    quote do
-      arg(:after, :string)
-      arg(:first, :integer)
-    end
+    [after: :string, first: :integer]
   end
 
-  # Backward pagination arguments.
-
-  # Arguments appropriate to include on a field whose type is a connection
-  # with backward pagination.
   defp paginate_args(:backward) do
-    quote do
-      arg(:before, :string)
-      arg(:last, :integer)
-    end
+    [before: :string, last: :integer]
   end
 
-  # Pagination arguments (both forward and backward).
-
-  # Arguments appropriate to include on a field whose type is a connection
-  # with both forward and backward pagination.
   defp paginate_args(:both) do
-    [
-      paginate_args(:forward),
-      paginate_args(:backward)
-    ]
+    paginate_args(:forward) ++ paginate_args(:backward)
+  end
+
+  defp build_arg(id, type) do
+    %Schema.InputValueDefinition{
+      name: id |> Atom.to_string(),
+      identifier: id,
+      type: type,
+      module: __MODULE__,
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
   end
 end

@@ -30,7 +30,7 @@ defmodule Absinthe.Relay.Schema.Phase do
     types =
       Enum.reduce(attrs, types, fn
         {kind, {:fill, style}}, types ->
-          style.additional_types(kind, node) ++ types
+          List.wrap(style.additional_types(kind, node)) ++ types
 
         _, types ->
           types

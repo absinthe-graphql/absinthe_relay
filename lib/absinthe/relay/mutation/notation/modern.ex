@@ -141,15 +141,13 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   end
 
   def additional_types(:payload, %Schema.FieldDefinition{identifier: field_ident}) do
-    [
-      %Schema.ObjectTypeDefinition{
-        name: Notation.ident(field_ident, :payload) |> Atom.to_string() |> Macro.camelize(),
-        identifier: Notation.ident(field_ident, :payload),
-        module: __MODULE__,
-        __private__: [absinthe_relay: [payload: {:fill, __MODULE__}]],
-        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
-      }
-    ]
+    %Schema.ObjectTypeDefinition{
+      name: Notation.ident(field_ident, :payload) |> Atom.to_string() |> Macro.camelize(),
+      identifier: Notation.ident(field_ident, :payload),
+      module: __MODULE__,
+      __private__: [absinthe_relay: [payload: {:fill, __MODULE__}]],
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
   end
 
   def additional_types(_, _), do: []
