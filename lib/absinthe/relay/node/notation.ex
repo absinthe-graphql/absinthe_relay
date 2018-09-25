@@ -39,7 +39,7 @@ defmodule Absinthe.Relay.Node.Notation do
         private(:absinthe_relay, :node, {:fill, unquote(__MODULE__)})
         private(:absinthe_relay, :id_fetcher, unquote(id_fetcher))
       end,
-      object_body(identifier |> Atom.to_string() |> Macro.camelize(), id_fetcher),
+      object_body(id_fetcher),
       block
     ]
 
@@ -93,11 +93,11 @@ defmodule Absinthe.Relay.Node.Notation do
   # - An id field that resolves to the generated global ID
   #   for an object of this type
   # - A declaration that this implements the node interface
-  defp object_body(name, id_fetcher) do
+  defp object_body(id_fetcher) do
     quote do
       @desc "The ID of an object"
       field :id, non_null(:id) do
-        resolve(Absinthe.Relay.Node.global_id_resolver(unquote(name), unquote(id_fetcher)))
+        middleware {Absinthe.Relay.Node, :global_id_resolver}, unquote(id_fetcher)
       end
 
       interface(:node)

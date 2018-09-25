@@ -294,6 +294,24 @@ defmodule Absinthe.Relay.Node do
   # The resolver for a global ID. If a type identifier instead of a type name
   # is used during field configuration, the type name needs to be looked up
   # during resolution.
+
+  def global_id_resolver(%Absinthe.Resolution{state: :unresolved} = res, id_fetcher) do
+    type = res.parent_type
+
+    id_fetcher = id_fetcher || (&default_id_fetcher/2)
+
+    result =
+      case id_fetcher.(res.source, res) do
+        nil ->
+          report_fetch_id_error(type.name, res.source)
+
+        internal_id ->
+          {:ok, to_global_id(type.name, internal_id, res.schema)}
+      end
+
+    Absinthe.Resolution.put_result(res, result)
+  end
+
   def global_id_resolver(identifier, nil) do
     global_id_resolver(identifier, &default_id_fetcher/2)
   end
