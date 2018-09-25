@@ -2,8 +2,6 @@ defmodule Absinthe.Relay.NodeTest do
   use Absinthe.Relay.Case, async: true
   import ExUnit.CaptureLog
 
-  @moduletag :pending
-
   alias Absinthe.Relay.Node
 
   defmodule Schema do

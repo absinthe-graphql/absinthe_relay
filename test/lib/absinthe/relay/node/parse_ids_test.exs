@@ -1,8 +1,6 @@
 defmodule Absinthe.Relay.Node.ParseIDsTest do
   use Absinthe.Relay.Case, async: true
 
-  @moduletag :pending
-
   defmodule Foo do
     defstruct [:id, :name]
   end
@@ -476,7 +474,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
              data: %{"updateParent" => nil},
              errors: [
                %{
-                 locations: [%{column: 0, line: 2}],
+                 locations: [%{column: 5, line: 2}],
                  message:
                    ~s<In argument "input": In field "parent": In field "child": In field "id": Expected node type in ["Child"], found "FancyFoo".>
                }
