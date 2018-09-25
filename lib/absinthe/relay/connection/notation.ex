@@ -14,7 +14,8 @@ defmodule Absinthe.Relay.Connection.Notation do
     defstruct base_identifier: nil,
               node_type_identifier: nil,
               connection_type_identifier: nil,
-              edge_type_identifier: nil
+              edge_type_identifier: nil,
+              attrs: []
 
     def define(node_type_identifier) do
       define(node_type_identifier, node_type_identifier)
@@ -33,7 +34,8 @@ defmodule Absinthe.Relay.Connection.Notation do
         node_type_identifier: node_type_identifier,
         base_identifier: base_identifier,
         connection_type_identifier: ident(base_identifier, :connection),
-        edge_type_identifier: ident(base_identifier, :edge)
+        edge_type_identifier: ident(base_identifier, :edge),
+        attrs: [node_type: node_type_identifier, connection: base_identifier]
       }
     end
 
@@ -139,16 +141,16 @@ defmodule Absinthe.Relay.Connection.Notation do
     identifier = naming.connection_type_identifier
     attrs = Keyword.drop(attrs, [:node_type, :connection])
 
-    conn_attrs = [
-      connection: naming.base_identifier,
-      node_type: naming.node_type_identifier
-    ]
-
-    block = name_edge(block, conn_attrs)
+    block = name_edge(block, naming.attrs)
 
     quote do
       object unquote(identifier), unquote(attrs) do
-        private(:absinthe_relay, {:connection, unquote(conn_attrs)}, {:fill, unquote(__MODULE__)})
+        private(
+          :absinthe_relay,
+          {:connection, unquote(naming.attrs)},
+          {:fill, unquote(__MODULE__)}
+        )
+
         field(:page_info, type: non_null(:page_info))
         field(:edges, type: list_of(unquote(naming.edge_type_identifier)))
         unquote(block)
@@ -201,7 +203,7 @@ defmodule Absinthe.Relay.Connection.Notation do
       Absinthe.Schema.Notation.stash()
 
       object unquote(naming.edge_type_identifier), unquote(attrs) do
-        private(:absinthe_relay, :edge, {:fill, unquote(__MODULE__)})
+        private(:absinthe_relay, {:edge, unquote(naming.attrs)}, {:fill, unquote(__MODULE__)})
         unquote(block)
       end
 
