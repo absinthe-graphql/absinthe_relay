@@ -46,7 +46,7 @@ defmodule AbsintheRelay.Mixfile do
   defp deps do
     [
       # {:absinthe, "~> 1.4.0"},
-      {:absinthe, path: "../absinthe"},
+      {:absinthe, github: "absinthe-graphql/absinthe"},
       {:ecto, "~> 2.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
       {:ex_doc, "~> 0.16", only: :dev}
