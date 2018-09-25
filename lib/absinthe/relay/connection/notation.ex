@@ -160,6 +160,10 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   defp name_edge([], _), do: []
 
+  defp name_edge({:edge, meta, [[do: block]]}, conn_attrs) do
+    {:edge, meta, [conn_attrs, [do: block]]}
+  end
+
   defp name_edge({:__block__, meta, content}, conn_attrs) do
     content =
       Enum.map(content, fn
