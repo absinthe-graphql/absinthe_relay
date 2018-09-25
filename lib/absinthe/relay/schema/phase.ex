@@ -7,6 +7,38 @@ defmodule Absinthe.Relay.Schema.Phase do
 
   def run(blueprint, _) do
     {blueprint, _acc} = Blueprint.postwalk(blueprint, [], &collect_types/2)
+
+    {_, acc} =
+      Blueprint.prewalk(blueprint, [], fn node, acc ->
+        case node do
+          %Schema.FieldDefinition{identifier: identifier} = node ->
+            obj =
+              case hd(acc) do
+                {obj, _, _} -> obj
+                obj -> obj
+              end
+
+            {node, [{obj, identifier, :field} | acc]}
+
+          %Schema.InputValueDefinition{identifier: identifier} = node ->
+            obj =
+              case hd(acc) do
+                {obj, _, _} -> obj
+                obj -> obj
+              end
+
+            {node, [{obj, identifier, :arg} | acc]}
+
+          %{identifier: identifier} = node ->
+            {node, [identifier | acc]}
+
+          node ->
+            {node, acc}
+        end
+      end)
+
+    # acc |> IO.inspect()
+
     {:ok, blueprint}
   end
 

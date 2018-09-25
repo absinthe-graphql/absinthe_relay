@@ -5,7 +5,6 @@ defmodule Absinthe.Relay.Node.Notation do
   See `Absinthe.Relay.Node` for examples of use.
   """
 
-  alias Absinthe.Schema.Notation
   alias Absinthe.Blueprint.Schema
 
   @doc """

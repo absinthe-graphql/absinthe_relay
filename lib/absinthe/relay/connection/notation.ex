@@ -201,10 +201,7 @@ defmodule Absinthe.Relay.Connection.Notation do
       Absinthe.Schema.Notation.stash()
 
       object unquote(naming.edge_type_identifier), unquote(attrs) do
-        @desc "The item at the end of the edge"
-        field(:node, unquote(naming.node_type_identifier))
-        @desc "A cursor for use in pagination"
-        field(:cursor, non_null(:string))
+        private(:absinthe_relay, :edge, {:fill, unquote(__MODULE__)})
         unquote(block)
       end
 
@@ -220,7 +217,7 @@ defmodule Absinthe.Relay.Connection.Notation do
       name: identifier |> Atom.to_string() |> Macro.camelize(),
       identifier: identifier,
       module: __MODULE__,
-      __private__: [absinthe_relay: [payload: {:fill, __MODULE__}]],
+      __private__: [absinthe_relay: [{{:edge, attrs}, {:fill, __MODULE__}}]],
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
     }
   end
@@ -229,18 +226,56 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   def fillout({:paginate, type}, node) do
     Map.update!(node, :arguments, fn arguments ->
-      existing = MapSet.new(arguments, & &1.identifier)
-
       type
       |> paginate_args()
       |> Enum.map(fn {id, type} -> build_arg(id, type) end)
-      |> Enum.filter(&(&1.identifier not in existing))
-      |> Enum.concat(arguments)
+      |> put_uniq(arguments)
+    end)
+  end
+
+  #   @desc "The item at the end of the edge"
+  # field(:node, unquote(naming.node_type_identifier))
+  # @desc "A cursor for use in pagination"
+  # field(:cursor, non_null(:string))
+  def fillout({:edge, attrs}, node) do
+    naming = naming_from_attrs!(attrs)
+
+    Map.update!(node, :fields, fn fields ->
+      naming.node_type_identifier
+      |> edge_fields
+      |> put_uniq(fields)
     end)
   end
 
   def fillout(_, node) do
     node
+  end
+
+  defp put_uniq(new, prior) do
+    existing = MapSet.new(prior, & &1.identifier)
+
+    new
+    |> Enum.filter(&(&1.identifier not in existing))
+    |> Enum.concat(prior)
+  end
+
+  defp edge_fields(node_type) do
+    [
+      %Schema.FieldDefinition{
+        name: "node",
+        identifier: :node,
+        type: node_type,
+        module: __MODULE__,
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      },
+      %Schema.FieldDefinition{
+        name: "cursor",
+        identifier: :cursor,
+        type: :string,
+        module: __MODULE__,
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      }
+    ]
   end
 
   defp paginate_args(:forward) do
