@@ -206,6 +206,55 @@ defmodule Absinthe.Relay.Connection do
   Use `from_slice` when you have items for a particular request, and merely need
   a connection produced from these items.
 
+  ### Supplying Edge Information
+
+  In some cases you may wish to supply extra information about the edge
+  so that it can be used in the schema. For example:
+
+  ```
+  connection node_type: :user do
+    edge do
+      field :role, :string
+    end
+  end
+  ```
+
+  To do this, pass `from_list` a list of 2-element tuples
+  where the first element is the node and the second element
+  either a map or a keyword list of the edge attributes.
+
+  ```
+  [
+    {%{name: "Jim"}, role: "owner"},
+    {%{name: "Sari"}, role: "guest"},
+    {%{name: "Lee"}, %{role: "guest"}}, # This is OK, too
+  ]
+  |> Connection.from_list(args)
+  ```
+
+  This is useful when using ecto to include relationship information
+  on the edge itself via `from_query`:
+
+  ```
+  # In a UserResolver module
+  alias Absinthe.Relay
+
+  def list_teams(args, %{context: %{current_user: user}}) do
+    TeamAssignment
+    |> from
+    |> where([a], a.user_id == ^user.id)
+    |> join(:left, [a], t in assoc(a, :team))
+    |> select([a,t], {t, map(a, [:role])})
+    |> Relay.Connection.from_query(&Repo.all/1, args)
+  end
+  ```
+
+  Be aware that if you pass `:node` in the arguments provided as the second
+  element of the edge tuple, that value will be ignored and a warning logged.
+
+  If you provide a `:cursor` argument, then your value will override
+  the internally generated cursor. This may or may not be desirable.
+
   ## Schema Macros
 
   For more details on connection-related macros, see
@@ -213,6 +262,7 @@ defmodule Absinthe.Relay.Connection do
   """
 
   alias Absinthe.Relay.Connection.Options
+  require Logger
 
   @cursor_prefix "arrayconnection:"
 
@@ -512,13 +562,8 @@ defmodule Absinthe.Relay.Connection do
   defp build_cursors([item | items], offset) do
     offset = offset || 0
     first = offset_to_cursor(offset)
-
-    first_edge = %{
-      node: item,
-      cursor: first
-    }
-
-    {edges, last} = do_build_cursors(items, offset + 1, [first_edge], first)
+    edge = build_edge(item, first)
+    {edges, last} = do_build_cursors(items, offset + 1, [edge], first)
     {edges, first, last}
   end
 
@@ -526,13 +571,27 @@ defmodule Absinthe.Relay.Connection do
 
   defp do_build_cursors([item | rest], i, edges, _last) do
     cursor = offset_to_cursor(i)
+    edge = build_edge(item, cursor)
+    do_build_cursors(rest, i + 1, [edge | edges], cursor)
+  end
 
-    edge = %{
+  defp build_edge({item, args}, cursor) do
+    args
+    |> Enum.flat_map(fn
+      {key, _} when key in [:cursor, :node] ->
+        Logger.warn("Ignoring additional #{key} provided on edge (overriding is not allowed)")
+        []
+      {key, val} ->
+        [{key, val}]
+    end)
+    |> Enum.into(build_edge(item, cursor))
+  end
+
+  defp build_edge(item, cursor) do
+    %{
       node: item,
       cursor: cursor
     }
-
-    do_build_cursors(rest, i + 1, [edge | edges], cursor)
   end
 
   @doc """
