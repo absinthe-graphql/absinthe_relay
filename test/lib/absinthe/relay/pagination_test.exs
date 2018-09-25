@@ -350,7 +350,7 @@ defmodule Absinthe.Relay.PaginationTest do
              data: %{},
              errors: [
                %{
-                 locations: [%{column: 0, line: 2}],
+                 locations: [%{column: 3, line: 2}],
                  message: "You must either supply `:first` or `:last`"
                }
              ]
