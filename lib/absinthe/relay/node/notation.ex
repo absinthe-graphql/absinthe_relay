@@ -62,16 +62,6 @@ defmodule Absinthe.Relay.Node.Notation do
     node
   end
 
-  defp id_field_template() do
-    %Schema.FieldDefinition{
-      identifier: :id,
-      name: "id",
-      module: __MODULE__,
-      type: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :id},
-      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
-    }
-  end
-
   # An id field is automatically configured
   defp interface_body do
     quote do

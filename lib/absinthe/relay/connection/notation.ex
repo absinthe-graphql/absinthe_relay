@@ -5,7 +5,6 @@ defmodule Absinthe.Relay.Connection.Notation do
   See `Absinthe.Relay.Connection` for more information.
   """
 
-  alias Absinthe.Schema.Notation
   alias Absinthe.Blueprint.Schema
 
   defmodule Naming do
@@ -261,7 +260,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     existing = MapSet.new(prior, & &1.identifier)
 
     new
-    |> Enum.filter(&(&1.identifier not in existing))
+    |> Enum.filter(&(!(&1.identifier in existing)))
     |> Enum.concat(prior)
   end
 
