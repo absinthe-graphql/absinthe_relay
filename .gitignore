@@ -1,6 +1,7 @@
 /_build
 /cover
 /deps
+/.elixir_ls
 erl_crash.dump
 .tool-versions
 *.ez

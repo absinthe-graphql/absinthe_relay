@@ -95,6 +95,8 @@ defmodule Absinthe.Relay.SchemaTest do
       assert %{fields: %{node: %{name: "node", type: :node, middleware: middleware}}} =
                Schema.__absinthe_type__(:query)
 
+      middleware = Absinthe.Middleware.unshim(middleware, Schema)
+
       assert [
                {{Absinthe.Relay.Node, :resolve_with_global_id}, []},
                {{Absinthe.Resolution, :call}, _}

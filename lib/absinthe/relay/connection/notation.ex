@@ -5,7 +5,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   See `Absinthe.Relay.Connection` for more information.
   """
 
-  alias Absinthe.Schema.Notation
+  alias Absinthe.Blueprint.Schema
 
   defmodule Naming do
     @moduledoc false
@@ -13,7 +13,8 @@ defmodule Absinthe.Relay.Connection.Notation do
     defstruct base_identifier: nil,
               node_type_identifier: nil,
               connection_type_identifier: nil,
-              edge_type_identifier: nil
+              edge_type_identifier: nil,
+              attrs: []
 
     def define(node_type_identifier) do
       define(node_type_identifier, node_type_identifier)
@@ -32,7 +33,8 @@ defmodule Absinthe.Relay.Connection.Notation do
         node_type_identifier: node_type_identifier,
         base_identifier: base_identifier,
         connection_type_identifier: ident(base_identifier, :connection),
-        edge_type_identifier: ident(base_identifier, :edge)
+        edge_type_identifier: ident(base_identifier, :edge),
+        attrs: [node_type: node_type_identifier, connection: base_identifier]
       }
     end
 
@@ -97,22 +99,84 @@ defmodule Absinthe.Relay.Connection.Notation do
   See the `edge` macro below for more information.
   """
   defmacro connection({:field, _, [identifier, attrs]}, do: block) when is_list(attrs) do
-    field_attrs = Keyword.drop(attrs, [:node_type, :connection])
-    do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
+    # do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
+    do_connection_field(identifier, attrs, block)
   end
 
   defmacro connection(attrs, do: block) do
-    do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], block)
+    naming = naming_from_attrs!(attrs)
+    do_connection_definition(naming, attrs, block)
   end
 
   defmacro connection(attrs) do
-    do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], nil)
+    naming = naming_from_attrs!(attrs)
+    do_connection_definition(naming, attrs, [])
   end
 
   defmacro connection(identifier, attrs, do: block) do
     naming = naming_from_attrs!(attrs |> Keyword.put(:connection, identifier))
-    object_attrs = attrs |> Keyword.drop([:node_type, :connection])
-    do_connection_definition(__CALLER__, naming, object_attrs, block)
+    do_connection_definition(naming, attrs, block)
+  end
+
+  defp do_connection_field(identifier, attrs, block) do
+    naming = naming_from_attrs!(attrs)
+
+    paginate = Keyword.get(attrs, :paginate, :both)
+
+    field_attrs =
+      attrs
+      |> Keyword.drop([:node_type, :connection, :paginate])
+      |> Keyword.put(:type, naming.connection_type_identifier)
+
+    quote do
+      field unquote(identifier), unquote(field_attrs) do
+        private(:absinthe_relay, {:paginate, unquote(paginate)}, {:fill, unquote(__MODULE__)})
+        unquote(block)
+      end
+    end
+  end
+
+  defp do_connection_definition(naming, attrs, block) do
+    identifier = naming.connection_type_identifier
+    attrs = Keyword.drop(attrs, [:node_type, :connection])
+
+    block = name_edge(block, naming.attrs)
+
+    quote do
+      object unquote(identifier), unquote(attrs) do
+        private(
+          :absinthe_relay,
+          {:connection, unquote(naming.attrs)},
+          {:fill, unquote(__MODULE__)}
+        )
+
+        field(:page_info, type: non_null(:page_info))
+        field(:edges, type: list_of(unquote(naming.edge_type_identifier)))
+        unquote(block)
+      end
+    end
+  end
+
+  defp name_edge([], _), do: []
+
+  defp name_edge({:edge, meta, [[do: block]]}, conn_attrs) do
+    {:edge, meta, [conn_attrs, [do: block]]}
+  end
+
+  defp name_edge({:__block__, meta, content}, conn_attrs) do
+    content =
+      Enum.map(content, fn
+        {:edge, meta, [[do: block]]} ->
+          {:edge, meta, [conn_attrs, [do: block]]}
+
+        {:edge, meta, [attrs, [do: block]]} ->
+          {:edge, meta, [conn_attrs ++ attrs, [do: block]]}
+
+        node ->
+          node
+      end)
+
+    {:__block__, meta, content}
   end
 
   @doc """
@@ -135,180 +199,109 @@ defmodule Absinthe.Relay.Connection.Notation do
   ```
   """
   defmacro edge(attrs, do: block) do
-    __CALLER__
-    |> do_edge(attrs, block)
-  end
-
-  defmacro edge(do: block) do
-    __CALLER__
-    |> do_edge([], block)
-  end
-
-  @private_node_type_identifier_path [Absinthe.Relay, :connection_node]
-  @private_base_identifier_path [Absinthe.Relay, :connection_base]
-  defp do_edge(env, attrs, block) do
-    Notation.recordable!(env, :edge, private_lookup: @private_node_type_identifier_path)
-    # Hydrate naming struct from values stored in `private`
-    node_type_identifier = Notation.get_in_private(env.module, @private_node_type_identifier_path)
-    base_identifier = Notation.get_in_private(env.module, @private_base_identifier_path)
-    naming = Naming.define(node_type_identifier, base_identifier)
-    record_edge_object!(env, naming, attrs, block)
-  end
-
-  defp do_connection_field(env, identifier, naming, attrs, block) do
-    env
-    |> Notation.recordable!(:field)
-    |> record_connection_field!(identifier, naming, attrs, block)
-  end
-
-  # Generate connection & edge objects
-  defp do_connection_definition(env, naming, attrs, block) do
-    env
-    |> Notation.recordable!(:object)
-    |> record_connection_definition!(naming, attrs, block)
-  end
-
-  @doc false
-  # Record a connection field
-  def record_connection_field!(env, identifier, naming, attrs, block) do
-    pagination = Keyword.get(attrs, :paginate, :both)
-
-    Notation.record_field!(
-      env,
-      identifier,
-      [type: naming.connection_type_identifier] ++ Keyword.delete(attrs, :paginate),
-      [paginate_args(pagination), block]
-    )
-  end
-
-  @doc false
-  # Record a connection and edge types
-  def record_connection_definition!(env, naming, attrs, nil) do
-    record_connection_object!(env, naming, attrs, nil)
-    record_edge_object!(env, naming, attrs, nil)
-  end
-
-  def record_connection_definition!(env, naming, attrs, block) do
-    record_connection_object!(env, naming, attrs, block)
-  end
-
-  @doc false
-  # Record the connection object
-  def record_connection_object!(env, naming, attrs, block) do
-    Notation.record_object!(env, naming.connection_type_identifier, attrs, [
-      connection_object_body(naming),
-      block
-    ])
-  end
-
-  @doc false
-  # Record the edge object
-  def record_edge_object!(env, naming, attrs, block) do
-    Notation.record_object!(env, naming.edge_type_identifier, attrs, [
-      block,
-      edge_object_body(naming, block)
-    ])
-  end
-
-  defp connection_object_body(naming) do
-    edge_type = naming.edge_type_identifier
-    [private_category_node, private_key_node] = @private_node_type_identifier_path
-    [private_category_base, private_key_base] = @private_base_identifier_path
+    naming = naming_from_attrs!(attrs)
+    attrs = Keyword.drop(attrs, [:node_type, :connection])
 
     quote do
-      field :page_info, type: non_null(:page_info)
-      field :edges, type: list_of(unquote(edge_type))
+      Absinthe.Schema.Notation.stash()
 
-      private(
-        unquote(private_category_node),
-        unquote(private_key_node),
-        unquote(naming.node_type_identifier)
-      )
+      object unquote(naming.edge_type_identifier), unquote(attrs) do
+        private(:absinthe_relay, {:edge, unquote(naming.attrs)}, {:fill, unquote(__MODULE__)})
+        unquote(block)
+      end
 
-      private(
-        unquote(private_category_base),
-        unquote(private_key_base),
-        unquote(naming.base_identifier)
-      )
+      Absinthe.Schema.Notation.pop()
     end
   end
 
-  defp edge_object_body(naming, block) do
-    node_type = naming.node_type_identifier
+  def additional_types({:connection, attrs}, _) do
+    naming = naming_from_attrs!(attrs)
+    identifier = naming.edge_type_identifier
 
-    node_field =
-      default_field(
-        block,
-        :node,
-        quote do
-          @desc "The item at the end of the edge"
-          field :node, unquote(node_type)
-        end
-      )
-
-    cursor_field =
-      default_field(
-        block,
-        :cursor,
-        quote do
-          @desc "A cursor for use in pagination"
-          field :cursor, non_null(:string)
-        end
-      )
-
-    quote do
-      unquote(node_field)
-      unquote(cursor_field)
-    end
+    %Schema.ObjectTypeDefinition{
+      name: identifier |> Atom.to_string() |> Macro.camelize(),
+      identifier: identifier,
+      module: __MODULE__,
+      __private__: [absinthe_relay: [{{:edge, attrs}, {:fill, __MODULE__}}]],
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
   end
 
-  defp default_field(definition, field, block) do
-    case defines_field?(definition, field) do
-      true -> nil
-      false -> block
-    end
+  def additional_types(_, _), do: []
+
+  def fillout({:paginate, type}, node) do
+    Map.update!(node, :arguments, fn arguments ->
+      type
+      |> paginate_args()
+      |> Enum.map(fn {id, type} -> build_arg(id, type) end)
+      |> put_uniq(arguments)
+    end)
   end
 
-  defp defines_field?(ast, field_name) do
-    {_, defined?} =
-      Macro.prewalk(ast, false, fn
-        {:field, _, [^field_name | _]}, _ = node -> {node, true}
-        expr, acc -> {expr, acc}
-      end)
+  #   @desc "The item at the end of the edge"
+  # field(:node, unquote(naming.node_type_identifier))
+  # @desc "A cursor for use in pagination"
+  # field(:cursor, non_null(:string))
+  def fillout({:edge, attrs}, node) do
+    naming = naming_from_attrs!(attrs)
 
-    defined?
+    Map.update!(node, :fields, fn fields ->
+      naming.node_type_identifier
+      |> edge_fields
+      |> put_uniq(fields)
+    end)
   end
 
-  # Forward pagination arguments.
-  #
-  # Arguments appropriate to include on a field whose type is a connection
-  # with forward pagination.
-  defp paginate_args(:forward) do
-    quote do
-      arg :after, :string
-      arg :first, :integer
-    end
+  def fillout(_, node) do
+    node
   end
 
-  # Backward pagination arguments.
+  defp put_uniq(new, prior) do
+    existing = MapSet.new(prior, & &1.identifier)
 
-  # Arguments appropriate to include on a field whose type is a connection
-  # with backward pagination.
-  defp paginate_args(:backward) do
-    quote do
-      arg :before, :string
-      arg :last, :integer
-    end
+    new
+    |> Enum.filter(&(!(&1.identifier in existing)))
+    |> Enum.concat(prior)
   end
 
-  # Pagination arguments (both forward and backward).
-
-  # Arguments appropriate to include on a field whose type is a connection
-  # with both forward and backward pagination.
-  defp paginate_args(:both) do
+  defp edge_fields(node_type) do
     [
-      paginate_args(:forward),
-      paginate_args(:backward)
+      %Schema.FieldDefinition{
+        name: "node",
+        identifier: :node,
+        type: node_type,
+        module: __MODULE__,
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      },
+      %Schema.FieldDefinition{
+        name: "cursor",
+        identifier: :cursor,
+        type: :string,
+        module: __MODULE__,
+        __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+      }
     ]
+  end
+
+  defp paginate_args(:forward) do
+    [after: :string, first: :integer]
+  end
+
+  defp paginate_args(:backward) do
+    [before: :string, last: :integer]
+  end
+
+  defp paginate_args(:both) do
+    paginate_args(:forward) ++ paginate_args(:backward)
+  end
+
+  defp build_arg(id, type) do
+    %Schema.InputValueDefinition{
+      name: id |> Atom.to_string(),
+      identifier: id,
+      type: type,
+      module: __MODULE__,
+      __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
+    }
   end
 end

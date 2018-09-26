@@ -500,4 +500,10 @@ defmodule Absinthe.Relay.ConnectionTest do
              ) == {:error, "Invalid cursor provided as `after` argument"}
     end
   end
+
+  describe "defaults work" do
+    test "no custom edge still produces an edge" do
+      assert StarWars.Schema.__absinthe_type__(:ship_edge)
+    end
+  end
 end

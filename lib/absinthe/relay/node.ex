@@ -83,8 +83,8 @@ defmodule Absinthe.Relay.Node do
 
   This will create an object type, `:person`, as you might expect. An `:id`
   field is created for you automatically, and this field generates a global ID;
-  an opaque string that's built using a global ID translator (by default a 
-  Base64 implementation). All of this is handled for you automatically by 
+  an opaque string that's built using a global ID translator (by default a
+  Base64 implementation). All of this is handled for you automatically by
   prefixing your object type definition with `"node "`.
 
   The raw, internal value is retrieved using `default_id_fetcher/2` which just
@@ -196,7 +196,7 @@ defmodule Absinthe.Relay.Node do
       nil ->
         {:error, "Unknown type `#{type_name}'"}
 
-      %{__reference__: %{identifier: ident}, interfaces: interfaces} ->
+      %{identifier: ident, interfaces: interfaces} ->
         if Enum.member?(List.wrap(interfaces), :node) do
           {:ok, %{type: ident, id: id}}
         else
@@ -294,6 +294,24 @@ defmodule Absinthe.Relay.Node do
   # The resolver for a global ID. If a type identifier instead of a type name
   # is used during field configuration, the type name needs to be looked up
   # during resolution.
+
+  def global_id_resolver(%Absinthe.Resolution{state: :unresolved} = res, id_fetcher) do
+    type = res.parent_type
+
+    id_fetcher = id_fetcher || (&default_id_fetcher/2)
+
+    result =
+      case id_fetcher.(res.source, res) do
+        nil ->
+          report_fetch_id_error(type.name, res.source)
+
+        internal_id ->
+          {:ok, to_global_id(type.name, internal_id, res.schema)}
+      end
+
+    Absinthe.Resolution.put_result(res, result)
+  end
+
   def global_id_resolver(identifier, nil) do
     global_id_resolver(identifier, &default_id_fetcher/2)
   end
