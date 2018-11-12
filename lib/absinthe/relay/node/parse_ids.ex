@@ -349,6 +349,8 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
   defp format_child_value(_, [value]), do: value
 
+  defp format_child_value(nil, _), do: nil
+
   @spec find_child_schema_node(
           Absinthe.Type.identifier_t(),
           Absinthe.Type.Field.t() | Absinthe.Type.InputObject.t() | Absinthe.Type.Argument.t(),
