@@ -1,5 +1,9 @@
 # CHANGELOG
 
+# 1.4.5
+
+- Bug Fix: Handle null values with the parse id middleware properly. See [PR #124](https://github.com/absinthe-graphql/absinthe_relay/pull/124) Thanks @dpehrson
+
 # 1.4.4
 
 - Feature: Enhancements to Connection macros to support extensibility of edge types. See [PR #109](https://github.com/absinthe-graphql/absinthe_relay/pull/109) (Thanks, @coderdan!)
