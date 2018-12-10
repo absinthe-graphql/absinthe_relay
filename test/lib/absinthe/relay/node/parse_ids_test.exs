@@ -412,6 +412,31 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
+    
+    test "works with null branch values" do
+      result =
+        """
+        mutation Foobar {
+          updateParent(input: {
+            clientMutationId: "abc",
+            parent: null
+          }) {
+            parent {
+              id
+              children { id }
+              child { id }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(SchemaClassic)
+
+      expected_parent_data = %{
+        "parent" => nil
+      }
+
+      assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
+    end
 
     test "works with null leaf values" do
       result =
