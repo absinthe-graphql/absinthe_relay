@@ -105,6 +105,12 @@ defmodule Absinthe.Relay.Connection.Notation do
     do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], block)
   end
 
+  defmacro connection(identifier, attrs) do
+    naming = naming_from_attrs!(attrs |> Keyword.put(:connection, identifier))
+    object_attrs = attrs |> Keyword.drop([:node_type, :connection])
+    do_connection_definition(__CALLER__, naming, object_attrs, nil)
+  end
+
   defmacro connection(attrs) do
     do_connection_definition(__CALLER__, naming_from_attrs!(attrs), [], nil)
   end

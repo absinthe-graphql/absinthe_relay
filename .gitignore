@@ -1,4 +1,6 @@
 /_build
+.elixir_ls
+.vscode
 /cover
 /deps
 erl_crash.dump
