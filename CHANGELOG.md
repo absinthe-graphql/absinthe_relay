@@ -1,5 +1,11 @@
 # CHANGELOG
 
+# 1.4.6
+
+- Bug Fix: Support connection/2
+- Support Ecto 3
+- Updated travis.
+
 # 1.4.5
 
 - Bug Fix: Handle null values with the parse id middleware properly. See [PR #124](https://github.com/absinthe-graphql/absinthe_relay/pull/124) Thanks @dpehrson

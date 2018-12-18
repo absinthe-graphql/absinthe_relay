@@ -1,13 +1,13 @@
 defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
-  @version "1.4.5"
+  @version "1.4.6"
 
   def project do
     [
       app: :absinthe_relay,
       version: @version,
-      elixir: "~> 1.4",
+      elixir: "~> 1.5",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
