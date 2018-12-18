@@ -158,6 +158,8 @@ defmodule Absinthe.Relay.ConnectionTest do
       end
     end
 
+    connection(:favorite_pets_bare, node_type: :pet)
+
     connection :favorite_pets, node_type: :pet do
       field :fav_twice_edges_count, :integer do
         resolve fn _, %{source: conn} ->
