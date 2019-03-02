@@ -101,6 +101,7 @@ defmodule Absinthe.Relay.ConnectionTest do
             {:ok, Map.get(@teams, id)}
         end
       end
+
       connection field :teams, node_type: :team do
         resolve fn
           resolve_args, %{} ->
@@ -182,7 +183,7 @@ defmodule Absinthe.Relay.ConnectionTest do
       end
     end
 
-    connection(:favorite_pets_bare, node_type: :pet)
+    connection :favorite_pets_bare, node_type: :pet
 
     connection :favorite_pets, node_type: :pet do
       field :fav_twice_edges_count, :integer do
@@ -258,7 +259,12 @@ defmodule Absinthe.Relay.ConnectionTest do
 
   describe "Defining a connection node type as non-null with a connection name" do
     test " sets the correct type" do
-      edge = Absinthe.Schema.lookup_type(CustomConnectionAndEdgeFieldsSchema, :favorite_pets_non_nullable_edge)
+      edge =
+        Absinthe.Schema.lookup_type(
+          CustomConnectionAndEdgeFieldsSchema,
+          :favorite_pets_non_nullable_edge
+        )
+
       assert edge.fields[:node].type == %Absinthe.Type.NonNull{of_type: :pet}
     end
   end

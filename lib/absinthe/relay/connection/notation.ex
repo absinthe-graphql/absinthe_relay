@@ -21,6 +21,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     end
 
     def define(node_type_identifier, base_identifier, opts \\ [])
+
     def define(nil, nil, _opts) do
       nil
     end
@@ -47,6 +48,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   defp naming_from_attrs!(attrs) do
     attrs = attrs_with_nullability(attrs)
     naming = Naming.define(attrs[:node_type], attrs[:connection], attrs)
+
     naming ||
       raise(
         "Must provide a `:node_type' option (an optional `:connection` option is also supported)"
@@ -60,6 +62,7 @@ defmodule Absinthe.Relay.Connection.Notation do
       {:non_null, _, [node_type]} ->
         attrs
         |> Keyword.merge(node_type: node_type, non_null_node_type: true)
+
       _ ->
         attrs
     end
@@ -188,9 +191,11 @@ defmodule Absinthe.Relay.Connection.Notation do
     # Hydrate naming struct from values stored in `private`
     node_type_identifier = Notation.get_in_private(env.module, @private_node_type_identifier_path)
     base_identifier = Notation.get_in_private(env.module, @private_base_identifier_path)
+
     non_null_node_type =
       Notation.get_in_private(env.module, @private_non_null_node_type_path)
       |> decode_non_null_node_type_private_value()
+
     attrs = Keyword.put(attrs, :non_null_node_type, non_null_node_type)
     naming = Naming.define(node_type_identifier, base_identifier, attrs)
     record_edge_object!(env, naming, attrs, block)
@@ -245,10 +250,15 @@ defmodule Absinthe.Relay.Connection.Notation do
   @doc false
   # Record the edge object
   def record_edge_object!(env, naming, attrs, block) do
-    Notation.record_object!(env, naming.edge_type_identifier, Keyword.delete(attrs, :non_null_node_type), [
-      block,
-      edge_object_body(naming, block)
-    ])
+    Notation.record_object!(
+      env,
+      naming.edge_type_identifier,
+      Keyword.delete(attrs, :non_null_node_type),
+      [
+        block,
+        edge_object_body(naming, block)
+      ]
+    )
   end
 
   # Encode the non-null setting appropriate for storage with
@@ -264,7 +274,9 @@ defmodule Absinthe.Relay.Connection.Notation do
     edge_type = naming.edge_type_identifier
     [private_category_node, private_key_node] = @private_node_type_identifier_path
     [private_category_base, private_key_base] = @private_base_identifier_path
-    [private_category_non_null_node_type, private_key_non_null_node_type] = @private_non_null_node_type_path
+
+    [private_category_non_null_node_type, private_key_non_null_node_type] =
+      @private_non_null_node_type_path
 
     quote do
       field :page_info, type: non_null(:page_info)

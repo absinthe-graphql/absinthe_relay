@@ -412,7 +412,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
-    
+
     test "works with null branch values" do
       result =
         """
