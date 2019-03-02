@@ -269,6 +269,46 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
   end
 
+  describe "Using a connection with non-nullable node type" do
+    test " returns the values as expected" do
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                favoritePetsNonNullable(first: 1) {
+                  edges {
+                    node {
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          }
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                data: %{
+                  "node" => %{
+                    "favoritePetsNonNullable" => %{
+                      "edges" => [
+                        %{
+                          "node" => %{"name" => "Jock"}
+                        }
+                      ]
+                    }
+                  }
+                }
+              }} == result
+    end
+  end
+
   describe "Defining custom connection and edge fields" do
     test " allows querying those additional fields" do
       result =
