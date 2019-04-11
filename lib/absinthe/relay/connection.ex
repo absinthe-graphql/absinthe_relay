@@ -3,10 +3,10 @@ defmodule Absinthe.Relay.Connection.Options do
 
   @typedoc false
   @type t :: %{
-          after: nil | integer,
-          before: nil | integer,
-          first: nil | integer,
-          last: nil | integer
+          optional(:after) => nil | integer,
+          optional(:before) => nil | integer,
+          optional(:first) => nil | integer,
+          optional(:last) => nil | integer
         }
 
   defstruct after: nil, before: nil, first: nil, last: nil
