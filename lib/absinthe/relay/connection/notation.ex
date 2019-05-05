@@ -14,7 +14,7 @@ defmodule Absinthe.Relay.Connection.Notation do
               node_type_identifier: nil,
               connection_type_identifier: nil,
               edge_type_identifier: nil,
-              non_null_node_type: false
+              non_null_style: :lax
 
     def define(node_type_identifier) do
       define(node_type_identifier, node_type_identifier)
@@ -36,7 +36,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         base_identifier: base_identifier,
         connection_type_identifier: ident(base_identifier, :connection),
         edge_type_identifier: ident(base_identifier, :edge),
-        non_null_node_type: Keyword.get(opts, :non_null_node_type, false)
+        non_null_style: Keyword.get(opts, :non_null_style, :lax)
       }
     end
 
@@ -55,13 +55,12 @@ defmodule Absinthe.Relay.Connection.Notation do
       )
   end
 
-  # If the node type is wrapped in a non_null, set the `:non_null_node_type`
-  # attribute instead
+  # If the node type is wrapped in a non_null, set the `:non_null_style` to :strict
   defp attrs_with_nullability(attrs) do
     case attrs[:node_type] do
       {:non_null, _, [node_type]} ->
         attrs
-        |> Keyword.merge(node_type: node_type, non_null_node_type: true)
+        |> Keyword.merge(node_type: node_type, non_null_style: :strict)
 
       _ ->
         attrs
@@ -121,8 +120,9 @@ defmodule Absinthe.Relay.Connection.Notation do
   See the `edge` macro below for more information.
   """
   defmacro connection({:field, _, [identifier, attrs]}, do: block) when is_list(attrs) do
+    naming = naming_from_attrs!(attrs)
     field_attrs = Keyword.drop(attrs, [:node_type, :connection])
-    do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
+    do_connection_field(__CALLER__, identifier, naming, field_attrs, block)
   end
 
   defmacro connection(attrs, do: block) do
@@ -185,18 +185,16 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   @private_node_type_identifier_path [Absinthe.Relay, :connection_node]
   @private_base_identifier_path [Absinthe.Relay, :connection_base]
-  @private_non_null_node_type_path [Absinthe.Relay, :non_null_node_type]
+  @private_non_null_style_path [Absinthe.Relay, :non_null_style]
   defp do_edge(env, attrs, block) do
     Notation.recordable!(env, :edge, private_lookup: @private_node_type_identifier_path)
     # Hydrate naming struct from values stored in `private`
     node_type_identifier = Notation.get_in_private(env.module, @private_node_type_identifier_path)
     base_identifier = Notation.get_in_private(env.module, @private_base_identifier_path)
 
-    non_null_node_type =
-      Notation.get_in_private(env.module, @private_non_null_node_type_path)
-      |> decode_non_null_node_type_private_value()
+    non_null_style = Notation.get_in_private(env.module, @private_non_null_style_path)
 
-    attrs = Keyword.put(attrs, :non_null_node_type, non_null_node_type)
+    attrs = Keyword.put(attrs, :non_null_style, non_null_style)
     naming = Naming.define(node_type_identifier, base_identifier, attrs)
     record_edge_object!(env, naming, attrs, block)
   end
@@ -253,7 +251,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     Notation.record_object!(
       env,
       naming.edge_type_identifier,
-      Keyword.delete(attrs, :non_null_node_type),
+      Keyword.delete(attrs, :non_null_style),
       [
         block,
         edge_object_body(naming, block)
@@ -261,26 +259,17 @@ defmodule Absinthe.Relay.Connection.Notation do
     )
   end
 
-  # Encode the non-null setting appropriate for storage with
-  # `Absinthe.Schema.Notation.private/3`
-  defp encode_non_null_node_type_private_value(false), do: :set_false
-  defp encode_non_null_node_type_private_value(true), do: :set_true
-
-  # Decode the non-null setting (see `encode_non_null_node_type_private_value/1`)
-  defp decode_non_null_node_type_private_value(:set_false), do: false
-  defp decode_non_null_node_type_private_value(:set_true), do: true
-
   defp connection_object_body(naming) do
-    edge_type = naming.edge_type_identifier
     [private_category_node, private_key_node] = @private_node_type_identifier_path
     [private_category_base, private_key_base] = @private_base_identifier_path
 
-    [private_category_non_null_node_type, private_key_non_null_node_type] =
-      @private_non_null_node_type_path
+    [private_category_non_null_style, private_key_non_null_style] = @private_non_null_style_path
+
+    edges_field = connection_edges_field(naming)
 
     quote do
       field :page_info, type: non_null(:page_info)
-      field :edges, type: list_of(unquote(edge_type))
+      unquote(edges_field)
 
       private(
         unquote(private_category_node),
@@ -295,24 +284,35 @@ defmodule Absinthe.Relay.Connection.Notation do
       )
 
       private(
-        unquote(private_category_non_null_node_type),
-        unquote(private_key_non_null_node_type),
-        unquote(encode_non_null_node_type_private_value(naming.non_null_node_type))
+        unquote(private_category_non_null_style),
+        unquote(private_key_non_null_style),
+        unquote(naming.non_null_style)
       )
+    end
+  end
+
+  defp connection_edges_field(naming) do
+    edge_type = maybe_non_null_type(naming.non_null_style, naming.edge_type_identifier)
+
+    case naming.non_null_style do
+      :strict ->
+        quote do
+          field :edges, non_null(list_of(unquote(edge_type)))
+        end
+
+      _lax ->
+        quote do
+          field :edges, list_of(unquote(edge_type))
+        end
     end
   end
 
   defp edge_object_body(naming, block) do
     node_type =
-      case naming do
-        %{non_null_node_type: true} ->
-          quote do
-            %Absinthe.Type.NonNull{of_type: unquote(naming.node_type_identifier)}
-          end
-
-        _ ->
-          naming.node_type_identifier
-      end
+      maybe_non_null_type(
+        naming.non_null_style,
+        naming.node_type_identifier
+      )
 
     node_field =
       default_field(
@@ -338,6 +338,18 @@ defmodule Absinthe.Relay.Connection.Notation do
       unquote(node_field)
       unquote(cursor_field)
     end
+  end
+
+  defp maybe_non_null_type(style, type)
+
+  defp maybe_non_null_type(:strict, type) do
+    quote do
+      %Absinthe.Type.NonNull{of_type: unquote(type)}
+    end
+  end
+
+  defp maybe_non_null_type(_, type) do
+    type
   end
 
   defp default_field(definition, field, block) do
