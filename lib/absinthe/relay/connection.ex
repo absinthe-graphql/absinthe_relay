@@ -496,7 +496,9 @@ defmodule Absinthe.Relay.Connection do
               {:ok, max(value - limit, 0), limit}
 
             {value, _} ->
-              {:ok, max(value - limit, 0), limit}
+              start_offset = max(value - limit, 0)
+              limit = if start_offset == 0, do: value, else: limit
+              {:ok, start_offset, limit}
           end
       end
     end

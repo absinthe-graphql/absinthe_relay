@@ -469,7 +469,7 @@ defmodule Absinthe.Relay.ConnectionTest do
                {:ok, 5, 5}
 
       assert Connection.offset_and_limit_for_query(%{last: 10, before: @offset_cursor_1}, []) ==
-               {:ok, 0, 10}
+               {:ok, 0, 1}
 
       assert Connection.offset_and_limit_for_query(%{last: 5, before: @offset_cursor_2}, []) ==
                {:ok, 0, 5}
@@ -480,6 +480,9 @@ defmodule Absinthe.Relay.ConnectionTest do
                []
              ) ==
                {:ok, 0, 5}
+
+      assert Connection.offset_and_limit_for_query(%{last: 3, before: @offset_cursor_2}, []) ==
+               {:ok, 2, 3}
     end
 
     test "without a cursor" do
