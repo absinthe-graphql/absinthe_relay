@@ -378,7 +378,7 @@ defmodule Absinthe.Relay.Connection do
 
   def list(args, %{context: %{current_user: user}}) do
     {:ok, :forward, limit} = Connection.limit(args)
-    offset = Connection.offset(args)
+    {:ok, offset} = Connection.offset(args)
 
     Post
     |> where(author_id: ^user.id)
