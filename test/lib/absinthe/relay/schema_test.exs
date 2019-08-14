@@ -98,6 +98,7 @@ defmodule Absinthe.Relay.SchemaTest do
       middleware = Absinthe.Middleware.unshim(middleware, Schema)
 
       assert [
+               {Absinthe.Middleware.Telemetry, []},
                {{Absinthe.Relay.Node, :resolve_with_global_id}, []},
                {{Absinthe.Resolution, :call}, _}
              ] = middleware
