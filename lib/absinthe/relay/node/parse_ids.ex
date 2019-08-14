@@ -194,7 +194,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
   @doc false
   @spec call(Absinthe.Resolution.t(), rules) :: Absinthe.Resolution.t()
-  def call(resolution, rules) do
+  def call(%{state: :unresolved} = resolution, rules) do
     case parse(resolution.arguments, rules, resolution) do
       {:ok, parsed_args} ->
         %{resolution | arguments: parsed_args}
@@ -203,6 +203,10 @@ defmodule Absinthe.Relay.Node.ParseIDs do
         resolution
         |> Absinthe.Resolution.put_result(err)
     end
+  end
+
+  def call(res, _) do
+    res
   end
 
   @doc false

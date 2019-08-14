@@ -94,6 +94,22 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
 
     query do
+      node field do
+        resolve fn args, _ ->
+          {:ok, args}
+        end
+      end
+
+      field :unauthorized, :foo do
+        arg :foo_id, :id
+
+        resolve fn _, _, _ ->
+          {:error, "unauthorized"}
+        end
+
+        middleware Absinthe.Relay.Node.ParseIDs, foo_id: :foo
+      end
+
       field :foo, :foo do
         arg :foo_id, :id
         arg :foobar_id, :id
@@ -412,7 +428,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
     end
-    
+
     test "works with null branch values" do
       result =
         """
@@ -505,6 +521,54 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
                }
              ]
            } = result
+  end
+
+  test "doesn't run if already resolved" do
+    result =
+      """
+      {
+        unauthorized(fooId: "unknown") {
+          id
+        }
+      }
+      """
+      |> Absinthe.run(SchemaClassic)
+
+    assert {:ok,
+            %{
+              data: %{"unauthorized" => nil},
+              errors: [
+                %{
+                  locations: [%{column: 3, line: 2}],
+                  message: "unauthorized",
+                  path: ["unauthorized"]
+                }
+              ]
+            }} = result
+  end
+
+  test "handles one incorrect id correctly on node field" do
+    result =
+      """
+      {
+        node(id: "unknown") {
+          id
+        }
+      }
+      """
+      |> Absinthe.run(SchemaClassic)
+
+    assert {:ok,
+            %{
+              data: %{"node" => nil},
+              errors: [
+                %{
+                  locations: [%{column: 3, line: 2}],
+                  message: "Could not extract value from ID `\"unknown\"`",
+                  path: ["node"]
+                }
+              ]
+            }} = result
   end
 
   test "handles one incorrect id correctly" do

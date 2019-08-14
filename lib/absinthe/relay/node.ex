@@ -118,12 +118,13 @@ defmodule Absinthe.Relay.Node do
   # Middleware to handle a global id
   # parses the global ID before invoking it
   @doc false
-  def resolve_with_global_id(%{state: :unresolved} = res, _) do
-    with %{id: global_id} <- res.arguments,
-         {:ok, result} <- Absinthe.Relay.Node.from_global_id(global_id, res.schema) do
-      %{res | arguments: result}
-    else
-      _ -> res
+  def resolve_with_global_id(%{state: :unresolved, arguments: %{id: global_id}} = res, _) do
+    case Absinthe.Relay.Node.from_global_id(global_id, res.schema) do
+      {:ok, result} ->
+        %{res | arguments: result}
+
+      error ->
+        Absinthe.Resolution.put_result(res, error)
     end
   end
 
