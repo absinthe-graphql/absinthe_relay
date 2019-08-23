@@ -434,7 +434,8 @@ defmodule Absinthe.Relay.Connection do
 
   @type from_query_opts ::
           [
-            count: non_neg_integer
+            count: non_neg_integer,
+            max: pos_integer
           ]
           | from_slice_opts
 
