@@ -78,7 +78,6 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
   `input_object`, etc) schema notation macros as usual.
   """
   use Absinthe.Schema.Notation
-  alias Absinthe.Relay.Schema.Notation
   alias Absinthe.Blueprint
   alias Absinthe.Blueprint.Schema
   alias Absinthe.Relay.Schema.Notation
