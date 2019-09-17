@@ -87,10 +87,9 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
   restrictions, don't worry! You can always just define your types and fields using normal (`field`, `arg`,
   `input_object`, etc) schema notation macros as usual.
   """
-  alias Absinthe.Relay.Schema.Notation
-  alias Absinthe.Blueprint.Schema
   alias Absinthe.Blueprint
   alias Absinthe.Blueprint.Schema
+  alias Absinthe.Relay.Schema.Notation
 
   @doc """
   Define a mutation with a single input and a client mutation ID. See the module documentation for more information.
