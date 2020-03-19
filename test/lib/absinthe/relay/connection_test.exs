@@ -473,6 +473,13 @@ defmodule Absinthe.Relay.ConnectionTest do
 
       assert Connection.offset_and_limit_for_query(%{last: 5, before: @offset_cursor_2}, []) ==
                {:ok, 0, 5}
+
+      # Should be the same result even if nil :first and :after are provided:
+      assert Connection.offset_and_limit_for_query(
+               %{first: nil, after: nil, last: 5, before: @offset_cursor_2},
+               []
+             ) ==
+               {:ok, 0, 5}
     end
 
     test "without a cursor" do

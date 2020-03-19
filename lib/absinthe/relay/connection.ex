@@ -525,8 +525,8 @@ defmodule Absinthe.Relay.Connection do
   The direction and desired number of records in the pagination arguments.
   """
   @spec limit(args :: Options.t()) :: {:ok, pagination_direction, limit} | {:error, any}
-  def limit(%{first: first}), do: {:ok, :forward, first}
-  def limit(%{last: last}), do: {:ok, :backward, last}
+  def limit(%{first: first}) when not is_nil(first), do: {:ok, :forward, first}
+  def limit(%{last: last}) when not is_nil(last), do: {:ok, :backward, last}
   def limit(_), do: {:error, "You must either supply `:first` or `:last`"}
 
   @doc """
