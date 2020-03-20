@@ -220,6 +220,67 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
   end
 
+  defmodule CustomConnectionWithoutRelaySchema do
+    use Absinthe.Schema
+    import_types(Absinthe.Relay.Connection.Types)
+    import Absinthe.Relay.Connection.Notation, only: :macros
+
+    @teams %{
+      "1" => %{
+        id: "1",
+        name: "Isotopes",
+        users: [{:owner, "1"}, {:member, "2"}],
+      },
+      "2" => %{
+        id: "2",
+        name: "B-Sharps",
+        users: [{:owner, "3"}, {:member, "2"}, {:member, "4"}],
+      }
+    }
+
+    @users %{
+      "1" => %{id: "1", email: "homer@sector7g.burnsnuclear.com"},
+      "2" => %{id: "2", email: "lisa.simpson@se.edu"},
+      "3" => %{id: "3", email: "bart.simpson@se.edu"},
+      "4" => %{id: "4", email: "housewhiz77@hotmail.com"},
+    }
+
+    object :user do
+      field :email, :string
+    end
+
+    connection node_type: :user do
+      edge do
+        field :role, :string
+      end
+    end
+
+    object :team do
+      field :name, :string
+
+      connection field :users, node_type: :user do
+        resolve fn
+          resolve_args, %{source: team} ->
+            Absinthe.Relay.Connection.from_list(
+              Enum.map(team.users, fn {role, id} ->
+                {Map.get(@users, id), role: role}
+              end),
+              resolve_args
+            )
+        end
+      end
+    end
+
+    query do
+      field :team, :team do
+        arg :id, non_null(:id)
+        resolve fn %{id: id}, _ ->
+          {:ok, Map.get(@teams, id)}
+        end
+      end
+    end
+  end
+
   describe "Defining custom connection and edge fields" do
     test " allows querying those additional fields" do
       result =
@@ -414,6 +475,46 @@ defmodule Absinthe.Relay.ConnectionTest do
           }
         }
       }} == result
+    end
+  end
+
+  describe "Utilizing Relay.Connection.Notation macros without Relay.Schema" do
+    test " returns the expected connection results" do
+      result =
+        """
+          query GetTeam($teamId: ID!) {
+            team(id: $teamId) {
+              name
+              users(first: 2) {
+                edges {
+                  role
+                  node {
+                    email
+                  }
+                }
+              }
+            }
+          }
+        """
+        |> Absinthe.run(
+          CustomConnectionWithoutRelaySchema,
+          variables: %{"teamId" => "1"}
+        )
+
+      assert {:ok,
+              %{
+                data: %{
+                  "team" => %{
+                    "name" => "Isotopes",
+                    "users" => %{
+                      "edges" => [
+                        %{"role" => "owner", "node" => %{"email" => "homer@sector7g.burnsnuclear.com"}},
+                        %{"node" => %{"email" => "lisa.simpson@se.edu"}, "role" => "member"}
+                      ]
+                    }
+                  }
+                }
+              }} == result
     end
   end
 
