@@ -221,17 +221,18 @@ defmodule Absinthe.Relay.ConnectionTest do
     use Absinthe.Schema
     import_types(Absinthe.Relay.Connection.Types)
     import Absinthe.Relay.Connection.Notation, only: :macros
+    @pipeline_modifier Absinthe.Relay.Schema
 
     @teams %{
       "1" => %{
         id: "1",
         name: "Isotopes",
-        users: [{:owner, "1"}, {:member, "2"}],
+        users: [{:owner, "1"}, {:member, "2"}]
       },
       "2" => %{
         id: "2",
         name: "B-Sharps",
-        users: [{:owner, "3"}, {:member, "2"}, {:member, "4"}],
+        users: [{:owner, "3"}, {:member, "2"}, {:member, "4"}]
       }
     }
 
@@ -239,7 +240,7 @@ defmodule Absinthe.Relay.ConnectionTest do
       "1" => %{id: "1", email: "homer@sector7g.burnsnuclear.com"},
       "2" => %{id: "2", email: "lisa.simpson@se.edu"},
       "3" => %{id: "3", email: "bart.simpson@se.edu"},
-      "4" => %{id: "4", email: "housewhiz77@hotmail.com"},
+      "4" => %{id: "4", email: "housewhiz77@hotmail.com"}
     }
 
     object :user do
@@ -271,6 +272,7 @@ defmodule Absinthe.Relay.ConnectionTest do
     query do
       field :team, :team do
         arg :id, non_null(:id)
+
         resolve fn %{id: id}, _ ->
           {:ok, Map.get(@teams, id)}
         end
@@ -520,7 +522,10 @@ defmodule Absinthe.Relay.ConnectionTest do
                     "name" => "Isotopes",
                     "users" => %{
                       "edges" => [
-                        %{"role" => "owner", "node" => %{"email" => "homer@sector7g.burnsnuclear.com"}},
+                        %{
+                          "role" => "owner",
+                          "node" => %{"email" => "homer@sector7g.burnsnuclear.com"}
+                        },
                         %{"node" => %{"email" => "lisa.simpson@se.edu"}, "role" => "member"}
                       ]
                     }

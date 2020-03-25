@@ -3,6 +3,13 @@ defmodule Absinthe.Relay.Node.Notation do
   Macros used to define Node-related schema entities
 
   See `Absinthe.Relay.Node` for examples of use.
+
+  If you wish to use this module on its own without `use Absinthe.Relay` you
+  need to include
+  ```
+  @pipeline_modifier Absinthe.Relay.Schema
+  ```
+  in your root schema module.
   """
 
   alias Absinthe.Blueprint.Schema
