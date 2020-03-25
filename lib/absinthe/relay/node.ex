@@ -292,6 +292,7 @@ defmodule Absinthe.Relay.Node do
 
   @missing_internal_id_error "No source non-global ID value could be fetched from the source object"
   @doc false
+
   # The resolver for a global ID. If a type identifier instead of a type name
   # is used during field configuration, the type name needs to be looked up
   # during resolution.

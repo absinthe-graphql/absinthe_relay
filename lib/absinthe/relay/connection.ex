@@ -582,6 +582,7 @@ defmodule Absinthe.Relay.Connection do
       {key, _} when key in [:cursor, :node] ->
         Logger.warn("Ignoring additional #{key} provided on edge (overriding is not allowed)")
         []
+
       {key, val} ->
         [{key, val}]
     end)
