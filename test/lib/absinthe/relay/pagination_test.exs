@@ -80,7 +80,7 @@ defmodule Absinthe.Relay.PaginationTest do
            } = result
 
     query = """
-    query firstSupportingNonNullAfter($first: Int!, $after: ID!) {
+    query firstSupportingNonNullAfter($first: Int!, $after: String!) {
       foos(first: $first, after: $after) {
         page_info {
           start_cursor
@@ -226,7 +226,7 @@ defmodule Absinthe.Relay.PaginationTest do
            } = result
 
     query = """
-    query LastSupportingNonNullBefore($last: Int!, $before: ID!) {
+    query LastSupportingNonNullBefore($last: Int!, $before: String!) {
       foos(last: $last, before: $before) {
         page_info {
           start_cursor
