@@ -14,6 +14,8 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   alias Absinthe.Blueprint.Schema
 
+  @naming_attrs [:node_type, :non_null, :non_null_edges, :non_null_edge, :connection]
+
   defmodule Naming do
     @moduledoc false
 
@@ -21,42 +23,40 @@ defmodule Absinthe.Relay.Connection.Notation do
               node_type_identifier: nil,
               connection_type_identifier: nil,
               edge_type_identifier: nil,
+              non_null_edges: false,
+              non_null_edge: false,
               attrs: []
 
-    def define(node_type_identifier) do
-      define(node_type_identifier, node_type_identifier)
-    end
+    def from_attrs!(attrs) do
+      node_type_identifier =
+        attrs[:node_type] ||
+          raise(
+            "Must provide a `:node_type' option (an optional `:connection` option is also supported)"
+          )
 
-    def define(nil, nil) do
-      nil
-    end
+      base_identifier = attrs[:connection] || node_type_identifier
+      non_null_edges = attrs[:non_null_edges] || attrs[:non_null] || false
+      non_null_edge = attrs[:non_null_edge] || attrs[:non_null] || false
 
-    def define(node_type_identifier, nil) do
-      define(node_type_identifier, node_type_identifier)
-    end
-
-    def define(node_type_identifier, base_identifier) do
       %__MODULE__{
         node_type_identifier: node_type_identifier,
         base_identifier: base_identifier,
         connection_type_identifier: ident(base_identifier, :connection),
         edge_type_identifier: ident(base_identifier, :edge),
-        attrs: [node_type: node_type_identifier, connection: base_identifier]
+        non_null_edges: non_null_edges,
+        non_null_edge: non_null_edge,
+        attrs: [
+          node_type: node_type_identifier,
+          connection: base_identifier,
+          non_null_edges: non_null_edges,
+          non_null_edge: non_null_edge
+        ]
       }
     end
 
     defp ident(base, category) do
       :"#{base}_#{category}"
     end
-  end
-
-  defp naming_from_attrs!(attrs) do
-    naming = Naming.define(attrs[:node_type], attrs[:connection])
-
-    naming ||
-      raise(
-        "Must provide a `:node_type' option (an optional `:connection` option is also supported)"
-      )
   end
 
   @doc """
@@ -106,38 +106,37 @@ defmodule Absinthe.Relay.Connection.Notation do
   See the `edge` macro below for more information.
   """
   defmacro connection({:field, _, [identifier, attrs]}, do: block) when is_list(attrs) do
-    # do_connection_field(__CALLER__, identifier, naming_from_attrs!(attrs), field_attrs, block)
     do_connection_field(identifier, attrs, block)
   end
 
   defmacro connection(attrs, do: block) do
-    naming = naming_from_attrs!(attrs)
+    naming = Naming.from_attrs!(attrs)
     do_connection_definition(naming, attrs, block)
   end
 
   defmacro connection(identifier, attrs) do
-    naming = naming_from_attrs!(attrs |> Keyword.put(:connection, identifier))
+    naming = Naming.from_attrs!(attrs |> Keyword.put(:connection, identifier))
     do_connection_definition(naming, attrs, [])
   end
 
   defmacro connection(attrs) do
-    naming = naming_from_attrs!(attrs)
+    naming = Naming.from_attrs!(attrs)
     do_connection_definition(naming, attrs, [])
   end
 
   defmacro connection(identifier, attrs, do: block) do
-    naming = naming_from_attrs!(attrs |> Keyword.put(:connection, identifier))
+    naming = Naming.from_attrs!(attrs |> Keyword.put(:connection, identifier))
     do_connection_definition(naming, attrs, block)
   end
 
   defp do_connection_field(identifier, attrs, block) do
-    naming = naming_from_attrs!(attrs)
+    naming = Naming.from_attrs!(attrs)
 
     paginate = Keyword.get(attrs, :paginate, :both)
 
     field_attrs =
       attrs
-      |> Keyword.drop([:node_type, :connection, :paginate])
+      |> Keyword.drop([:paginate] ++ @naming_attrs)
       |> Keyword.put(:type, naming.connection_type_identifier)
 
     quote do
@@ -150,9 +149,11 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   defp do_connection_definition(naming, attrs, block) do
     identifier = naming.connection_type_identifier
-    attrs = Keyword.drop(attrs, [:node_type, :connection])
+
+    attrs = Keyword.drop(attrs, @naming_attrs)
 
     block = name_edge(block, naming.attrs)
+    edge_field = build_edge_type(naming)
 
     quote do
       object unquote(identifier), unquote(attrs) do
@@ -163,9 +164,33 @@ defmodule Absinthe.Relay.Connection.Notation do
         )
 
         field(:page_info, type: non_null(:page_info))
-        field(:edges, type: list_of(unquote(naming.edge_type_identifier)))
+        field(:edges, type: unquote(edge_field))
         unquote(block)
       end
+    end
+  end
+
+  defp build_edge_type(%{non_null_edge: true, non_null_edges: true} = naming) do
+    quote do
+      non_null(list_of(non_null(unquote(naming.edge_type_identifier))))
+    end
+  end
+
+  defp build_edge_type(%{non_null_edge: true} = naming) do
+    quote do
+      list_of(non_null(unquote(naming.edge_type_identifier)))
+    end
+  end
+
+  defp build_edge_type(%{non_null_edges: true} = naming) do
+    quote do
+      non_null(list_of(unquote(naming.edge_type_identifier)))
+    end
+  end
+
+  defp build_edge_type(naming) do
+    quote do
+      list_of(unquote(naming.edge_type_identifier))
     end
   end
 
@@ -211,8 +236,9 @@ defmodule Absinthe.Relay.Connection.Notation do
   ```
   """
   defmacro edge(attrs, do: block) do
-    naming = naming_from_attrs!(attrs)
-    attrs = Keyword.drop(attrs, [:node_type, :connection])
+    naming = Naming.from_attrs!(attrs)
+
+    attrs = Keyword.drop(attrs, @naming_attrs)
 
     quote do
       Absinthe.Schema.Notation.stash()
@@ -227,7 +253,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   end
 
   def additional_types({:connection, attrs}, _) do
-    naming = naming_from_attrs!(attrs)
+    naming = Naming.from_attrs!(attrs)
     identifier = naming.edge_type_identifier
 
     %Schema.ObjectTypeDefinition{
@@ -255,7 +281,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   # @desc "A cursor for use in pagination"
   # field(:cursor, non_null(:string))
   def fillout({:edge, attrs}, node) do
-    naming = naming_from_attrs!(attrs)
+    naming = Naming.from_attrs!(attrs)
 
     Map.update!(node, :fields, fn fields ->
       naming.node_type_identifier
