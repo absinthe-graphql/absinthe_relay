@@ -77,6 +77,12 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       field :name, :string
       field :children, list_of(:child)
       field :child, :child
+
+      field :child_by_id, :child do
+        arg :id, :id
+        middleware Absinthe.Relay.Node.ParseIDs, id: :child
+        resolve &resolve_child_by_id/3
+      end
     end
 
     node object(:child) do
@@ -179,6 +185,11 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       {:ok, args |> to_parent_output}
     end
 
+    defp resolve_child_by_id(%{children: children}, %{id: id}, _) do
+      child = Enum.find(children, &(&1.id === id))
+      {:ok, child}
+    end
+
     # This is just a utility that converts the input value into the
     # expected output value (which has non-null constraints).
     #
@@ -239,6 +250,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         %Parent{}, _ ->
           :parent
 
+        %Child{}, _ ->
+          :child
+
         _, _ ->
           nil
       end
@@ -246,6 +260,12 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     input_object :parent_input do
       field :id, non_null(:id)
+      field :children, list_of(:child_input)
+      field :child, :child_input
+    end
+
+    input_object :child_input do
+      field :id, :id
     end
 
     node object(:child) do
@@ -254,7 +274,14 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     node object(:parent) do
       field :name, :string
+      field :children, list_of(:child)
       field :child, :child
+
+      field :child_by_id, :child do
+        arg :id, :id
+        middleware Absinthe.Relay.Node.ParseIDs, id: :child
+        resolve &resolve_child_by_id/3
+      end
     end
 
     query do
@@ -272,7 +299,9 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
         middleware Absinthe.Relay.Node.ParseIDs,
           parent: [
-            id: :parent
+            id: :parent,
+            children: [id: :child],
+            child: [id: :child]
           ]
 
         resolve &resolve_parent/2
@@ -281,6 +310,11 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     defp resolve_parent(args, _) do
       {:ok, args}
+    end
+
+    defp resolve_child_by_id(%{children: children}, %{id: id}, _) do
+      child = Enum.find(children, &(&1.id === id))
+      {:ok, child}
     end
   end
 
@@ -291,6 +325,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
   @child2_id "Child:2"
   @otherfoo1_id "FancyFoo:1"
   @modern_parent1_id Base.encode64(@parent1_id)
+  @modern_child1_id Base.encode64(@child1_id)
+  @modern_child2_id Base.encode64(@child2_id)
 
   describe "parses one id" do
     test "succeeds with a non-null value" do
@@ -663,166 +699,81 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
   end
 
-  describe "find_schema_root!/2" do
-    test "matches on a classic relay mutation field" do
-      field = %Absinthe.Type.Field{
-        __private__: [
-          absinthe_relay: [
-            payload: {:fill, Absinthe.Relay.Mutation.Notation.Classic},
-            input: {:fill, Absinthe.Relay.Mutation.Notation.Classic}
-          ]
-        ],
-        args: %{
-          input: %Absinthe.Type.Argument{
-            __reference__: nil,
-            default_value: nil,
-            definition: nil,
-            deprecation: nil,
-            description: nil,
-            identifier: :input,
-            name: "input",
-            type: %Absinthe.Type.NonNull{of_type: :update_parent_input}
-          }
-        }
-      }
-
-      resolution = %Absinthe.Resolution{
-        private: %{__parse_ids_root: :input},
-        adapter: Absinthe.Adapter.LanguageConventions
-      }
-
-      # Returns a type of Argument because that is what is nested inside the `:input` args
-      assert {%Absinthe.Type.Argument{
-                __reference__: nil,
-                default_value: nil,
-                definition: nil,
-                deprecation: nil,
-                description: nil,
-                identifier: :input,
-                name: "input",
-                type: %Absinthe.Type.NonNull{of_type: :update_parent_input}
-              },
-              _function_reference} =
-               Absinthe.Relay.Node.ParseIDs.find_schema_root!(field, resolution)
-    end
-
-    test "matches on a modern relay mutation field" do
-      field = %Absinthe.Type.Field{
-        __private__: [
-          absinthe_relay: [
-            payload: {:fill, Absinthe.Relay.Mutation.Notation.Modern},
-            input: {:fill, Absinthe.Relay.Mutation.Notation.Modern}
-          ]
-        ],
-        args: %{
-          input: %Absinthe.Type.Argument{
-            __reference__: nil,
-            default_value: nil,
-            definition: nil,
-            deprecation: nil,
-            description: nil,
-            identifier: :input,
-            name: "input",
-            type: %Absinthe.Type.NonNull{
-              of_type: :update_parent_input
+  describe "ParseIDs middlware in both mutation and child field" do
+    test "classic schema" do
+      result =
+        """
+        mutation Foobar {
+          updateParent(input: {
+            clientMutationId: "abc",
+            parent: {
+              id: "#{@parent1_id}",
+              children: [{ id: "#{@child1_id}"}, {id: "#{@child2_id}"}],
+              child: { id: "#{@child2_id}"}
+            }
+          }) {
+            parent {
+              id
+              childById(id: "#{@child2_id}") { id }
             }
           }
-        },
-        definition: Absinthe.Relay.Node.ParseIDsTest.SchemaModern
-      }
+        }
+        """
+        |> Absinthe.run(SchemaClassic)
 
-      resolution = %Absinthe.Resolution{
-        private: %{__parse_ids_root: :input},
-        adapter: Absinthe.Adapter.LanguageConventions
-      }
-
-      # Returns a type of Argument because that is what is nested inside the `:input` args
-      assert {%Absinthe.Type.Argument{
-                __reference__: nil,
-                default_value: nil,
-                definition: nil,
-                deprecation: nil,
-                description: nil,
-                identifier: :input,
-                name: "input",
-                type: %Absinthe.Type.NonNull{of_type: :update_parent_input}
-              },
-              _function_reference} =
-               Absinthe.Relay.Node.ParseIDs.find_schema_root!(field, resolution)
-    end
-
-    test "matches on a child field" do
-      field = %Absinthe.Type.Field{
-        __private__: [],
-        args: %{
-          foo_id: %Absinthe.Type.Argument{
-            __reference__: nil,
-            default_value: nil,
-            definition: nil,
-            deprecation: nil,
-            description: nil,
-            identifier: :foo_id,
-            name: "foo_id",
-            type: :id
-          },
-          foobar_id: %Absinthe.Type.Argument{
-            __reference__: nil,
-            default_value: nil,
-            definition: nil,
-            deprecation: nil,
-            description: nil,
-            identifier: :foobar_id,
-            name: "foobar_id",
-            type: :id
+      expected_parent_data = %{
+        "parent" => %{
+          # The output re-converts everything to global_ids.
+          "id" => @parent1_id,
+          "childById" => %{
+            "id" => @child2_id
           }
         }
       }
 
-      resolution = %Absinthe.Resolution{
-        private: %{__parse_ids_root: :input},
-        adapter: Absinthe.Adapter.LanguageConventions
-      }
+      assert {:ok, %{data: %{"updateParent" => expected_parent_data}}} == result
+    end
 
-      # Returns a type of Field because it isn't matched on as being a mutation, so it passes the field along.
-      assert {%Absinthe.Type.Field{
-                __reference__: nil,
-                default_value: nil,
-                definition: nil,
-                deprecation: nil,
-                description: nil,
-                identifier: nil,
-                name: nil,
-                type: nil,
-                __private__: [],
-                args: %{
-                  foo_id: %Absinthe.Type.Argument{
-                    __reference__: nil,
-                    default_value: nil,
-                    definition: nil,
-                    deprecation: nil,
-                    description: nil,
-                    identifier: :foo_id,
-                    name: "foo_id",
-                    type: :id
-                  },
-                  foobar_id: %Absinthe.Type.Argument{
-                    __reference__: nil,
-                    default_value: nil,
-                    definition: nil,
-                    deprecation: nil,
-                    description: nil,
-                    identifier: :foobar_id,
-                    name: "foobar_id",
-                    type: :id
-                  }
-                },
-                complexity: nil,
-                config: nil,
-                middleware: [],
-                triggers: []
-              },
-              _function_reference} =
-               Absinthe.Relay.Node.ParseIDs.find_schema_root!(field, resolution)
+    test "modern schema" do
+      result =
+        """
+        mutation FoobarLocal {
+          updateParentLocalMiddleware(input: {
+            parent: {
+              id: "#{@modern_parent1_id}",
+              children: [{ id: "#{@modern_child1_id}"}, {id: "#{@modern_child2_id}"}],
+              child: { id: "#{@modern_child1_id}"}
+            }})
+            {
+              parent {
+                id
+                childById(id: "#{@modern_child1_id}") {
+                  id
+                }
+            }
+          }
+        }
+        """
+        |> Absinthe.run(SchemaModern)
+        |> IO.inspect()
+
+      expected_parent_data =
+        {:ok,
+         %{
+           data: %{
+             "updateParentLocalMiddleware" => %{
+               "parent" => %{
+                 # The output re-converts everything to global_ids.
+                 "id" => @modern_parent1_id,
+                 "childById" => %{
+                   "id" => @modern_child1_id
+                 }
+               }
+             }
+           }
+         }}
+
+      assert expected_parent_data == result
     end
   end
 end
