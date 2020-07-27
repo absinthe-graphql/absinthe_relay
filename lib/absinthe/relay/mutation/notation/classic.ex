@@ -100,8 +100,8 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
       # generate both input and payload types if they are not defined within the field
       # itself. The `input` notation also autogenerates the `input` argument to the field
       quote do
-        private(:absinthe_relay, :input, {:fill, unquote(__MODULE__)})
         private(:absinthe_relay, :payload, {:fill, unquote(__MODULE__)})
+        private(:absinthe_relay, :input, {:fill, unquote(__MODULE__)})
       end
     ]
   end
