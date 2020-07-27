@@ -148,6 +148,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         end
 
         middleware Absinthe.Relay.Node.ParseIDs,
+          mutation_root: true,
           parent: [
             id: :parent,
             children: [id: :child],
@@ -271,6 +272,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         end
 
         middleware Absinthe.Relay.Node.ParseIDs,
+          mutation_root: true,
           parent: [
             id: :parent
           ]

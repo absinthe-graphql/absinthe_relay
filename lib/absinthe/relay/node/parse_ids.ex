@@ -212,8 +212,23 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   @doc false
   @spec parse(map, rules, Absinthe.Resolution.t()) :: {:ok, map} | {:error, [String.t()]}
   def parse(args, rules, resolution) do
-    config = Config.parse!(rules)
-    {root, error_editor} = find_schema_root!(resolution.definition.schema_node, resolution)
+    config =
+      case Keyword.get(rules, :mutation_root) do
+        true ->
+          rules
+          |> Keyword.drop([:mutation_root])
+          |> Config.parse!()
+
+        _ ->
+          Config.parse!(rules)
+      end
+
+    {root, error_editor} =
+      find_schema_root!(
+        resolution.definition.schema_node,
+        resolution,
+        Keyword.get(rules, :mutation_root)
+      )
 
     case process(config, args, resolution, root, []) do
       {processed_args, []} ->
@@ -226,10 +241,10 @@ defmodule Absinthe.Relay.Node.ParseIDs do
 
   # To support middleware that may run earlier and strip away toplevel arguments (eg, `Absinthe.Relay.Mutation` stripping
   # away `input`), we check for a private value on the resolution to see how to find the root schema definition.
-  @spec find_schema_root!(Absinthe.Type.Field.t(), Absinthe.Resolution.t()) ::
+  @spec find_schema_root!(Absinthe.Type.Field.t(), Absinthe.Resolution.t(), boolean()) ::
           {{Absinthe.Type.Field.t() | Absinthe.Type.Argument.t(), String.t()},
            (String.t() -> String.t())}
-  defp find_schema_root!(field, resolution) do
+  defp find_schema_root!(field, resolution, true) do
     case Map.get(resolution.private, :__parse_ids_root) do
       nil ->
         {field, & &1}
@@ -249,6 +264,10 @@ defmodule Absinthe.Relay.Node.ParseIDs do
            field_error_prefix <> argument_error_prefix
          )}
     end
+  end
+
+  defp find_schema_root!(field, _resolution, _) do
+    {field, & &1}
   end
 
   # Process values based on the matching configuration rules
