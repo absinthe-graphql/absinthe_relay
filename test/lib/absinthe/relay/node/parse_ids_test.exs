@@ -755,7 +755,6 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
         """
         |> Absinthe.run(SchemaModern)
-        |> IO.inspect()
 
       expected_parent_data =
         {:ok,
