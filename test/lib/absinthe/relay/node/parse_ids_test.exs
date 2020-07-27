@@ -662,4 +662,167 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
       assert {:ok, %{data: %{"updateParentLocalMiddleware" => expected_parent_data}}} == result
     end
   end
+
+  describe "find_schema_root!/2" do
+    test "matches on a classic relay mutation field" do
+      field = %Absinthe.Type.Field{
+        __private__: [
+          absinthe_relay: [
+            payload: {:fill, Absinthe.Relay.Mutation.Notation.Classic},
+            input: {:fill, Absinthe.Relay.Mutation.Notation.Classic}
+          ]
+        ],
+        args: %{
+          input: %Absinthe.Type.Argument{
+            __reference__: nil,
+            default_value: nil,
+            definition: nil,
+            deprecation: nil,
+            description: nil,
+            identifier: :input,
+            name: "input",
+            type: %Absinthe.Type.NonNull{of_type: :update_parent_input}
+          }
+        }
+      }
+
+      resolution = %Absinthe.Resolution{
+        private: %{__parse_ids_root: :input},
+        adapter: Absinthe.Adapter.LanguageConventions
+      }
+
+      # Returns a type of Argument because that is what is nested inside the `:input` args
+      assert {%Absinthe.Type.Argument{
+                __reference__: nil,
+                default_value: nil,
+                definition: nil,
+                deprecation: nil,
+                description: nil,
+                identifier: :input,
+                name: "input",
+                type: %Absinthe.Type.NonNull{of_type: :update_parent_input}
+              },
+              _function_reference} =
+               Absinthe.Relay.Node.ParseIDs.find_schema_root!(field, resolution)
+    end
+
+    test "matches on a modern relay mutation field" do
+      field = %Absinthe.Type.Field{
+        __private__: [
+          absinthe_relay: [
+            payload: {:fill, Absinthe.Relay.Mutation.Notation.Modern},
+            input: {:fill, Absinthe.Relay.Mutation.Notation.Modern}
+          ]
+        ],
+        args: %{
+          input: %Absinthe.Type.Argument{
+            __reference__: nil,
+            default_value: nil,
+            definition: nil,
+            deprecation: nil,
+            description: nil,
+            identifier: :input,
+            name: "input",
+            type: %Absinthe.Type.NonNull{
+              of_type: :update_parent_input
+            }
+          }
+        },
+        definition: Absinthe.Relay.Node.ParseIDsTest.SchemaModern
+      }
+
+      resolution = %Absinthe.Resolution{
+        private: %{__parse_ids_root: :input},
+        adapter: Absinthe.Adapter.LanguageConventions
+      }
+
+      # Returns a type of Argument because that is what is nested inside the `:input` args
+      assert {%Absinthe.Type.Argument{
+                __reference__: nil,
+                default_value: nil,
+                definition: nil,
+                deprecation: nil,
+                description: nil,
+                identifier: :input,
+                name: "input",
+                type: %Absinthe.Type.NonNull{of_type: :update_parent_input}
+              },
+              _function_reference} =
+               Absinthe.Relay.Node.ParseIDs.find_schema_root!(field, resolution)
+    end
+
+    test "matches on a child field" do
+      field = %Absinthe.Type.Field{
+        __private__: [],
+        args: %{
+          foo_id: %Absinthe.Type.Argument{
+            __reference__: nil,
+            default_value: nil,
+            definition: nil,
+            deprecation: nil,
+            description: nil,
+            identifier: :foo_id,
+            name: "foo_id",
+            type: :id
+          },
+          foobar_id: %Absinthe.Type.Argument{
+            __reference__: nil,
+            default_value: nil,
+            definition: nil,
+            deprecation: nil,
+            description: nil,
+            identifier: :foobar_id,
+            name: "foobar_id",
+            type: :id
+          }
+        }
+      }
+
+      resolution = %Absinthe.Resolution{
+        private: %{__parse_ids_root: :input},
+        adapter: Absinthe.Adapter.LanguageConventions
+      }
+
+      # Returns a type of Field because it isn't matched on as being a mutation, so it passes the field along.
+      assert {%Absinthe.Type.Field{
+                __reference__: nil,
+                default_value: nil,
+                definition: nil,
+                deprecation: nil,
+                description: nil,
+                identifier: nil,
+                name: nil,
+                type: nil,
+                __private__: [],
+                args: %{
+                  foo_id: %Absinthe.Type.Argument{
+                    __reference__: nil,
+                    default_value: nil,
+                    definition: nil,
+                    deprecation: nil,
+                    description: nil,
+                    identifier: :foo_id,
+                    name: "foo_id",
+                    type: :id
+                  },
+                  foobar_id: %Absinthe.Type.Argument{
+                    __reference__: nil,
+                    default_value: nil,
+                    definition: nil,
+                    deprecation: nil,
+                    description: nil,
+                    identifier: :foobar_id,
+                    name: "foobar_id",
+                    type: :id
+                  }
+                },
+                complexity: nil,
+                config: nil,
+                middleware: [],
+                triggers: []
+              },
+              _function_reference} =
+               Absinthe.Relay.Node.ParseIDs.find_schema_root!(field, resolution)
+    end
+  end
 end
