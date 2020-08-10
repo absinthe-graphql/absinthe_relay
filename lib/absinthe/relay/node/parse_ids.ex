@@ -229,7 +229,17 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   @spec find_schema_root!(Absinthe.Type.Field.t(), Absinthe.Resolution.t()) ::
           {{Absinthe.Type.Field.t() | Absinthe.Type.Argument.t(), String.t()},
            (String.t() -> String.t())}
-  defp find_schema_root!(field, resolution) do
+  def find_schema_root!(
+        %{
+          __private__: [
+            absinthe_relay: [
+              payload: {:fill, _},
+              input: {:fill, _}
+            ]
+          ]
+        } = field,
+        resolution
+      ) do
     case Map.get(resolution.private, :__parse_ids_root) do
       nil ->
         {field, & &1}
@@ -249,6 +259,10 @@ defmodule Absinthe.Relay.Node.ParseIDs do
            field_error_prefix <> argument_error_prefix
          )}
     end
+  end
+
+  def find_schema_root!(field, _resolution) do
+    {field, & &1}
   end
 
   # Process values based on the matching configuration rules
