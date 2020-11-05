@@ -36,7 +36,7 @@ defmodule AbsintheRelay.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :absinthe]]
+    [extra_applications: [:logger]]
   end
 
   # Specifies which paths to compile per environment.
