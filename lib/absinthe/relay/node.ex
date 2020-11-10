@@ -87,6 +87,32 @@ defmodule Absinthe.Relay.Node do
   Base64 implementation). All of this is handled for you automatically by
   prefixing your object type definition with `"node "`.
 
+  By default, type of `:id` field is `ID`. But you can pass custom type in `:id_type` attribute:
+
+  ```
+  node interface id_type: :uuid do
+      resolve_type fn
+        ...
+      end
+  end
+
+  node field id_type: :uuid do
+      resolve fn
+        ...
+      end
+  end
+
+  node object :thing, id_type: :uuid do
+    field :name, :string
+  end
+  ```
+
+  Or you can set it up globally via application config:
+  ```
+  config Absinthe.Relay,
+    node_id_type: :uuid
+  ```
+
   The raw, internal value is retrieved using `default_id_fetcher/2` which just
   pattern matches an `:id` field from the resolved object. If you need to
   extract/build an internal ID via another method, just provide a function as

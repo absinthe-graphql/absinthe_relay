@@ -19,15 +19,37 @@ defmodule Absinthe.Relay.Node.Notation do
 
   See the `Absinthe.Relay.Node` module documentation for examples.
   """
+
+  defmacro node({:interface, meta, [attrs]}, do: block) when is_list(attrs) do
+    do_interface(meta, attrs, block)
+  end
+
   defmacro node({:interface, meta, attrs}, do: block) do
+    do_interface(meta, attrs, block)
+  end
+
+  defp do_interface(meta, attrs, block) do
     attrs = attrs || []
-    attrs = [:node | attrs]
-    block = [interface_body(), block]
+    {id_type, attrs} = Keyword.pop(attrs, :id_type, get_id_type())
+
+    block = [interface_body(id_type), block]
+    attrs = [:node | [attrs]]
     {:interface, meta, attrs ++ [[do: block]]}
   end
 
+  defmacro node({:field, meta, [attrs]}, do: block) when is_list(attrs) do
+    do_field(meta, attrs, block)
+  end
+
   defmacro node({:field, meta, attrs}, do: block) do
-    {:field, meta, [:node, :node, (attrs || []) ++ [do: [field_body(), block]]]}
+    do_field(meta, attrs, block)
+  end
+
+  defp do_field(meta, attrs, block) do
+    attrs = attrs || []
+    {id_type, attrs} = Keyword.pop(attrs, :id_type, get_id_type())
+
+    {:field, meta, [:node, :node, attrs ++ [do: [field_body(id_type), block]]]}
   end
 
   defmacro node({:object, meta, [identifier, attrs]}, do: block) when is_list(attrs) do
@@ -40,13 +62,14 @@ defmodule Absinthe.Relay.Node.Notation do
 
   defp do_object(meta, identifier, attrs, block) do
     {id_fetcher, attrs} = Keyword.pop(attrs, :id_fetcher)
+    {id_type, attrs} = Keyword.pop(attrs, :id_type, get_id_type())
 
     block = [
       quote do
         private(:absinthe_relay, :node, {:fill, unquote(__MODULE__)})
         private(:absinthe_relay, :id_fetcher, unquote(id_fetcher))
       end,
-      object_body(id_fetcher),
+      object_body(id_fetcher, id_type),
       block
     ]
 
@@ -69,18 +92,23 @@ defmodule Absinthe.Relay.Node.Notation do
     node
   end
 
+  defp get_id_type() do
+    Absinthe.Relay
+    |> Application.get_env(:node_id_type, :id)
+  end
+
   # An id field is automatically configured
-  defp interface_body do
+  defp interface_body(id_type) do
     quote do
-      field(:id, non_null(:id), description: "The id of the object.")
+      field(:id, non_null(unquote(id_type)), description: "The ID of the object.")
     end
   end
 
   # An id arg is automatically added
-  defp field_body do
+  defp field_body(id_type) do
     quote do
-      @desc "The id of an object."
-      arg(:id, non_null(:id))
+      @desc "The ID of an object."
+      arg(:id, non_null(unquote(id_type)))
 
       middleware({Absinthe.Relay.Node, :resolve_with_global_id})
     end
@@ -90,10 +118,10 @@ defmodule Absinthe.Relay.Node.Notation do
   # - An id field that resolves to the generated global ID
   #   for an object of this type
   # - A declaration that this implements the node interface
-  defp object_body(id_fetcher) do
+  defp object_body(id_fetcher, id_type) do
     quote do
       @desc "The ID of an object"
-      field :id, non_null(:id) do
+      field :id, non_null(unquote(id_type)) do
         middleware {Absinthe.Relay.Node, :global_id_resolver}, unquote(id_fetcher)
       end
 
