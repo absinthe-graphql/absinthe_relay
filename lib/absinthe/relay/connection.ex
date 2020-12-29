@@ -566,7 +566,9 @@ defmodule Absinthe.Relay.Connection do
     offset = offset || 0
     first = offset_to_cursor(offset)
     edge = build_edge(item, first)
-    {edges, last} = do_build_cursors(items, offset + 1, [edge], first)
+    {edges, _} = do_build_cursors(items, offset + 1, [edge], first)
+    first = edges |> List.first() |> get_in([:cursor])
+    last = edges |> List.last() |> get_in([:cursor])
     {edges, first, last}
   end
 
@@ -581,7 +583,7 @@ defmodule Absinthe.Relay.Connection do
   defp build_edge({item, args}, cursor) do
     args
     |> Enum.flat_map(fn
-      {key, _} when key in [:cursor, :node] ->
+      {key, _} when key in [:node] ->
         Logger.warn("Ignoring additional #{key} provided on edge (overriding is not allowed)")
         []
 

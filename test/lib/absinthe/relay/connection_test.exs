@@ -578,20 +578,25 @@ defmodule Absinthe.Relay.ConnectionTest do
 
   describe "when provided with a cursor as an edge arg" do
     setup do
-      [record: {%{name: "Dan"}, %{role: "contributor", cursor: :bad}}]
+      [
+        records: [
+          {%{name: "Dan"}, %{role: "contributor", cursor: "start_cursor"}},
+          {%{name: "Bob"}, %{role: "contributor", cursor: "end_cursor"}}
+        ]
+      ]
     end
 
-    test "it will ignore the additional cursor", %{record: record} do
-      capture_log(fn ->
-        {:ok, %{edges: [%{cursor: cursor} | _]}} = Connection.from_list([record], %{first: 1})
-        assert cursor == "YXJyYXljb25uZWN0aW9uOjA="
-      end)
-    end
-
-    test "it will log a warning", %{record: record} do
-      assert capture_log(fn ->
-               Connection.from_list([record], %{first: 1})
-             end) =~ "Ignoring additional cursor provided on edge"
+    test "it will override the default cursor", %{records: records} do
+      assert(
+        {:ok,
+         %{
+           edges: [%{cursor: "start_cursor"}, %{cursor: "end_cursor"}],
+           page_info: %{
+             start_cursor: "start_cursor",
+             end_cursor: "end_cursor"
+           }
+         }} = Connection.from_list(records, %{first: 2})
+      )
     end
   end
 
