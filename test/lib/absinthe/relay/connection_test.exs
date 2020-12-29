@@ -582,10 +582,8 @@ defmodule Absinthe.Relay.ConnectionTest do
     end
 
     test "it will override the default cursor", %{record: record} do
-      capture_log(fn ->
-        {:ok, %{edges: [%{cursor: cursor} | _]}} = Connection.from_list([record], %{first: 1})
-        assert cursor == "custom_cursor"
-      end)
+      {:ok, %{edges: [%{cursor: cursor} | _]}} = Connection.from_list([record], %{first: 1})
+      assert cursor == "custom_cursor"
     end
   end
 
