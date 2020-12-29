@@ -578,12 +578,25 @@ defmodule Absinthe.Relay.ConnectionTest do
 
   describe "when provided with a cursor as an edge arg" do
     setup do
-      [record: {%{name: "Dan"}, %{role: "contributor", cursor: "custom_cursor"}}]
+      [
+        records: [
+          {%{name: "Dan"}, %{role: "contributor", cursor: "first_custom_cursor"}},
+          {%{name: "Bob"}, %{role: "contributor", cursor: "end_custom_cursor"}}
+        ]
+      ]
     end
 
-    test "it will override the default cursor", %{record: record} do
-      {:ok, %{edges: [%{cursor: cursor} | _]}} = Connection.from_list([record], %{first: 1})
-      assert cursor == "custom_cursor"
+    test "it will override the default cursor", %{records: records} do
+      assert(
+        {:ok,
+         %{
+           edges: [%{cursor: "first_custom_cursor"}, %{cursor: "end_custom_cursor"}],
+           page_info: %{
+             start_cursor: "first_custom_cursor",
+             end_cursor: "end_custom_cursor"
+           }
+         }} = Connection.from_list(records, %{first: 2})
+      )
     end
   end
 

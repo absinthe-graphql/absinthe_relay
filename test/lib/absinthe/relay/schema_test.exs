@@ -155,7 +155,6 @@ defmodule Absinthe.Relay.SchemaTest do
     end
   end
 
-
   defmodule SchemaCustomIdType do
     use Absinthe.Schema
     use Absinthe.Relay.Schema, :classic
