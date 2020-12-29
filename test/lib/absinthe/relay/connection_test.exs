@@ -580,8 +580,8 @@ defmodule Absinthe.Relay.ConnectionTest do
     setup do
       [
         records: [
-          {%{name: "Dan"}, %{role: "contributor", cursor: "first_custom_cursor"}},
-          {%{name: "Bob"}, %{role: "contributor", cursor: "end_custom_cursor"}}
+          {%{name: "Dan"}, %{role: "contributor", cursor: "start_cursor"}},
+          {%{name: "Bob"}, %{role: "contributor", cursor: "end_cursor"}}
         ]
       ]
     end
@@ -590,10 +590,10 @@ defmodule Absinthe.Relay.ConnectionTest do
       assert(
         {:ok,
          %{
-           edges: [%{cursor: "first_custom_cursor"}, %{cursor: "end_custom_cursor"}],
+           edges: [%{cursor: "start_cursor"}, %{cursor: "end_cursor"}],
            page_info: %{
-             start_cursor: "first_custom_cursor",
-             end_cursor: "end_custom_cursor"
+             start_cursor: "start_cursor",
+             end_cursor: "end_cursor"
            }
          }} = Connection.from_list(records, %{first: 2})
       )
