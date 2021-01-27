@@ -28,6 +28,22 @@ defmodule Absinthe.Relay.Node.Notation do
     do_interface(meta, attrs, block)
   end
 
+  defmacro node({:field, meta, [attrs]}, do: block) when is_list(attrs) do
+    do_field(meta, attrs, block)
+  end
+
+  defmacro node({:field, meta, attrs}, do: block) do
+    do_field(meta, attrs, block)
+  end
+
+  defmacro node({:object, meta, [identifier, attrs]}, do: block) when is_list(attrs) do
+    do_object(meta, identifier, attrs, block)
+  end
+
+  defmacro node({:object, meta, [identifier]}, do: block) do
+    do_object(meta, identifier, [], block)
+  end
+
   defp do_interface(meta, attrs, block) do
     attrs = attrs || []
     {id_type, attrs} = Keyword.pop(attrs, :id_type, get_id_type())
@@ -37,27 +53,11 @@ defmodule Absinthe.Relay.Node.Notation do
     {:interface, meta, attrs ++ [[do: block]]}
   end
 
-  defmacro node({:field, meta, [attrs]}, do: block) when is_list(attrs) do
-    do_field(meta, attrs, block)
-  end
-
-  defmacro node({:field, meta, attrs}, do: block) do
-    do_field(meta, attrs, block)
-  end
-
   defp do_field(meta, attrs, block) do
     attrs = attrs || []
     {id_type, attrs} = Keyword.pop(attrs, :id_type, get_id_type())
 
     {:field, meta, [:node, :node, attrs ++ [do: [field_body(id_type), block]]]}
-  end
-
-  defmacro node({:object, meta, [identifier, attrs]}, do: block) when is_list(attrs) do
-    do_object(meta, identifier, attrs, block)
-  end
-
-  defmacro node({:object, meta, [identifier]}, do: block) do
-    do_object(meta, identifier, [], block)
   end
 
   defp do_object(meta, identifier, attrs, block) do
