@@ -13,7 +13,10 @@ defmodule AbsintheRelay.Mixfile do
       start_permanent: Mix.env() == :prod,
       package: package(),
       docs: docs(),
-      deps: deps()
+      deps: deps(),
+      xref: [
+        exclude: [:ecto]
+      ]
     ]
   end
 
