@@ -26,7 +26,11 @@ defmodule AbsintheRelay.Mixfile do
       files: ["lib", "mix.exs", "README*"],
       maintainers: ["Bruce Williams", "Ben Wilson"],
       licenses: ["MIT"],
-      links: %{github: "https://github.com/absinthe-graphql/absinthe_relay"}
+      links: %{
+        "Website": "https://absinthe-graphql.org",
+        "Changelog": "https://github.com/absinthe-graphql/absinthe_relay/blob/master/CHANGELOG.md", 
+        "GitHub": "https://github.com/absinthe-graphql/absinthe_relay"
+      }
     ]
   end
 
