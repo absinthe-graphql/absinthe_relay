@@ -1,4 +1,4 @@
 [
-  inputs: ["mix.exs", "{config,lib,test}/**/*.{ex,exs}"],
-  import_deps: [:absinthe],
+  inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+  import_deps: [:absinthe]
 ]
