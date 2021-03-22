@@ -1,6 +1,7 @@
 defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
+  @source_url "https://github.com/absinthe-graphql/absinthe_relay"
   @version "1.5.1"
 
   def project do
@@ -23,18 +24,23 @@ defmodule AbsintheRelay.Mixfile do
   defp package do
     [
       description: "Relay framework support for Absinthe",
-      files: ["lib", "mix.exs", "README*"],
+      files: ["lib", "mix.exs", "README*", "CHANGELOG*"],
       maintainers: ["Bruce Williams", "Ben Wilson"],
       licenses: ["MIT"],
-      links: %{github: "https://github.com/absinthe-graphql/absinthe_relay"}
+      links: %{
+        Changelog: "https://hexdocs.pm/absinthe_relay/changelog.html",
+        GitHub: @source_url
+      }
     ]
   end
 
   defp docs do
     [
+      extras: ["CHANGELOG.md", "README.md"],
+      main: "readme",
+      source_url: @source_url,
       source_ref: "v#{@version}",
-      main: "Absinthe.Relay",
-      source_url: "https://github.com/absinthe-graphql/absinthe_relay"
+      formatters: ["html"]
     ]
   end
 
@@ -51,7 +57,7 @@ defmodule AbsintheRelay.Mixfile do
       {:absinthe, "~> 1.5.0 or ~> 1.6.0"},
       {:ecto, "~> 2.0 or ~> 3.0", optional: true},
       {:poison, ">= 0.0.0", only: [:dev, :test]},
-      {:ex_doc, ">= 0.0.0", only: :dev}
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 end

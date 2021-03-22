@@ -414,7 +414,7 @@ defmodule Absinthe.Relay.Connection do
   Notes:
   - Your query MUST have an `order_by` value. Offset does not make
     sense without one.
-  - `last: N` must always be acompanied by either a `before:` argument
+  - `last: N` must always be accompanied by either a `before:` argument
     to the query,
   or an explicit `count: ` option to the `from_query` call.
   Otherwise it is impossible to derive the required offset.

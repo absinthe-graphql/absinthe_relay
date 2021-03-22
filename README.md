@@ -1,8 +1,11 @@
 # Absinthe.Relay
 
 [![Build Status](https://travis-ci.org/absinthe-graphql/absinthe_relay.svg?branch=master)](https://travis-ci.org/absinthe-graphql/absinthe_relay)
-[![Hex pm](http://img.shields.io/hexpm/v/absinthe_relay.svg?style=flat)](https://hex.pm/packages/absinthe_relay)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Module Version](https://img.shields.io/hexpm/v/absinthe_relay.svg)](https://hex.pm/packages/absinthe_relay)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/absinthe_relay/)
+[![Total Download](https://img.shields.io/hexpm/dt/absinthe_relay.svg)](https://hex.pm/packages/absinthe_relay)
+[![License](https://img.shields.io/hexpm/l/absinthe_relay.svg)](https://github.com/absinthe-graphql/absinthe_relay/blob/master/LICENSE)
+[![Last Updated](https://img.shields.io/github/last-commit/absinthe-graphql/absinthe_relay.svg)](https://github.com/absinthe-graphql/absinthe_relay/commits/master)
 
 Support for the [Relay framework](https://facebook.github.io/relay/)
 from Elixir, using the [Absinthe](https://github.com/absinthe-graphql/absinthe)
@@ -14,11 +17,13 @@ Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
 
 ```elixir
 def deps do
-  [{:absinthe_relay, "~> 1.5.0"}]
+  [
+    {:absinthe_relay, "~> 1.5.0"}
+  ]
 end
 ```
 
-Note: Absinthe requires Elixir 1.4 or higher.
+Note: Absinthe requires Elixir 1.5 or higher.
 
 ## Upgrading
 
@@ -121,8 +126,10 @@ See additional documentation, including guides, in the [Absinthe hexdocs](https:
 ## Contributing
 
 Please remember that all interactions in our official spaces follow our [Code of
-Conduct](./CODE_OF_CONDUCT.md).
+Conduct](https://github.com/absinthe-graphql/absinthe_relay/blog/master/LICENSE.md).
 
-## License
+## Copyright and License
 
-See [LICENSE.md](./LICENSE.md)
+Copyright (c) 2016 Bruce Williams
+
+Released under the MIT License, which can be found in the repository in [`LICENSE.md`](https://github.com/absinthe-graphql/absinthe_relay/blob/master/LICENSE.md).
