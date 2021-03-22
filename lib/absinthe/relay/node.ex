@@ -64,7 +64,7 @@ defmodule Absinthe.Relay.Node do
   be a global ID and, once resolved, will result in a value whose type
   implements the `:node` interface.
 
-  Here's how you easly create object types that can be looked up using this
+  Here's how you easily create object types that can be looked up using this
   field:
 
   ## Object
