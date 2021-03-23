@@ -1,10 +1,10 @@
 # Absinthe.Relay
 
-[![Build Status](https://travis-ci.org/absinthe-graphql/absinthe_relay.svg?branch=master)](https://travis-ci.org/absinthe-graphql/absinthe_relay)
-[![Module Version](https://img.shields.io/hexpm/v/absinthe_relay.svg)](https://hex.pm/packages/absinthe_relay)
+[![Build Status](https://github.com/absinthe-graphql/absinthe_relay/workflows/CI/badge.svg)](https://github.com/absinthe-graphql/absinthe_relay/actions?query=workflow%3ACI)
+[![Version](https://img.shields.io/hexpm/v/absinthe_relay.svg)](https://hex.pm/packages/absinthe_relay)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/absinthe_relay/)
-[![Total Download](https://img.shields.io/hexpm/dt/absinthe_relay.svg)](https://hex.pm/packages/absinthe_relay)
-[![License](https://img.shields.io/hexpm/l/absinthe_relay.svg)](https://github.com/absinthe-graphql/absinthe_relay/blob/master/LICENSE)
+[![Download](https://img.shields.io/hexpm/dt/absinthe_relay.svg)](https://hex.pm/packages/absinthe_relay)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Last Updated](https://img.shields.io/github/last-commit/absinthe-graphql/absinthe_relay.svg)](https://github.com/absinthe-graphql/absinthe_relay/commits/master)
 
 Support for the [Relay framework](https://facebook.github.io/relay/)
@@ -23,7 +23,7 @@ def deps do
 end
 ```
 
-Note: Absinthe requires Elixir 1.5 or higher.
+Note: Absinthe.Relay requires Elixir 1.10 or higher.
 
 ## Upgrading
 
@@ -35,17 +35,13 @@ You may want to look for the specific upgrade guide in the [Absinthe documentati
 
 See "Usage," below, for basic usage information and links to specific resources.
 
+- [Absinthe.Relay hexdocs](https://hexdocs.pm/absinthe_relay).
 - For the tutorial, guides, and general information about Absinthe-related
   projects, see [http://absinthe-graphql.org](http://absinthe-graphql.org).
-- Links to the API documentation are available in the [project list](http://absinthe-graphql.org/projects).
-
-### Roadmap
-
-See the Roadmap on [absinthe-graphql.org](http://absinthe-graphql.org/roadmap).
 
 ## Related Projects
 
-See the Project List on [absinthe-graphql.org](http://absinthe-graphql.org/projects).
+See the [GitHub organization](https://github.com/absinthe-graphql).
 
 ## Usage
 
@@ -119,17 +115,20 @@ In your project, check out the documentation with:
 mix help absinthe.schema.json
 ```
 
-## More Documentation
+## Community
 
-See additional documentation, including guides, in the [Absinthe hexdocs](https://hexdocs.pm/absinthe).
+The project is under constant improvement by a growing list of
+contributors, and your feedback is important. Please join us in Slack
+(`#absinthe-graphql` under the Elixir Slack account) or the Elixir Forum
+(tagged `absinthe`).
+
+Please remember that all interactions in our official spaces follow
+our [Code of Conduct](./CODE_OF_CONDUCT.md).
 
 ## Contributing
 
-Please remember that all interactions in our official spaces follow our [Code of
-Conduct](https://github.com/absinthe-graphql/absinthe_relay/blog/master/LICENSE.md).
+Please follow [contribution guide](./CONTRIBUTING.md).
 
-## Copyright and License
+## License
 
-Copyright (c) 2016 Bruce Williams
-
-Released under the MIT License, which can be found in the repository in [`LICENSE.md`](https://github.com/absinthe-graphql/absinthe_relay/blob/master/LICENSE.md).
+See [LICENSE.md](./LICENSE.md).
