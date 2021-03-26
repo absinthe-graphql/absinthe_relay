@@ -8,7 +8,7 @@ defmodule AbsintheRelay.Mixfile do
     [
       app: :absinthe_relay,
       version: @version,
-      elixir: "~> 1.5",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
