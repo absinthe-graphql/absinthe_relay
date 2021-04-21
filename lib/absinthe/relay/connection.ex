@@ -1,12 +1,15 @@
 defmodule Absinthe.Relay.Connection.Options do
   @moduledoc false
+  
+  alias Absinthe.Relay.Connection
 
   @typedoc false
   @type t :: %{
           optional(:after) => nil | Connection.cursor(),
           optional(:before) => nil | Connection.cursor(),
           optional(:first) => nil | pos_integer(),
-          optional(:last) => nil | pos_integer()
+          optional(:last) => nil | pos_integer(),
+          optional(any()) => any()
         }
 
   defstruct after: nil, before: nil, first: nil, last: nil
@@ -324,7 +327,7 @@ defmodule Absinthe.Relay.Connection do
   end
   ```
   """
-  @spec from_list(data :: list, args :: Option.t()) :: {:ok, t} | {:error, any}
+  @spec from_list(data :: list, args :: Options.t()) :: {:ok, t} | {:error, any}
   def from_list(data, args, opts \\ []) do
     with {:ok, direction, limit} <- limit(args, opts[:max]),
          {:ok, offset} <- offset(args) do
