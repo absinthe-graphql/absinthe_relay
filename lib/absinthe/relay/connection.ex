@@ -1,6 +1,6 @@
 defmodule Absinthe.Relay.Connection.Options do
   @moduledoc false
-  
+
   alias Absinthe.Relay.Connection
 
   @typedoc false
