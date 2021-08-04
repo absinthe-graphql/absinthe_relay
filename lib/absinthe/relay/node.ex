@@ -7,7 +7,7 @@ defmodule Absinthe.Relay.Node do
   interface for querying them.
 
   More information can be found at:
-  - https://facebook.github.io/relay/docs/graphql-object-identification.html#content
+  - https://relay.dev/docs/guides/graphql-server-specification/#object-identification
   - https://facebook.github.io/relay/graphql/objectidentification.htm
 
   ## Interface
