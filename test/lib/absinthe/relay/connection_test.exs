@@ -160,6 +160,7 @@ defmodule Absinthe.Relay.ConnectionTest do
     connection(:non_null, node_type: non_null(:person), non_null: true)
     connection(:non_null_edges, node_type: non_null(:person), non_null_edges: true)
     connection(:non_null_edge, node_type: non_null(:person), non_null_edge: true)
+    connection(:non_null_connection, node_type: non_null(:person), non_null_connection: true)
 
     connection :favorite_pets, node_type: :pet do
       field :fav_twice_edges_count, :integer do
@@ -216,6 +217,20 @@ defmodule Absinthe.Relay.ConnectionTest do
       end
 
       connection field :non_null_edges, node_type: :person, connection: :non_null_edges do
+        resolve fn _, args -> Absinthe.Relay.Connection.from_list(@people, args) end
+      end
+
+      connection field :non_null_connection_at_connection_level,
+                   node_type: :person,
+                   non_null_connection: true,
+                   connection: :non_null_connection do
+        resolve fn _, args -> Absinthe.Relay.Connection.from_list(@people, args) end
+      end
+
+      connection field :non_null_at_connection_level,
+                   node_type: :person,
+                   non_null: true,
+                   connection: :non_null_connection do
         resolve fn _, args -> Absinthe.Relay.Connection.from_list(@people, args) end
       end
     end
@@ -657,6 +672,33 @@ defmodule Absinthe.Relay.ConnectionTest do
                connection.fields.edges.type
 
       assert %Absinthe.Type.NonNull{of_type: :person} == edge.fields.node.type
+    end
+  end
+
+  describe "when connection field is defined with non_null_connection: true" do
+    test "it will define the connection field as non_null" do
+      object = CustomConnectionAndEdgeFieldsSchema.__absinthe_type__(:person)
+
+      assert %Absinthe.Type.NonNull{of_type: :non_null_connection_connection} ==
+               object.fields.non_null_connection_at_connection_level.type
+    end
+  end
+
+  describe "when connection field is defined with non_null: true" do
+    test "it will define the connection field as non_null" do
+      object = CustomConnectionAndEdgeFieldsSchema.__absinthe_type__(:person)
+
+      assert %Absinthe.Type.NonNull{of_type: :non_null_connection_connection} ==
+               object.fields.non_null_at_connection_level.type
+    end
+  end
+
+  describe "when connection field is not defined as non_null" do
+    test "it will define the connection field as a nullable field" do
+      object = CustomConnectionAndEdgeFieldsSchema.__absinthe_type__(:person)
+
+      assert :non_null_edges_connection ==
+               object.fields.non_null_edges.type
     end
   end
 
