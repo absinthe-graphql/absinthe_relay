@@ -213,7 +213,9 @@ defmodule Absinthe.Relay.NodeTest do
 
     test "handles multiple incorrect ids" do
       result =
-        ~s<{ dualFoo(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }>
+        ~s<{ dualFoo(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{
+          Node.to_global_id(:other_foo, 2, Schema)
+        }") { id name } }>
         |> Absinthe.run(Schema)
 
       assert {:ok,
@@ -234,7 +236,9 @@ defmodule Absinthe.Relay.NodeTest do
 
     test "handles multiple incorrect ids with multiple node types" do
       result =
-        ~s<{ dualFooWithMultipleNodeTypes(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{Node.to_global_id(:other_foo, 2, Schema)}") { id name } }>
+        ~s<{ dualFooWithMultipleNodeTypes(id1: "#{Node.to_global_id(:other_foo, 1, Schema)}", id2: "#{
+          Node.to_global_id(:other_foo, 2, Schema)
+        }") { id name } }>
         |> Absinthe.run(Schema)
 
       assert {:ok,
