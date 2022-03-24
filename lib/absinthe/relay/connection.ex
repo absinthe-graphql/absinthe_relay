@@ -195,7 +195,7 @@ defmodule Absinthe.Relay.Connection do
 
   This would resolve the connections into a list of the user's
   associated accounts, and then for each node find that particular
-  account (preferrably batched).
+  account (preferably batched).
 
   ## Creating Connections
 

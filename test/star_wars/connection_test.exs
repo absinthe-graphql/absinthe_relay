@@ -35,7 +35,7 @@ defmodule StarWars.ConnectionTest do
             "edges" => [
               %{
                 "node" => %{
-                  "name" => "Millenium Falcon"
+                  "name" => "Millennium Falcon"
                 }
               },
               %{
@@ -230,7 +230,7 @@ defmodule StarWars.ConnectionTest do
               %{
                 "cursor" => "YXJyYXljb25uZWN0aW9uOjM=",
                 "node" => %{
-                  "name" => "Millenium Falcon"
+                  "name" => "Millennium Falcon"
                 }
               },
               %{
@@ -334,7 +334,7 @@ defmodule StarWars.ConnectionTest do
               },
               %{
                 "node" => %{
-                  "name" => "Millenium Falcon"
+                  "name" => "Millennium Falcon"
                 }
               },
               %{
