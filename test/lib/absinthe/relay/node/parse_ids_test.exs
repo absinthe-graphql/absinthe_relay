@@ -799,7 +799,7 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
     end
   end
 
-  describe "ParseIDs middlware in both mutation and child field" do
+  describe "ParseIDs middleware in both mutation and child field" do
     test "classic schema" do
       result =
         """
