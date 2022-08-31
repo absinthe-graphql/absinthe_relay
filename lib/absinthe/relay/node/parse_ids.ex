@@ -231,33 +231,35 @@ defmodule Absinthe.Relay.Node.ParseIDs do
            (String.t() -> String.t())}
   def find_schema_root!(
         %{
-          __private__: [
-            absinthe_relay: [
-              payload: {:fill, _},
-              input: {:fill, _}
-            ]
-          ]
+          __private__: private
         } = field,
         resolution
       ) do
-    case Map.get(resolution.private, :__parse_ids_root) do
-      nil ->
-        {field, & &1}
+    matches_payload = match?({:fill, _}, get_in(private, [:absinthe_relay, :payload]))
+    matches_input = match?({:fill, _}, get_in(private, [:absinthe_relay, :input]))
 
-      root_argument ->
-        argument =
-          Map.get(field.args, root_argument) ||
-            raise "Can't find ParseIDs schema root argument #{inspect(root_argument)}"
+    if matches_input and matches_payload do
+      case Map.get(resolution.private, :__parse_ids_root) do
+        nil ->
+          {field, & &1}
 
-        field_error_prefix = error_prefix(field, resolution.adapter)
-        argument_error_prefix = error_prefix(argument, resolution.adapter)
+        root_argument ->
+          argument =
+            Map.get(field.args, root_argument) ||
+              raise "Can't find ParseIDs schema root argument #{inspect(root_argument)}"
 
-        {argument,
-         &String.replace_leading(
-           &1,
-           field_error_prefix,
-           field_error_prefix <> argument_error_prefix
-         )}
+          field_error_prefix = error_prefix(field, resolution.adapter)
+          argument_error_prefix = error_prefix(argument, resolution.adapter)
+
+          {argument,
+          &String.replace_leading(
+            &1,
+            field_error_prefix,
+            field_error_prefix <> argument_error_prefix
+          )}
+      end
+    else
+      {field, & &1}
     end
   end
 
