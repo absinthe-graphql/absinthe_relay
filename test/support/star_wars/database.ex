@@ -18,7 +18,7 @@ defmodule StarWars.Database do
   # so for the purposes of this demo it"s a rebel ship.
   @falcon %{
     id: "4",
-    name: "Millenium Falcon"
+    name: "Millennium Falcon"
   }
 
   @home_one %{
