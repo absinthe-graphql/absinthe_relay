@@ -265,9 +265,7 @@ defmodule Absinthe.Relay.Node do
 
       {:error, err} ->
         Logger.warn(
-          "Failed to translate (#{inspect(node_type)}, #{inspect(source_id)}) to global ID with error: #{
-            err
-          }"
+          "Failed to translate (#{inspect(node_type)}, #{inspect(source_id)}) to global ID with error: #{err}"
         )
 
         nil

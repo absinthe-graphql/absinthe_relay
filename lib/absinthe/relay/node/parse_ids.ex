@@ -252,11 +252,11 @@ defmodule Absinthe.Relay.Node.ParseIDs do
           argument_error_prefix = error_prefix(argument, resolution.adapter)
 
           {argument,
-          &String.replace_leading(
-            &1,
-            field_error_prefix,
-            field_error_prefix <> argument_error_prefix
-          )}
+           &String.replace_leading(
+             &1,
+             field_error_prefix,
+             field_error_prefix <> argument_error_prefix
+           )}
       end
     else
       {field, & &1}

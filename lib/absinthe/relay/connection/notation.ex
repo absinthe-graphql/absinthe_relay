@@ -14,7 +14,14 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   alias Absinthe.Blueprint.Schema
 
-  @naming_attrs [:node_type, :non_null, :non_null_edges, :non_null_edge, :non_null_connection, :connection]
+  @naming_attrs [
+    :node_type,
+    :non_null,
+    :non_null_edges,
+    :non_null_edge,
+    :non_null_connection,
+    :connection
+  ]
 
   defmodule Naming do
     @moduledoc false

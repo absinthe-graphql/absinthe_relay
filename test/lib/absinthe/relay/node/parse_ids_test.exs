@@ -769,7 +769,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
       }
 
-      assert {:ok, %{data: %{"updateParentLocalMiddlewareWithMeta" => expected_parent_data}}} == result
+      assert {:ok, %{data: %{"updateParentLocalMiddlewareWithMeta" => expected_parent_data}}} ==
+               result
     end
 
     test "for modern schema with meta" do
@@ -795,7 +796,8 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
         }
       }
 
-      assert {:ok, %{data: %{"updateParentLocalMiddlewareWithMeta" => expected_parent_data}}} == result
+      assert {:ok, %{data: %{"updateParentLocalMiddlewareWithMeta" => expected_parent_data}}} ==
+               result
     end
   end
 
