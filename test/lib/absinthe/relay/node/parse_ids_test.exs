@@ -162,6 +162,25 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
         resolve &resolve_parent/2
       end
+
+      payload field(:update_parent_local_middleware_with_meta, meta: [key: :val]) do
+        input do
+          field :parent, :parent_input
+        end
+
+        output do
+          field :parent, :parent
+        end
+
+        middleware Absinthe.Relay.Node.ParseIDs,
+          parent: [
+            id: :parent,
+            children: [id: :child],
+            child: [id: :child]
+          ]
+
+        resolve &resolve_parent/2
+      end
     end
 
     defp resolve_foo(%{foo_id: id}, _) do
@@ -289,6 +308,25 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
     mutation do
       payload field(:update_parent_local_middleware) do
+        input do
+          field :parent, :parent_input
+        end
+
+        output do
+          field :parent, :parent
+        end
+
+        middleware Absinthe.Relay.Node.ParseIDs,
+          parent: [
+            id: :parent,
+            children: [id: :child],
+            child: [id: :child]
+          ]
+
+        resolve &resolve_parent/2
+      end
+
+      payload field(:update_parent_local_middleware_with_meta, meta: [key: :val]) do
         input do
           field :parent, :parent_input
         end
@@ -697,9 +735,71 @@ defmodule Absinthe.Relay.Node.ParseIDsTest do
 
       assert {:ok, %{data: %{"updateParentLocalMiddleware" => expected_parent_data}}} == result
     end
+
+    test "for classic schema with meta" do
+      result =
+        """
+        mutation FoobarLocal {
+          updateParentLocalMiddlewareWithMeta(input: {
+            clientMutationId: "abc",
+            parent: {
+              id: "#{@parent1_id}",
+              children: [{ id: "#{@child1_id}"}, {id: "#{@child2_id}"}, {id: null}],
+              child: { id: "#{@child2_id}"}
+            }
+          }) {
+            parent {
+              id
+              children { id }
+              child { id }
+              }
+            }
+        }
+        """
+        |> Absinthe.run(SchemaClassic)
+
+      expected_parent_data = %{
+        "parent" => %{
+          # The output re-converts everything to global_ids.
+          "id" => @parent1_id,
+          "children" => [%{"id" => @child1_id}, %{"id" => @child2_id}, nil],
+          "child" => %{
+            "id" => @child2_id
+          }
+        }
+      }
+
+      assert {:ok, %{data: %{"updateParentLocalMiddlewareWithMeta" => expected_parent_data}}} == result
+    end
+
+    test "for modern schema with meta" do
+      result =
+        """
+        mutation FoobarLocal {
+          updateParentLocalMiddlewareWithMeta(input: {
+            parent: {
+              id: "#{@modern_parent1_id}",
+            }
+          }) {
+            parent {
+              id
+            }
+          }
+        }
+        """
+        |> Absinthe.run(SchemaModern)
+
+      expected_parent_data = %{
+        "parent" => %{
+          "id" => @modern_parent1_id
+        }
+      }
+
+      assert {:ok, %{data: %{"updateParentLocalMiddlewareWithMeta" => expected_parent_data}}} == result
+    end
   end
 
-  describe "ParseIDs middlware in both mutation and child field" do
+  describe "ParseIDs middleware in both mutation and child field" do
     test "classic schema" do
       result =
         """
