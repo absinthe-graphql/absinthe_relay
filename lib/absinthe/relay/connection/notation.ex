@@ -343,15 +343,15 @@ defmodule Absinthe.Relay.Connection.Notation do
   end
 
   defp paginate_args(:forward) do
-    [after: :string, first: :integer]
+    [after: :string, first: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :integer}]
   end
 
   defp paginate_args(:backward) do
-    [before: :string, last: :integer]
+    [before: :string, last: %Absinthe.Blueprint.TypeReference.NonNull{of_type: :integer}]
   end
 
   defp paginate_args(:both) do
-    paginate_args(:forward) ++ paginate_args(:backward)
+    [after: :string, first: :integer, before: :string, last: :integer]
   end
 
   defp build_arg(id, type) do
