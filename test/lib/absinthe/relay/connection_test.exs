@@ -184,12 +184,7 @@ defmodule Absinthe.Relay.ConnectionTest do
 
       @desc "The pets for a person"
       connection field :pets, node_type: :pet do
-        resolve fn resolve_args, %{source: person} ->
-          Absinthe.Relay.Connection.from_list(
-            Enum.map(person.pets, &Map.get(@pets, &1)),
-            resolve_args
-          )
-        end
+        resolve &pets/2
       end
 
       @desc "The favorite pets for a person"
@@ -233,6 +228,26 @@ defmodule Absinthe.Relay.ConnectionTest do
                    connection: :non_null_connection do
         resolve fn _, args -> Absinthe.Relay.Connection.from_list(@people, args) end
       end
+
+      connection field :forward_paginated_pets,
+                   node_type: :pet,
+                   paginate: :forward,
+                   connection: :favorite_pets_bare do
+        resolve &pets/2
+      end
+
+      connection field :backward_paginated_pets,
+                   node_type: :pet,
+                   paginate: :backward,
+                   connection: :favorite_pets_bare do
+        resolve &pets/2
+      end
+    end
+
+    def pets(resolve_args, %{source: person}) do
+      person.pets
+      |> Enum.map(&Map.get(@pets, &1))
+      |> Absinthe.Relay.Connection.from_list(resolve_args)
     end
 
     query do
@@ -612,6 +627,142 @@ defmodule Absinthe.Relay.ConnectionTest do
            }
          }} = Connection.from_list(records, %{first: 2})
       )
+    end
+  end
+
+  describe "when defined with forward pagination" do
+    test "it will reject missing :first" do
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                forward_paginated_pets {
+                  edges {
+                    node {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    locations: [%{column: 9, line: 4}],
+                    message: "In argument \"first\": Expected type \"Int!\", found null."
+                  }
+                ]
+              }} = result
+    end
+
+    test "it will use :first arg" do
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                forward_paginated_pets(first: 1) {
+                  edges {
+                    node {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                data: %{
+                  "node" => %{
+                    "forward_paginated_pets" => %{"edges" => [%{"node" => %{"id" => "UGV0OjE="}}]}
+                  }
+                }
+              }} = result
+    end
+  end
+
+  describe "when defined with backward pagination" do
+    test "it will reject missing :last" do
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                backward_paginated_pets {
+                  edges {
+                    node {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                errors: [
+                  %{
+                    locations: [%{column: 9, line: 4}],
+                    message: "In argument \"last\": Expected type \"Int!\", found null."
+                  }
+                ]
+              }} = result
+    end
+
+    test "it will use :last arg" do
+      result =
+        """
+          query FirstPetName($personId: ID!) {
+            node(id: $personId) {
+              ... on Person {
+                backward_paginated_pets(last: 1) {
+                  edges {
+                    node {
+                      id
+                    }
+                  }
+                }
+              }
+            }
+          }
+        """
+        |> Absinthe.run(
+          CustomConnectionAndEdgeFieldsSchema,
+          variables: %{"personId" => @jack_global_id}
+        )
+
+      assert {:ok,
+              %{
+                data: %{
+                  "node" => %{
+                    "backward_paginated_pets" => %{
+                      "edges" => [%{"node" => %{"id" => "UGV0OjI="}}]
+                    }
+                  }
+                }
+              }} = result
     end
   end
 
