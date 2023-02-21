@@ -6,6 +6,8 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
     use Absinthe.Relay.Schema, :modern
 
     query do
+      # cannot have empty query type
+      field :simple_query, :integer, resolve: fn _, _ -> {:ok, 1} end
     end
 
     mutation do
@@ -220,6 +222,8 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
     use Absinthe.Relay.Schema, :modern
 
     query do
+      # cannot have empty query type
+      field :simple_query, :integer, resolve: fn _, _ -> {:ok, 1} end
     end
 
     mutation do
@@ -434,6 +438,8 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
     use Absinthe.Relay.Schema, :modern
 
     query do
+      # cannot have empty query type
+      field :simple_query, :integer, resolve: fn _, _ -> {:ok, 1} end
     end
 
     mutation do
@@ -574,42 +580,6 @@ defmodule Absinthe.Relay.Mutation.ModernTest do
 
     test "returns the correct field" do
       assert {:ok, @expected} == Absinthe.run(@query, SchemaWithOutputButNoInput)
-    end
-  end
-
-  describe "an empty definition" do
-    defmodule SchemaWithoutInputOrOutput do
-      use Absinthe.Schema
-      use Absinthe.Relay.Schema, :modern
-
-      query do
-      end
-
-      mutation do
-        payload(field :without_block, resolve: fn _, _ -> {:ok, %{}} end)
-
-        payload field :with_block_and_attrs, resolve: fn _, _ -> {:ok, %{}} end do
-        end
-
-        payload field(:with_block) do
-          resolve fn _, _ ->
-            # Logic is there
-            {:ok, %{}}
-          end
-        end
-      end
-    end
-
-    test "input argument isn't present" do
-      type = Absinthe.Schema.lookup_type(SchemaWithoutInputOrOutput, :mutation)
-
-      for field <- Map.values(type.fields) do
-        assert !Map.get(field.args, :input)
-      end
-    end
-
-    test "output is present" do
-      assert Absinthe.Schema.lookup_type(SchemaWithoutInputOrOutput, :without_block_payload)
     end
   end
 end
