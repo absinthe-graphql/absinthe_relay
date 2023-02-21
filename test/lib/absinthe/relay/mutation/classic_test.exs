@@ -6,6 +6,8 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
     use Absinthe.Relay.Schema, :classic
 
     query do
+      # cannot have empty query type
+      field :simple_query, :integer, resolve: fn _, _ -> {:ok, 1} end
     end
 
     mutation do
@@ -240,6 +242,8 @@ defmodule Absinthe.Relay.Mutation.ClassicTest do
       use Absinthe.Relay.Schema, :classic
 
       query do
+        # cannot have empty query type
+        field :simple_query, :integer, resolve: fn _, _ -> {:ok, 1} end
       end
 
       mutation do
