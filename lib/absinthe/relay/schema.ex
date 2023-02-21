@@ -29,6 +29,9 @@ defmodule Absinthe.Relay.Schema do
 
   def pipeline(pipeline) do
     pipeline
-    |> Absinthe.Pipeline.insert_after(Absinthe.Phase.Schema.TypeImports, __MODULE__.Phase)
+    |> Absinthe.Pipeline.insert_before(
+      Absinthe.Phase.Schema.ApplyDeclaration,
+      __MODULE__.Phase
+    )
   end
 end
