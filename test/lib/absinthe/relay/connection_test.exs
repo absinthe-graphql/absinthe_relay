@@ -766,4 +766,98 @@ defmodule Absinthe.Relay.ConnectionTest do
       assert StarWars.Schema.__absinthe_type__(:ship_edge)
     end
   end
+
+  describe "when importing connections in type extensions" do
+    defmodule PetsExtensions do
+      use Absinthe.Schema.Notation
+      use Absinthe.Relay.Schema.Notation, :classic
+
+      @pets %{
+        "1" => %{id: "1", name: "Svenja"},
+        "2" => %{id: "2", name: "Jock"},
+        "3" => %{id: "3", name: "Sherlock"}
+      }
+
+      object :pet do
+        field :name, :string
+      end
+
+      connection(node_type: :pet)
+
+      extend object(:person) do
+        connection field :pets, node_type: :pet do
+          resolve fn resolve_args, %{source: person} ->
+            Absinthe.Relay.Connection.from_list(
+              Enum.map(person.pets, &Map.get(@pets, &1)),
+              resolve_args
+            )
+          end
+        end
+      end
+    end
+
+    defmodule PersonExtensions do
+      use Absinthe.Schema.Notation
+      use Absinthe.Relay.Schema.Notation, :classic
+
+      @people %{
+        "jack" => %{id: "jack", name: "Jack", age: 35, pets: ["1", "2"], favorite_pets: ["2"]},
+        "jill" => %{id: "jill", name: "Jill", age: 31, pets: ["3"], favorite_pets: ["3"]}
+      }
+
+      object :person do
+        field :name, :string
+        field :age, :integer
+
+        connection field :friends, node_type: :person do
+          resolve fn resolve_args, %{source: _person} ->
+            Absinthe.Relay.Connection.from_list(
+              Map.values(@people),
+              resolve_args
+            )
+          end
+        end
+      end
+
+      connection(node_type: :person)
+    end
+
+    defmodule SchemaWithConnectionInTypeExtension do
+      use Absinthe.Schema
+      use Absinthe.Relay.Schema, :classic
+
+      import_types PetsExtensions
+      import_types PersonExtensions
+      import_type_extensions(PetsExtensions)
+
+      @people %{
+        "jack" => %{id: "jack", name: "Jack", age: 35, pets: ["1", "2"], favorite_pets: ["2"]},
+        "jill" => %{id: "jill", name: "Jill", age: 31, pets: ["3"], favorite_pets: ["3"]}
+      }
+
+      extend object(:query) do
+        connection field :people, node_type: :person do
+          resolve fn _, _ -> {:ok, Map.values(@people)} end
+        end
+      end
+
+      query do
+      end
+    end
+
+    test "It keeps args from the local type extension" do
+      assert %{after: _, before: _, first: _, last: _} =
+               SchemaWithConnectionInTypeExtension.__absinthe_type__(:query).fields.people.args
+    end
+
+    test "It keeps args from the imported type" do
+      assert %{after: _, before: _, first: _, last: _} =
+               SchemaWithConnectionInTypeExtension.__absinthe_type__(:person).fields.friends.args
+    end
+
+    test "It keeps args from the imported type extension" do
+      assert %{after: _, before: _, first: _, last: _} =
+               SchemaWithConnectionInTypeExtension.__absinthe_type__(:person).fields.pets.args
+    end
+  end
 end
