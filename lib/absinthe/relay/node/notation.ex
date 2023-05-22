@@ -61,7 +61,7 @@ defmodule Absinthe.Relay.Node.Notation do
   end
 
   defp do_object(meta, identifier, attrs, block) do
-    {id_fetcher, attrs} = Keyword.pop(attrs, :id_fetcher)
+    {id_fetcher, attrs} = Keyword.pop(attrs, :id_fetcher, get_id_fetcher())
     {id_type, attrs} = Keyword.pop(attrs, :id_type, get_id_type())
 
     block = [
@@ -95,6 +95,11 @@ defmodule Absinthe.Relay.Node.Notation do
   defp get_id_type() do
     Absinthe.Relay
     |> Application.get_env(:node_id_type, :id)
+  end
+
+  defp get_id_fetcher() do
+    Absinthe.Relay
+    |> Application.get_env(:node_id_fetcher)
   end
 
   # An id field is automatically configured
