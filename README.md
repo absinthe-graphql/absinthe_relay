@@ -18,12 +18,12 @@ Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
 ```elixir
 def deps do
   [
-    {:absinthe_relay, "~> 1.5.0"}
+    {:absinthe_relay, "~> 1.6.0"}
   ]
 end
 ```
 
-Note: Absinthe.Relay requires Elixir 1.10 or higher.
+Note: Absinthe.Relay requires Elixir 1.11 or higher.
 
 ## Upgrading
 

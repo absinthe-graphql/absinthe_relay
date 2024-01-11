@@ -2,7 +2,7 @@ defmodule AbsintheRelay.Mixfile do
   use Mix.Project
 
   @source_url "https://github.com/absinthe-graphql/absinthe_relay"
-  @version "1.5.2"
+  @version "1.6.0"
 
   def project do
     [
