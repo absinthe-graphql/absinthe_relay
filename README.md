@@ -18,7 +18,7 @@ Install from [Hex.pm](https://hex.pm/packages/absinthe_relay):
 ```elixir
 def deps do
   [
-    {:absinthe_relay, "~> 1.6.0"}
+    {:absinthe_relay, "~> 1.5.0"}
   ]
 end
 ```
