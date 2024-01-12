@@ -23,7 +23,7 @@ def deps do
 end
 ```
 
-Note: Absinthe.Relay requires Elixir 1.10 or higher.
+Note: Absinthe.Relay requires Elixir 1.11 or higher.
 
 ## Upgrading
 

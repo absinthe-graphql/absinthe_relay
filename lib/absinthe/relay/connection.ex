@@ -587,7 +587,7 @@ defmodule Absinthe.Relay.Connection do
     args
     |> Enum.flat_map(fn
       {key, _} when key in [:node] ->
-        Logger.warn("Ignoring additional #{key} provided on edge (overriding is not allowed)")
+        Logger.warning("Ignoring additional #{key} provided on edge (overriding is not allowed)")
         []
 
       {key, val} ->

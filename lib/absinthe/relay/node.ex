@@ -264,7 +264,7 @@ defmodule Absinthe.Relay.Node do
         global_id
 
       {:error, err} ->
-        Logger.warn(
+        Logger.warning(
           "Failed to translate (#{inspect(node_type)}, #{inspect(source_id)}) to global ID with error: #{err}"
         )
 
@@ -371,7 +371,7 @@ defmodule Absinthe.Relay.Node do
   # Reports a failure to fetch an ID
   @spec report_fetch_id_error(type_name :: String.t(), source :: any) :: {:error, String.t()}
   defp report_fetch_id_error(type_name, source) do
-    Logger.warn(@missing_internal_id_error <> " (type #{type_name})")
+    Logger.warning(@missing_internal_id_error <> " (type #{type_name})")
     Logger.debug(inspect(source))
     {:error, @missing_internal_id_error}
   end
