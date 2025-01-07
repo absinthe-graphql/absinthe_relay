@@ -83,7 +83,7 @@ defmodule StarWars.Database do
   end
 
   def get_factions(names) do
-    factions = data().factions |> Map.values()
+    factions = data().faction |> Map.values()
 
     names
     |> Enum.map(fn name ->
