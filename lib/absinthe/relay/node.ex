@@ -127,6 +127,12 @@ defmodule Absinthe.Relay.Node do
   end
   ```
 
+  Or you can set it up globally via application config:
+  ```
+  config Absinthe.Relay,
+    node_id_fetcher: &my_custom_id_fetcher/2
+  ```
+
   For instructions on how to change the underlying method of decoding/encoding
   a global ID, see `Absinthe.Relay.Node.IDTranslator`.
 
