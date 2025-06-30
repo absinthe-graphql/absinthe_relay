@@ -174,8 +174,8 @@ defmodule Absinthe.Relay.Connection.Notation do
           {:fill, unquote(__MODULE__)}
         )
 
-        field(:page_info, type: non_null(:page_info))
-        field(:edges, type: unquote(edge_field))
+        field(:page_info, type: non_null(:page_info), description: "Information to aid in pagination")
+        field(:edges, type: unquote(edge_field), description: "A list of edges")
         unquote(block)
       end
     end
@@ -329,6 +329,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         name: "node",
         identifier: :node,
         type: node_type,
+        description: "The item at the end of the edge",
         module: __MODULE__,
         __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
       },
@@ -336,6 +337,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         name: "cursor",
         identifier: :cursor,
         type: :string,
+        description: "A cursor for use in pagination",
         module: __MODULE__,
         __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
       }
