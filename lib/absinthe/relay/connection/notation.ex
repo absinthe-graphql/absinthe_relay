@@ -359,8 +359,14 @@ defmodule Absinthe.Relay.Connection.Notation do
       name: id |> Atom.to_string(),
       identifier: id,
       type: type,
+      description: pagination_arg_description(id),
       module: __MODULE__,
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
     }
   end
+
+  defp pagination_arg_description(:first), do: "Returns the first n elements from the list."
+  defp pagination_arg_description(:last), do: "Returns the last n elements from the list."
+  defp pagination_arg_description(:after), do: "Returns the elements in the list that come after the specified cursor."
+  defp pagination_arg_description(:before), do: "Returns the elements in the list that come before the specified cursor."
 end
