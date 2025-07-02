@@ -291,7 +291,9 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   def additional_types(_, _), do: []
 
-  def fillout({:paginate, type}, node) do
+  def fillout(type, node, schema \\ nil)
+
+  def fillout({:paginate, type}, node, _schema) do
     Map.update!(node, :arguments, fn arguments ->
       type
       |> paginate_args()
@@ -304,7 +306,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   # field(:node, unquote(naming.node_type_identifier))
   # @desc "A cursor for use in pagination"
   # field(:cursor, non_null(:string))
-  def fillout({:edge, attrs}, node) do
+  def fillout({:edge, attrs}, node, _schema) do
     naming = Naming.from_attrs!(attrs)
 
     Map.update!(node, :fields, fn fields ->
@@ -314,7 +316,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     end)
   end
 
-  def fillout(_, node) do
+  def fillout(_, node, _schema) do
     node
   end
 

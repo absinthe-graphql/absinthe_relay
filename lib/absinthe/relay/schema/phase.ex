@@ -19,7 +19,7 @@ defmodule Absinthe.Relay.Schema.Phase do
     schema =
       schema
       |> Map.update!(:type_definitions, &(new_types ++ &1))
-      |> Blueprint.prewalk(&fill_nodes/1)
+      |> Blueprint.prewalk(&fill_nodes(&1, schema))
 
     {schema, []}
   end
@@ -43,14 +43,14 @@ defmodule Absinthe.Relay.Schema.Phase do
     {node, acc}
   end
 
-  defp fill_nodes(%{__private__: private} = node) do
+  defp fill_nodes(%{__private__: private} = node, schema) do
     Enum.reduce(private[:absinthe_relay] || [], node, fn
-      {type, {:fill, style}}, node -> style.fillout(type, node)
+      {type, {:fill, style}}, node -> style.fillout(type, node, schema)
       _, node -> node
     end)
   end
 
-  defp fill_nodes(node) do
+  defp fill_nodes(node, _schema) do
     node
   end
 end
