@@ -54,7 +54,7 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, path: "../absinthe"},
+      {:absinthe, git: "https://github.com/gigsmart/absinthe.git", branch: "gigmart/defer-stream-incremental"},
       {:ecto, "~> 2.0 or ~> 3.0", optional: true},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
