@@ -21,8 +21,8 @@ This functionality is included when using both `absinthe_relay` and incremental 
 ```elixir
 def deps do
   [
-    {:absinthe, "~> 1.8"},
-    {:absinthe_relay, "~> 1.5"}
+    {:absinthe, git: "https://github.com/gigsmart/absinthe.git", branch: "gigmart/defer-stream-incremental"},
+    {:absinthe_relay, git: "https://github.com/gigsmart/absinthe_relay.git", branch: "gigmart/defer-stream-incremental"}
   ]
 end
 ```
