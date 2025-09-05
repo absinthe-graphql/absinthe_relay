@@ -105,6 +105,49 @@ Relay supports mutation via [a contract](https://facebook.github.io/relay/docs/e
 
 See the [Absinthe.Relay.Mutation](https://hexdocs.pm/absinthe_relay/Absinthe.Relay.Mutation.html) module documentation for specific instructions on how to design a schema that makes use of mutations.
 
+### Incremental Delivery
+
+Absinthe.Relay supports GraphQL `@defer` and `@stream` directives for incremental delivery with Relay connections. This enables streaming of connection edges while maintaining proper cursor consistency and connection structure.
+
+Key features:
+- ✅ **Relay Specification**: Full compliance with Relay Cursor Connection spec  
+- ✅ **Cursor Consistency**: Maintains proper cursor ordering during streaming
+- ✅ **Connection Structure**: Preserves `pageInfo` and connection metadata
+- ✅ **Bidirectional Pagination**: Supports forward and backward streaming
+
+**Installation with incremental delivery:**
+
+```elixir
+def deps do
+  [
+    {:absinthe, git: "https://github.com/gigsmart/absinthe.git", branch: "gigmart/defer-stream-incremental"},
+    {:absinthe_relay, git: "https://github.com/gigsmart/absinthe_relay.git", branch: "gigmart/defer-stream-incremental"}
+  ]
+end
+```
+
+**Example usage:**
+
+```graphql
+query GetPosts($first: Int!, $after: String) {
+  posts(first: $first, after: $after) @stream(initialCount: 2, label: "posts") {
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        title
+      }
+    }
+  }
+}
+```
+
+For comprehensive documentation on Relay incremental delivery patterns, see [Absinthe Incremental Delivery Guide](https://hexdocs.pm/absinthe/incremental-delivery.html).
+
 ## Supporting the Babel Relay Plugin
 
 To generate a `schema.json` file for use with the [Babel Relay Plugin](https://facebook.github.io/relay/docs/en/installation-and-setup.html#set-up-babel-plugin-relay), run the `absinthe.schema.json` Mix task, built-in to [Absinthe](https://github.com/absinthe-graphql/absinthe).
