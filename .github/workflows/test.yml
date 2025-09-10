@@ -19,12 +19,12 @@ jobs:
               otp: "22"
           - pair:
               elixir: "1.18"
-              otp: "27"
+              otp: "28"
             lint: true
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Elixir
       uses: erlef/setup-beam@v1
@@ -33,7 +33,7 @@ jobs:
         otp-version: ${{ matrix.pair.otp }}
 
     - name: Restore deps cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           deps
