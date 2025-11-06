@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/absinthe-graphql/absinthe_relay/compare/v1.5.2...v1.6.0) (2025-11-06)
+
+### Miscellaneous Chores
+
+* release 1.6.0 ([4174c0a](https://github.com/absinthe-graphql/absinthe_relay/commit/4174c0a83bea8d0fa5e3034f379acb203e01b805))
+* update minimum elixir version
+* update absinthe dependency mininum version
+
 ## 1.4.4 - 2018-09-20
 
 - Feature: Enhancements to Connection macros to support extensibility of edge types. See [PR #109](https://github.com/absinthe-graphql/absinthe_relay/pull/109) (Thanks, @coderdan!)
