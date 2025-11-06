@@ -168,14 +168,15 @@ defmodule Absinthe.Relay.Connection.Notation do
 
     quote do
       object unquote(identifier), unquote(attrs) do
+        description(unquote(connection_type_description(naming.node_type_identifier)))
         private(
           :absinthe_relay,
           {:connection, unquote(naming.attrs)},
           {:fill, unquote(__MODULE__)}
         )
 
-        field(:page_info, type: non_null(:page_info))
-        field(:edges, type: unquote(edge_field))
+        field(:page_info, type: non_null(:page_info), description: "Information to aid in pagination")
+        field(:edges, type: unquote(edge_field), description: unquote(edges_field_description(naming.node_type_identifier)))
         unquote(block)
       end
     end
@@ -265,6 +266,7 @@ defmodule Absinthe.Relay.Connection.Notation do
       Absinthe.Schema.Notation.stash()
 
       object unquote(naming.edge_type_identifier), unquote(attrs) do
+        description(unquote(edge_type_description(naming.node_type_identifier)))
         private(:absinthe_relay, {:edge, unquote(naming.attrs)}, {:fill, unquote(__MODULE__)})
         unquote(block)
       end
@@ -280,6 +282,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     %Schema.ObjectTypeDefinition{
       name: identifier |> Atom.to_string() |> Macro.camelize(),
       identifier: identifier,
+      description: edge_type_description(naming.node_type_identifier),
       module: __MODULE__,
       __private__: [absinthe_relay: [{{:edge, attrs}, {:fill, __MODULE__}}]],
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
@@ -288,7 +291,9 @@ defmodule Absinthe.Relay.Connection.Notation do
 
   def additional_types(_, _), do: []
 
-  def fillout({:paginate, type}, node) do
+  def fillout(type, node, schema \\ nil)
+
+  def fillout({:paginate, type}, node, _schema) do
     Map.update!(node, :arguments, fn arguments ->
       type
       |> paginate_args()
@@ -301,7 +306,7 @@ defmodule Absinthe.Relay.Connection.Notation do
   # field(:node, unquote(naming.node_type_identifier))
   # @desc "A cursor for use in pagination"
   # field(:cursor, non_null(:string))
-  def fillout({:edge, attrs}, node) do
+  def fillout({:edge, attrs}, node, _schema) do
     naming = Naming.from_attrs!(attrs)
 
     Map.update!(node, :fields, fn fields ->
@@ -311,7 +316,7 @@ defmodule Absinthe.Relay.Connection.Notation do
     end)
   end
 
-  def fillout(_, node) do
+  def fillout(_, node, _schema) do
     node
   end
 
@@ -329,6 +334,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         name: "node",
         identifier: :node,
         type: node_type,
+        description: node_field_description(node_type),
         module: __MODULE__,
         __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
       },
@@ -336,6 +342,7 @@ defmodule Absinthe.Relay.Connection.Notation do
         name: "cursor",
         identifier: :cursor,
         type: :string,
+        description: "A cursor for use in pagination",
         module: __MODULE__,
         __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
       }
@@ -359,8 +366,35 @@ defmodule Absinthe.Relay.Connection.Notation do
       name: id |> Atom.to_string(),
       identifier: id,
       type: type,
+      description: pagination_arg_description(id),
       module: __MODULE__,
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
     }
   end
+
+  defp pagination_arg_description(:first), do: "Returns the first n elements from the list."
+  defp pagination_arg_description(:last), do: "Returns the last n elements from the list."
+  defp pagination_arg_description(:after), do: "Returns the elements in the list that come after the specified cursor."
+  defp pagination_arg_description(:before), do: "Returns the elements in the list that come before the specified cursor."
+
+  defp connection_type_description(node_type_identifier) do
+    "A connection to a list of #{format_type_name(node_type_identifier)} items."
+  end
+
+  defp edges_field_description(node_type_identifier) do
+    "A list of #{format_type_name(node_type_identifier)} edges."
+  end
+
+  defp edge_type_description(node_type_identifier) do
+    "An edge in a #{format_type_name(node_type_identifier)} connection."
+  end
+
+  defp node_field_description(node_type) do
+    "The #{format_type_name(node_type)} at the end of the edge."
+  end
+
+  defp format_type_name(type) when is_atom(type), do: type
+  defp format_type_name(%Absinthe.Blueprint.TypeReference.NonNull{of_type: type}), do: format_type_name(type)
+  defp format_type_name({:non_null, _, [type]}), do: format_type_name(type)
+  defp format_type_name(type), do: type
 end

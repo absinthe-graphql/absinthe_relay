@@ -84,11 +84,13 @@ defmodule Absinthe.Relay.Node.Notation do
   #   %{obj | interfaces: [:node | obj.interfaces], fields: [id_field | obj.fields]}
   # end
 
-  def fillout(_, %Schema.ObjectTypeDefinition{identifier: :faction} = obj) do
+  def fillout(type, node, schema \\ nil)
+
+  def fillout(_, %Schema.ObjectTypeDefinition{identifier: :faction} = obj, _schema) do
     obj
   end
 
-  def fillout(_, node) do
+  def fillout(_, node, _schema) do
     node
   end
 

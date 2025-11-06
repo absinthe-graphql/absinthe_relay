@@ -150,22 +150,24 @@ defmodule Absinthe.Relay.Mutation.Notation.Classic do
 
   def additional_types(_, _), do: []
 
-  def fillout(:input, %Schema.FieldDefinition{} = field) do
-    Absinthe.Relay.Mutation.Notation.Modern.add_input_arg(field)
+  def fillout(type, node, schema \\ nil)
+
+  def fillout(:input, %Schema.FieldDefinition{} = field, schema) do
+    Absinthe.Relay.Mutation.Notation.Modern.add_input_arg(field, schema)
   end
 
-  def fillout(:input, %Schema.InputObjectTypeDefinition{} = input) do
+  def fillout(:input, %Schema.InputObjectTypeDefinition{} = input, _schema) do
     # We could add this to the additional_types above, but we also need to fill
     # out this field if the user specified the types. It's easier to leave it out
     # of the defaults, and then unconditionally apply it after the fact.
     %{input | fields: [client_mutation_id_field() | input.fields]}
   end
 
-  def fillout(:payload, %Schema.ObjectTypeDefinition{} = payload) do
+  def fillout(:payload, %Schema.ObjectTypeDefinition{} = payload, _schema) do
     %{payload | fields: [client_mutation_id_field() | payload.fields]}
   end
 
-  def fillout(_, node) do
+  def fillout(_, node, _schema) do
     node
   end
 

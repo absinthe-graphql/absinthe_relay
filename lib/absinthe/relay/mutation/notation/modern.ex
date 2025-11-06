@@ -151,18 +151,24 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
 
   def additional_types(_, _), do: []
 
-  def fillout(:input, %Schema.FieldDefinition{} = field) do
-    add_input_arg(field)
+  def fillout(type, node, schema \\ nil)
+  
+  def fillout(:input, %Schema.FieldDefinition{} = field, schema) do
+    add_input_arg(field, schema)
   end
 
-  def fillout(_, node) do
+  def fillout(_, node, _schema) do
     node
   end
 
-  def add_input_arg(field) do
+  def add_input_arg(field, blueprint \\ nil) do
+    # Get the description from the input type if available
+    description = get_input_type_description(field, blueprint)
+    
     arg = %Schema.InputValueDefinition{
       identifier: :input,
       name: "input",
+      description: description,
       type: %Blueprint.TypeReference.NonNull{of_type: Notation.ident(field.identifier, :input)},
       module: __MODULE__,
       __reference__: Absinthe.Schema.Notation.build_reference(__ENV__)
@@ -173,5 +179,28 @@ defmodule Absinthe.Relay.Mutation.Notation.Modern do
       | arguments: [arg | field.arguments],
         middleware: [Absinthe.Relay.Mutation | field.middleware]
     }
+  end
+  
+  defp get_input_type_description(field, blueprint) do
+    # Try to find the input type and get its description
+    input_type_identifier = Notation.ident(field.identifier, :input)
+    
+    # If we have access to the blueprint, look for the input type description
+    if blueprint do
+      case find_type_in_blueprint(blueprint, input_type_identifier) do
+        %{description: desc} when desc != nil -> desc
+        _ -> nil
+      end
+    else
+      nil
+    end
+  end
+  
+  defp find_type_in_blueprint(blueprint, type_identifier) do
+    Blueprint.postwalk(blueprint, nil, fn
+      %{identifier: ^type_identifier} = type, _ -> {type, type}
+      node, acc -> {node, acc}
+    end)
+    |> elem(1)
   end
 end

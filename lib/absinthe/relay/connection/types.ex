@@ -3,6 +3,7 @@ defmodule Absinthe.Relay.Connection.Types do
 
   use Absinthe.Schema.Notation
 
+  @desc "Information about pagination in a connection"
   object :page_info do
     @desc "When paginating backwards, are there more items?"
     field :has_previous_page, non_null(:boolean)
