@@ -8,7 +8,7 @@ defmodule AbsintheRelay.Mixfile do
     [
       app: :absinthe_relay,
       version: @version,
-      elixir: "~> 1.12",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -54,7 +54,7 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, "~> 1.5.0 or ~> 1.6.0 or ~> 1.7.0"},
+      {:absinthe, "~> 1.8.0"},
       {:ecto, "~> 2.0 or ~> 3.0", optional: true},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
