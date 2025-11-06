@@ -30,8 +30,8 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{ matrix.otp-version }}
-          elixir-version: ${{ matrix.elixir-version }}
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
 
       - name: Restore deps cache
         uses: actions/cache@v4
@@ -57,12 +57,16 @@ jobs:
   test:
     name: Test on Elixir ${{matrix.elixir}} / OTP ${{matrix.otp}}
     runs-on: ubuntu-latest
-    strategy:
-      <<: *strategy
+    needs: [setup]
+    strategy: *strategy
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
       - name: Run unit tests
         run: mix test
 
@@ -71,6 +75,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with: { elixir-version: 1.19, otp-version: 28 }
       - name: Check for unused dependencies
         run: mix deps.unlock --check-unused
       - name: Check for retired dependencies
@@ -83,13 +92,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [setup]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with: { elixir-version: 1.19, otp-version: 28 }
       - name: Check code format
         run: mix format --check-formatted
 
   release:
     name: Create or Update Release PR
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, dependencies, format]
     if: github.ref == 'refs/heads/main'
     permissions:
       contents: write
