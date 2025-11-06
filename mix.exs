@@ -56,7 +56,8 @@ defmodule AbsintheRelay.Mixfile do
     [
       {:absinthe, "~> 1.8.0"},
       {:ecto, "~> 2.0 or ~> 3.0", optional: true},
-      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 end

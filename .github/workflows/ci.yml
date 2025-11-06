@@ -84,7 +84,7 @@ jobs:
       - name: Check for retired dependencies
         run: mix hex.audit
       - name: Check for dependencies for known vulnerabilities
-        run: hex.audit
+        run: mix hex.audit
 
   format:
     name: Check formatting
