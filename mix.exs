@@ -54,7 +54,7 @@ defmodule AbsintheRelay.Mixfile do
 
   defp deps do
     [
-      {:absinthe, "~> 1.8.0"},
+      {:absinthe, ">= 1.7.10"},
       {:ecto, "~> 2.0 or ~> 3.0", optional: true},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
