@@ -71,6 +71,8 @@ jobs:
     name: Check dependencies
     runs-on: ubuntu-latest
     needs: [setup]
+    strategy:
+      matrix: { elixir: ["1.19"], otp: ["28"] }
     steps:
       - *checkout
       - name: Set up Elixir
@@ -88,6 +90,8 @@ jobs:
     name: Check formatting
     runs-on: ubuntu-latest
     needs: [setup]
+    strategy:
+      matrix: { elixir: ["1.19"], otp: ["28"] }
     steps:
       - *checkout
       - name: Set up Elixir
