@@ -321,6 +321,10 @@ defmodule Absinthe.Relay.Node do
   # is used during field configuration, the type name needs to be looked up
   # during resolution.
 
+  def global_id_resolver(%Absinthe.Resolution{state: :resolved} = res, _id_fetcher) do
+    res
+  end
+
   def global_id_resolver(%Absinthe.Resolution{state: :unresolved} = res, id_fetcher) do
     type = res.parent_type
 
