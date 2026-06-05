@@ -307,6 +307,47 @@ defmodule Absinthe.Relay.NodeTest do
     end
   end
 
+  defmodule ScopedIdSchema do
+    defmodule DenyMiddleware do
+      @behaviour Absinthe.Middleware
+
+      def call(resolution, _config) do
+        Absinthe.Resolution.put_result(resolution, {:error, "MISSING_REQUIRED_SCOPE"})
+      end
+    end
+
+    defmodule Scoped do
+      defstruct id: "scoped"
+    end
+
+    use Absinthe.Schema
+    use Absinthe.Relay.Schema, :classic
+
+    # Deny only the node `id` field, leaving the parent field to resolve
+    # successfully so that the `id` field's middleware chain actually runs.
+    def middleware(middleware, %{identifier: :id}, %{identifier: :scoped}) do
+      [DenyMiddleware | middleware]
+    end
+
+    def middleware(middleware, _field, _object), do: middleware
+
+    node interface do
+      resolve_type fn
+        %Scoped{}, _ -> :scoped
+        _, _ -> nil
+      end
+    end
+
+    node object(:scoped) do
+    end
+
+    query do
+      field :scoped, :scoped do
+        resolve fn _, _ -> {:ok, %Scoped{}} end
+      end
+    end
+  end
+
   describe "node resolution" do
     test "fails gracefully when middleware puts an error into the resolution" do
       result =
@@ -320,6 +361,24 @@ defmodule Absinthe.Relay.NodeTest do
         |> Absinthe.run(ErrorMiddlewareSchema, variables: %{"id" => Base.encode64("Root:root")})
 
       assert {:ok, %{data: %{"node" => nil}, errors: [%{message: "Error"}]}} = result
+    end
+
+    test "passes through when an earlier middleware on the id field resolves with an error" do
+      result =
+        """
+          query {
+            scoped {
+              id
+            }
+          }
+        """
+        |> Absinthe.run(ScopedIdSchema)
+
+      assert {:ok,
+              %{
+                data: %{"scoped" => nil},
+                errors: [%{message: "MISSING_REQUIRED_SCOPE", path: ["scoped", "id"]}]
+              }} = result
     end
   end
 end
