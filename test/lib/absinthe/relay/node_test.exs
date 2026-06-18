@@ -322,4 +322,51 @@ defmodule Absinthe.Relay.NodeTest do
       assert {:ok, %{data: %{"node" => nil}, errors: [%{message: "Error"}]}} = result
     end
   end
+
+  defmodule DeniedIdSchema do
+    defmodule DenyMiddleware do
+      @behaviour Absinthe.Middleware
+
+      def call(resolution, _config) do
+        Absinthe.Resolution.put_result(resolution, {:error, "denied"})
+      end
+    end
+
+    use Absinthe.Schema
+    use Absinthe.Relay.Schema, :classic
+
+    @item %{id: "1", name: "Item 1"}
+
+    def middleware(middleware, %{identifier: :id}, %{identifier: :item}) do
+      [DenyMiddleware | middleware]
+    end
+
+    def middleware(middleware, _field, _object), do: middleware
+
+    node interface do
+      resolve_type fn _, _ -> :item end
+    end
+
+    node object(:item) do
+      field :name, :string
+    end
+
+    query do
+      field :item, :item do
+        resolve fn _, _ -> {:ok, @item} end
+      end
+    end
+  end
+
+  describe "global_id_resolver as middleware" do
+    test "passes through a resolution already resolved with an error" do
+      result =
+        """
+          query { item { id name } }
+        """
+        |> Absinthe.run(DeniedIdSchema)
+
+      assert {:ok, %{data: %{"item" => nil}, errors: [%{message: "denied"}]}} = result
+    end
+  end
 end
