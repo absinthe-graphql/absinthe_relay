@@ -227,8 +227,7 @@ defmodule Absinthe.Relay.Node.ParseIDs do
   # To support middleware that may run earlier and strip away toplevel arguments (eg, `Absinthe.Relay.Mutation` stripping
   # away `input`), we check for a private value on the resolution to see how to find the root schema definition.
   @spec find_schema_root!(Absinthe.Type.Field.t(), Absinthe.Resolution.t()) ::
-          {{Absinthe.Type.Field.t() | Absinthe.Type.Argument.t(), String.t()},
-           (String.t() -> String.t())}
+          {Absinthe.Type.Field.t() | Absinthe.Type.Argument.t(), (String.t() -> String.t())}
   def find_schema_root!(
         %{
           __private__: private
